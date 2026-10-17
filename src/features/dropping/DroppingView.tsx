@@ -572,8 +572,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  Daftar Kunjungan Toko Mitra
+                  <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                  <span>Daftar Kunjungan Toko {profile?.username ? (profile.username.charAt(0).toUpperCase() + profile.username.slice(1)) : 'Petugas'}</span>
                 </h2>
                 <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                   {currentBranch?.name || 'Cabang'}

@@ -6,7 +6,7 @@ import type { UserRole } from '../../types';
 
 export const LoginView: React.FC = () => {
   const { loginWithPin, switchDemoRole, isLoading } = useAuth();
-  const { theme, setTheme } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const [identifier, setIdentifier] = useState('');
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -39,42 +39,23 @@ export const LoginView: React.FC = () => {
     <div className="min-h-screen flex flex-col justify-between p-5 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       {/* Top Theme Switcher Bar */}
       <div className="flex justify-end pt-2">
-        <div className="flex items-center bg-white dark:bg-slate-900 p-0.5 rounded-xl border border-slate-300 dark:border-slate-800 shadow-xs">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setTheme('light');
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              theme === 'light'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
-            }`}
-            title="Ganti ke Mode Terang"
-          >
-            <Sun className={`w-3.5 h-3.5 ${theme === 'light' ? 'text-amber-300 fill-amber-300' : 'text-slate-400'}`} />
-            <span>Terang</span>
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setTheme('dark');
-            }}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              theme === 'dark'
-                ? 'bg-slate-800 text-amber-300 shadow-sm border border-slate-700'
-                : 'text-slate-500 hover:text-slate-200 dark:text-slate-400'
-            }`}
-            title="Ganti ke Mode Gelap"
-          >
-            <Moon className={`w-3.5 h-3.5 ${theme === 'dark' ? 'text-indigo-400 fill-indigo-400' : 'text-slate-400'}`} />
-            <span>Gelap</span>
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleTheme();
+          }}
+          className="w-9 h-9 rounded-xl flex items-center justify-center bg-white hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-amber-400 transition-all cursor-pointer shadow-xs active:scale-90"
+          title={theme === 'light' ? 'Beralih ke Mode Gelap' : 'Beralih ke Mode Terang'}
+          aria-label={theme === 'light' ? 'Beralih ke Mode Gelap' : 'Beralih ke Mode Terang'}
+        >
+          {theme === 'light' ? (
+            <Moon className="w-4 h-4 text-slate-700 hover:text-indigo-600 transition-colors" />
+          ) : (
+            <Sun className="w-4 h-4 text-amber-400 fill-amber-400/30 transition-colors" />
+          )}
+        </button>
       </div>
 
       {/* Top Branding */}
