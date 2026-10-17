@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ThemeContext, type Theme, type ThemeContextType, useTheme } from './useTheme';
-
-export { useTheme, type Theme, type ThemeContextType };
+import { ThemeContext, type Theme } from './useTheme';
 
 const THEME_STORAGE_KEY = 'topcoin_app_theme';
 
