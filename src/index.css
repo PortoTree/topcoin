@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    color-scheme: dark;
+  }
+
+  :root:not(.dark) {
+    color-scheme: light;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #f1f5f9;
+    color: #0f172a;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  html.dark body {
+    background-color: #020617;
+    color: #f8fafc;
+  }
+
+  input, textarea, select {
+    user-select: text;
+  }
+}
+
+/* Mobile-first ergonomic touch helpers */
+.touch-target {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Hide scrollbar for mobile clean tab scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile frame container for large screens, centered */
+.mobile-container {
+  width: 100%;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  background-color: #ffffff;
+  color: #0f172a;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+html.dark .mobile-container {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+@media (min-width: 1024px) {
+  .mobile-container {
+    border-left: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.08);
+  }
+  html.dark .mobile-container {
+    border-left: 1px solid #1e293b;
+    border-right: 1px solid #1e293b;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  }
+}
