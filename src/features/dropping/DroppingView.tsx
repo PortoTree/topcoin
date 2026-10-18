@@ -887,7 +887,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                       Meteran Terakhir Mesin:
                     </span>
                     <span className="text-base font-black font-mono text-indigo-950 dark:text-white">
-                      {prevMeter.toLocaleString('id-ID')}
+                      {prevMeter}
                     </span>
                   </div>
                   <div className="text-right">
@@ -1114,7 +1114,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                       />
                     </div>
                     <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
-                      <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter.toLocaleString('id-ID')}</strong></span>
+                      <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter}</strong></span>
                       {selectedStore && (
                         <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{selectedStore.machine?.machine_code}</strong></span>
                       )}
@@ -1188,10 +1188,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                     <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-2">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-600 dark:text-slate-400 font-medium">
-                          Target Meteran Baru ({prevMeter.toLocaleString('id-ID')} + {coinsCollected.toLocaleString('id-ID')} koin):
+                          Target Meteran Baru ({prevMeter} + {coinsCollected} koin):
                         </span>
                         <span className="font-black font-mono text-slate-900 dark:text-white text-sm">
-                          {calculatedNewMeter.toLocaleString('id-ID')}
+                          {calculatedNewMeter}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-700">
