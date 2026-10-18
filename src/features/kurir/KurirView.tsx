@@ -41,7 +41,7 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
         .from('stores')
         .select(`
           *,
-          machine:machines(id, machine_code, status)
+          machine:machines!stores_current_machine_id_fkey(id, machine_code, status)
         `)
         .in('status', ['proses', 'dikirim'])
         .order('created_at', { ascending: false });
@@ -53,7 +53,7 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
         .from('stores')
         .select(`
           *,
-          machine:machines(id, machine_code, status)
+          machine:machines!stores_current_machine_id_fkey(id, machine_code, status)
         `)
         .eq('status', 'terkirim')
         .order('delivered_at', { ascending: false })

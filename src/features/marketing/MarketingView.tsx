@@ -55,7 +55,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
         .from('stores')
         .select(`
           *,
-          machine:machines(machine_code, status)
+          machine:machines!stores_current_machine_id_fkey(machine_code, status)
         `)
         .order('created_at', { ascending: false });
 

@@ -113,7 +113,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       // 3. Stores in this branch
       const { data: sData } = await supabase
         .from('stores')
-        .select(`*, machine:machines(machine_code, status)`)
+        .select(`*, machine:machines!stores_current_machine_id_fkey(machine_code, status)`)
         .eq('branch_id', activeBranchId)
         .order('name', { ascending: true });
 
