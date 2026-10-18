@@ -26,5 +26,4 @@ dist-ssr
 .claude
 .env
 planning
-public
 supabase

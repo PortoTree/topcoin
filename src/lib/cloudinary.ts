@@ -2,7 +2,7 @@
  * Cloudinary Direct Upload Helper
  * Uses unsigned upload preset for secure client-side uploads
  */
-const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'j02cymeq';
 const defaultUploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'upload_optional';
 const presetMachine = import.meta.env.VITE_CLOUDINARY_PRESET_MACHINE || 'upload_mechine';
 const presetNota = import.meta.env.VITE_CLOUDINARY_PRESET_NOTA || 'upload_nota';
