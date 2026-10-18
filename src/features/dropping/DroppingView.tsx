@@ -842,17 +842,6 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
               </span>
             </div>
 
-            {/* Header Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors">
-              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Coins className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                Dropping Koin & Pencocokan Meteran
-              </h2>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-                Ambil foto bukti wajib, verifikasi meteran, dan catat omset toko di {currentBranch?.name || 'Cabang'}.
-              </p>
-            </div>
-
             {submitSuccess && (
               <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
