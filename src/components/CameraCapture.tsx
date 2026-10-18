@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Camera, RefreshCw, CheckCircle2 } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Camera, RefreshCw, CheckCircle2, X, AlertTriangle, SwitchCamera, ShieldCheck, Lock } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
 
 interface CameraCaptureProps {
@@ -15,18 +15,173 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   onPhotoCaptured,
   required = true,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [photoSizeKb, setPhotoSizeKb] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const hardwareInputRef = useRef<HTMLInputElement>(null);
 
-  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [photoSizeKb, setPhotoSizeKb] = useState<number | null>(null);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isPermissionPromptOpen, setIsPermissionPromptOpen] = useState(false);
+  const [isStartingCamera, setIsStartingCamera] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+
+  // Stop camera stream cleanly
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const closeCamera = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    stopStream();
+    setIsCameraModalOpen(false);
+    setIsPermissionPromptOpen(false);
+    setIsStartingCamera(false);
+    setCameraError(null);
+  };
+
+  useEffect(() => {
+    return () => {
+      stopStream();
+    };
+  }, []);
+
+  // Request camera permission and start stream
+  const requestCameraAccess = async (targetFacing: 'environment' | 'user' = facingMode) => {
+    setIsPermissionPromptOpen(false);
+    setIsCameraModalOpen(true);
+    setIsStartingCamera(true);
+    setCameraError(null);
+
+    // Check if getUserMedia is actually supported (Requires HTTPS or localhost)
+    const isGetUserMediaSupported = Boolean(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+    if (isGetUserMediaSupported && (window.isSecureContext || window.location.hostname === 'localhost')) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: targetFacing },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+
+        streamRef.current = stream;
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setIsStartingCamera(false);
+      } catch (err: any) {
+        console.error('Camera stream error:', err);
+        setIsStartingCamera(false);
+
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          setCameraError(
+            'Izin kamera belum diberikan. Mohon klik "Izinkan" saat browser meminta izin kamera, atau aktifkan izin kamera pada pengaturan situs browser.'
+          );
+        } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          setCameraError('Perangkat kamera fisik tidak ditemukan pada perangkat ini.');
+        } else {
+          // Fallback to hardware camera
+          closeCamera();
+          hardwareInputRef.current?.click();
+        }
+      }
+    } else {
+      // Over plain HTTP IP (no WebRTC allowed by Chrome mobile), directly open physical camera sensor (Anti-Fraud: NO GALLERY)
+      setIsStartingCamera(false);
+      setIsCameraModalOpen(false);
+      setIsPermissionPromptOpen(false);
+      hardwareInputRef.current?.click();
+    }
+  };
+
+  // Click on "Buka Kamera Langsung"
+  const handleClickCamera = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // If not secure context (plain HTTP on mobile IP), immediately open hardware camera directly (zero confusion, zero blocking modal)
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      hardwareInputRef.current?.click();
+      return;
+    }
+
+    // Check if permission query is supported on secure contexts
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: 'camera' as PermissionName })
+        .then((permissionStatus) => {
+          if (permissionStatus.state === 'granted') {
+            requestCameraAccess(facingMode);
+          } else {
+            setIsPermissionPromptOpen(true);
+          }
+        })
+        .catch(() => {
+          requestCameraAccess(facingMode);
+        });
+    } else {
+      requestCameraAccess(facingMode);
+    }
+  };
+
+  // Toggle front/back camera inside live stream
+  const handleToggleFacingMode = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextFacing);
+    await requestCameraAccess(nextFacing);
+  };
+
+  // Snap photo from the live video frame directly into WebP (zero gallery, zero reload)
+  const handleSnapPhoto = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!videoRef.current) return;
+
+    const video = videoRef.current;
+    const width = video.videoWidth || 1280;
+    const height = video.videoHeight || 720;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, width, height);
+
+    const base64 = canvas.toDataURL('image/webp', 0.8);
+
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const sizeKb = Math.round(blob.size / 1024);
+        setPreviewUrl(base64);
+        setPhotoSizeKb(sizeKb);
+        onPhotoCaptured({ base64, blob });
+      }
+      closeCamera();
+    }, 'image/webp', 0.8);
+  };
+
+  // Fallback handler for direct hardware camera input (strictly capture="environment", NO GALLERY)
+  const handleHardwareCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      setIsCompressing(true);
-      // Auto compress to ~150-250KB WebP
       const { base64, blob, sizeKb } = await compressImage(file, 1200, 1200, 0.75);
       setPreviewUrl(base64);
       setPhotoSizeKb(sizeKb);
@@ -35,12 +190,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       console.error('Error compressing image:', err);
       alert('Gagal memproses foto dari kamera. Coba ulangi.');
     } finally {
-      setIsCompressing(false);
+      if (hardwareInputRef.current) hardwareInputRef.current.value = '';
     }
-  };
-
-  const triggerCamera = () => {
-    fileInputRef.current?.click();
   };
 
   return (
@@ -61,13 +212,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         )}
       </div>
 
-      {/* Hidden file input with hardware camera constraint */}
+      {/* Hidden strictly hardware camera input (forces native camera sensor, strictly no gallery) */}
       <input
-        ref={fileInputRef}
+        ref={hardwareInputRef}
         type="file"
         accept="image/*"
         capture="environment"
-        onChange={handleCapture}
+        onChange={handleHardwareCapture}
         className="hidden"
       />
 
@@ -80,34 +231,192 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           />
           <button
             type="button"
-            onClick={triggerCamera}
-            className="absolute bottom-2 right-2 px-3 py-1.5 bg-slate-900/80 backdrop-blur-md hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg active:scale-95 transition"
+            onClick={handleClickCamera}
+            className="absolute bottom-2 right-2 px-3 py-1.5 bg-slate-900/80 backdrop-blur-md hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg active:scale-95 transition cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            Foto Ulang
+            Ambil Ulang Foto
           </button>
         </div>
       ) : (
         <button
           type="button"
-          onClick={triggerCamera}
-          disabled={isCompressing}
-          className="w-full py-4 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 rounded-xl bg-slate-50 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800/80 flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.99] touch-target"
+          onClick={handleClickCamera}
+          className="w-full py-4 border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 rounded-xl bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.99] cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-            {isCompressing ? (
-              <RefreshCw className="w-5 h-5 animate-spin" />
-            ) : (
-              <Camera className="w-5 h-5" />
-            )}
+          <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <Camera className="w-5 h-5" />
           </div>
           <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
-            {isCompressing ? 'Mengompres Foto...' : 'Buka Kamera Langsung'}
+            Buka Kamera Langsung
           </span>
-          <span className="text-[10px] text-slate-500 dark:text-slate-400">
-            Hanya kamera perangkat (Anti-Fraud)
+          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+            Hanya kamera langsung (Anti-Fraud • Galeri dinonaktifkan)
           </span>
         </button>
+      )}
+
+      {/* Interactive Permission Request Prompt Dialog */}
+      {isPermissionPromptOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-2xl space-y-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto shadow-inner">
+              <Camera className="w-7 h-7" />
+            </div>
+
+            <div>
+              <h3 className="text-base font-black text-slate-900 dark:text-white">
+                Izin Akses Kamera Diperlukan
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed font-medium">
+                Untuk menjaga keaslian data (Anti-Fraud), aplikasi TopCoin mewajibkan pengambilan foto langsung melalui kamera fisik di toko.
+              </p>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 rounded-xl text-left flex items-start gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-amber-900 dark:text-amber-300 font-semibold leading-normal">
+                Ketuk tombol di bawah, lalu pilih <strong>"Izinkan"</strong> pada jendela konfirmasi browser Anda.
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => requestCameraAccess(facingMode)}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black rounded-xl shadow-lg shadow-indigo-600/30 active:scale-[0.98] transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                <span>Izinkan & Buka Kamera</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPermissionPromptOpen(false)}
+                className="w-full py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* In-App Live Camera Modal */}
+      {isCameraModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col justify-between p-4 animate-in fade-in duration-200">
+          {/* Header Bar */}
+          <div className="flex items-center justify-between text-white pt-2 z-10">
+            <div>
+              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-emerald-400" />
+                {label}
+              </h4>
+              <p className="text-[11px] text-emerald-300 font-medium">Kamera Langsung Lapangan (Anti-Fraud)</p>
+            </div>
+            <button
+              type="button"
+              onClick={closeCamera}
+              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition active:scale-95 cursor-pointer"
+              title="Tutup Kamera"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Live Viewfinder Feed */}
+          <div className="relative flex-1 my-3 rounded-2xl overflow-hidden bg-slate-950 border border-white/10 flex items-center justify-center">
+            {cameraError ? (
+              <div className="p-6 text-center max-w-xs space-y-3">
+                <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+                  <Lock className="w-6 h-6" />
+                </div>
+                <h4 className="text-sm font-bold text-white">Akses Kamera Terblokir</h4>
+                <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                  {cameraError}
+                </p>
+                <div className="space-y-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => requestCameraAccess(facingMode)}
+                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    Minta Izin Ulang
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeCamera();
+                      hardwareInputRef.current?.click();
+                    }}
+                    className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+                  >
+                    Gunakan Kamera Hardware Bawaan
+                  </button>
+                </div>
+              </div>
+            ) : isStartingCamera ? (
+              <div className="text-center space-y-2">
+                <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
+                <p className="text-xs text-slate-300 font-medium">Mengaktifkan kamera...</p>
+              </div>
+            ) : null}
+
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`w-full h-full object-cover ${cameraError || isStartingCamera ? 'hidden' : 'block'}`}
+            />
+
+            {/* Viewfinder Target Guidelines */}
+            {!cameraError && !isStartingCamera && (
+              <>
+                <div className="absolute inset-8 border-2 border-dashed border-white/40 rounded-2xl pointer-events-none" />
+                <div className="absolute top-4 left-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  LIVE CAMERA
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Bottom Shutter Controls */}
+          {!cameraError && (
+            <div className="flex items-center justify-between px-6 pb-6 pt-2 z-10">
+              {/* Flip Camera Button */}
+              <button
+                type="button"
+                onClick={handleToggleFacingMode}
+                className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition active:scale-95 cursor-pointer"
+                title="Putar Kamera"
+              >
+                <SwitchCamera className="w-5 h-5" />
+              </button>
+
+              {/* Shutter Button (Snapshot live frame) */}
+              <button
+                type="button"
+                disabled={isStartingCamera}
+                onClick={handleSnapPhoto}
+                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 active:scale-90 transition cursor-pointer shadow-2xl disabled:opacity-50"
+                title="Ambil Foto Sekarang"
+              >
+                <div className="w-full h-full rounded-full bg-white hover:bg-slate-100 transition shadow-inner" />
+              </button>
+
+              {/* Cancel Button */}
+              <button
+                type="button"
+                onClick={closeCamera}
+                className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold transition active:scale-95 cursor-pointer"
+              >
+                Batal
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

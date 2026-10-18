@@ -4,6 +4,8 @@ import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
 import { offlineDb } from '../../lib/db';
 import { CameraCapture } from '../../components/CameraCapture';
+import { MultiStepCameraModal } from '../../components/MultiStepCameraModal';
+import type { PhotoStepItem } from '../../components/MultiStepCameraModal';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import {
   Coins,
@@ -21,6 +23,7 @@ import {
   Search,
   MapPin,
   Clock,
+  Camera,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
@@ -32,7 +35,7 @@ interface DroppingViewProps {
 // Fallback demo stores with machines for testing
 const DEMO_DROPPING_STORES: Store[] = [
   {
-    id: 'store-sby-01',
+    id: '22222222-0000-0000-0000-000000000001',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     name: 'Toko Berkah Mandiri',
     address: 'Jl. Basuki Rahmat No. 12, Surabaya',
@@ -41,22 +44,22 @@ const DEMO_DROPPING_STORES: Store[] = [
     latitude: -7.265,
     longitude: 112.742,
     status: 'terpasang',
-    current_machine_id: 'm-sby-001',
+    current_machine_id: '11111111-0000-0000-0000-000000000001',
     photo_store_url: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     machine: {
-      id: 'm-sby-001',
+      id: '11111111-0000-0000-0000-000000000001',
       machine_code: 'MSN-SBY-001',
       status: 'terpasang',
-      current_store_id: 'store-sby-01',
+      current_store_id: '22222222-0000-0000-0000-000000000001',
       last_counter_meter: 100,
       notes: null,
       created_at: new Date().toISOString(),
     },
   },
   {
-    id: 'store-sby-02',
+    id: '22222222-0000-0000-0000-000000000002',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     name: 'Kedai Kopi Rezeki',
     address: 'Jl. Embong Malang No. 45, Surabaya',
@@ -65,22 +68,22 @@ const DEMO_DROPPING_STORES: Store[] = [
     latitude: -7.261,
     longitude: 112.738,
     status: 'terpasang',
-    current_machine_id: 'm-sby-002',
+    current_machine_id: '11111111-0000-0000-0000-000000000002',
     photo_store_url: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     machine: {
-      id: 'm-sby-002',
+      id: '11111111-0000-0000-0000-000000000002',
       machine_code: 'MSN-SBY-002',
       status: 'terpasang',
-      current_store_id: 'store-sby-02',
+      current_store_id: '22222222-0000-0000-0000-000000000002',
       last_counter_meter: 250,
       notes: null,
       created_at: new Date().toISOString(),
     },
   },
   {
-    id: 'store-sby-03',
+    id: '22222222-0000-0000-0000-000000000003',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     name: 'Minimarket Barokah Jaya',
     address: 'Jl. Manyar Kertoarjo No. 88, Surabaya',
@@ -89,39 +92,39 @@ const DEMO_DROPPING_STORES: Store[] = [
     latitude: -7.282,
     longitude: 112.765,
     status: 'terpasang',
-    current_machine_id: 'm-sby-003',
+    current_machine_id: '11111111-0000-0000-0000-000000000003',
     photo_store_url: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     machine: {
-      id: 'm-sby-003',
+      id: '11111111-0000-0000-0000-000000000003',
       machine_code: 'MSN-SBY-003',
       status: 'terpasang',
-      current_store_id: 'store-sby-03',
+      current_store_id: '22222222-0000-0000-0000-000000000003',
       last_counter_meter: 410,
       notes: null,
       created_at: new Date().toISOString(),
     },
   },
   {
-    id: 'store-sby-04',
+    id: '22222222-0000-0000-0000-000000000004',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    name: 'Warkop Citra Rasa 24 Jam',
+    name: 'Toko Kelontong Bu Siti',
     address: 'Jl. Ngagel Jaya Selatan No. 19, Surabaya',
     owner_name: 'Mas Dwi',
     phone: '085611223344',
     latitude: -7.291,
     longitude: 112.752,
     status: 'terpasang',
-    current_machine_id: 'm-sby-004',
+    current_machine_id: '11111111-0000-0000-0000-000000000004',
     photo_store_url: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     machine: {
-      id: 'm-sby-004',
+      id: '11111111-0000-0000-0000-000000000004',
       machine_code: 'MSN-SBY-004',
       status: 'terpasang',
-      current_store_id: 'store-sby-04',
+      current_store_id: '22222222-0000-0000-0000-000000000004',
       last_counter_meter: 85,
       notes: null,
       created_at: new Date().toISOString(),
@@ -135,13 +138,65 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
 
   // Active stores for selection
   const [activeStores, setActiveStores] = useState<Store[]>([]);
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
+
+  // Selected store (persisted to sessionStorage to survive mobile reloads)
+  const [selectedStoreId, setSelectedStoreIdState] = useState<string>(() => {
+    try {
+      return sessionStorage.getItem('topcoin_active_store_id') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const setSelectedStoreId = (id: string) => {
+    setSelectedStoreIdState(id);
+    try {
+      if (id) {
+        sessionStorage.setItem('topcoin_active_store_id', id);
+      } else {
+        sessionStorage.removeItem('topcoin_active_store_id');
+      }
+    } catch {
+      // ignore
+    }
+  };
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // 1. Foto Wajib (3 Foto Pertama di atas)
   const [photoMachine, setPhotoMachine] = useState<string | null>(null);             // 1. Wajib
   const [photoMachineNumber, setPhotoMachineNumber] = useState<string | null>(null); // 2. Wajib
   const [photoCoin, setPhotoCoin] = useState<string | null>(null);                   // 3. Wajib
+
+  // Multi-step connected camera modal state
+  const [isMultiStepCameraOpen, setIsMultiStepCameraOpen] = useState(false);
+  const [multiStepStartIndex, setMultiStepStartIndex] = useState(0);
+
+  const MANDATORY_PHOTO_STEPS: PhotoStepItem[] = [
+    {
+      key: 'photoMachine',
+      label: 'Foto Mesin / Boneka',
+      subLabel: 'Ambil foto unit mesin dan boneka tampak depan',
+      required: true,
+    },
+    {
+      key: 'photoMachineNumber',
+      label: 'Foto Nomor Mesin',
+      subLabel: 'Ambil foto plat kode / nomor unit mesin',
+      required: true,
+    },
+    {
+      key: 'photoCoin',
+      label: 'Foto Koin',
+      subLabel: 'Ambil foto fisik koin yang berada di mesin',
+      required: true,
+    },
+    {
+      key: 'photoOptional',
+      label: 'Foto Tambahan (Opsional)',
+      subLabel: 'Ambil foto kondisi khusus',
+      required: false,
+    },
+  ];
 
   // 2. Checklist "Total Koin Terambil / Ambil Omset" Toggle (Default false: hanya pencocokan meteran)
   const [hasOmset, setHasOmset] = useState<boolean>(false);
@@ -245,7 +300,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     if (!profile) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('droppings')
         .select(`
           *,
@@ -256,7 +311,51 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         .eq('transaction_date', today)
         .order('created_at', { ascending: false });
 
-      if (data) setTodayDroppings(data as DroppingTransaction[]);
+      if (error) {
+        console.warn('Error fetching today droppings from Supabase:', error);
+      }
+
+      const list: DroppingTransaction[] = data ? (data as DroppingTransaction[]) : [];
+
+      // Also merge any pending offline records from Dexie.js
+      try {
+        const offlinePending = await offlineDb.offlineDroppings
+          .where('dropping_user_id')
+          .equals(profile.id)
+          .toArray();
+
+        if (offlinePending && offlinePending.length > 0) {
+          const existingStoreIds = new Set(list.map((t) => t.store_id));
+          for (const off of offlinePending) {
+            if (!existingStoreIds.has(off.store_id)) {
+              list.push({
+                id: off.id || `offline-${off.store_id}`,
+                branch_id: off.branch_id || activeBranchId,
+                dropping_user_id: off.dropping_user_id,
+                store_id: off.store_id,
+                machine_id: off.machine_id,
+                has_omset: Boolean(off.has_omset),
+                coins_collected: off.coins_collected || 0,
+                gross_omset: off.gross_omset || (off.coins_collected ? off.coins_collected * 1000 : 0),
+                previous_counter_meter: off.previous_counter_meter || 0,
+                actual_physical_meter: off.actual_physical_meter,
+                store_share_amount: off.store_share_amount || 0,
+                photo_machine_url: off.photo_machine_blob || '',
+                photo_machine_number_url: off.photo_machine_number_blob || '',
+                photo_coin_url: off.photo_coin_blob || '',
+                photo_nota_url: off.photo_nota_blob || null,
+                photo_optional_url: off.photo_optional_blob || null,
+                transaction_date: today,
+                created_at: off.created_at,
+              } as any);
+            }
+          }
+        }
+      } catch (offErr) {
+        console.warn('Error reading offline droppings:', offErr);
+      }
+
+      setTodayDroppings(list);
 
       // Check offline count
       const offlineCount = await offlineDb.offlineDroppings
@@ -267,7 +366,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     } catch (err) {
       console.error('Error fetching today droppings:', err);
     }
-  }, [profile?.id]);
+  }, [profile?.id, activeBranchId]);
 
   useEffect(() => {
     fetchActiveStores();
@@ -341,15 +440,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             rec.photo_optional_blob ? uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : Promise.resolve(null),
           ]);
 
+          const today = new Date().toISOString().split('T')[0];
           const { error } = await supabase.from('droppings').insert({
             branch_id: rec.branch_id || activeBranchId,
             dropping_user_id: rec.dropping_user_id,
             store_id: rec.store_id,
             machine_id: rec.machine_id,
-            has_omset: rec.has_omset,
+            has_omset: Boolean(rec.has_omset),
             coins_collected: rec.coins_collected ?? 0,
+            gross_omset: rec.gross_omset ?? ((rec.coins_collected || 0) * 1000),
             previous_counter_meter: rec.previous_counter_meter ?? 0,
             actual_physical_meter: rec.actual_physical_meter,
+            has_mismatch: Boolean(rec.has_mismatch),
             discrepancy_reason: rec.discrepancy_reason,
             store_share_amount: rec.store_share_amount ?? 0,
             photo_machine_url: urlMachine,
@@ -361,6 +463,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             photo_optional_url: urlOptional,
             latitude: rec.latitude,
             longitude: rec.longitude,
+            transaction_date: today,
           });
 
           if (!error) {
@@ -484,15 +587,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         photoOptional ? uploadToCloudinary(photoOptional, 'droppings/optional') : Promise.resolve(null),
       ]);
 
+      const today = new Date().toISOString().split('T')[0];
       const payload = {
         branch_id: activeBranchId,
         dropping_user_id: profile.id,
         store_id: store.id,
         machine_id: store.current_machine_id,
-        has_omset: hasOmset,
+        has_omset: Boolean(hasOmset),
         coins_collected: hasOmset ? coinsCollected : 0,
+        gross_omset: hasOmset ? grossOmset : 0,
         previous_counter_meter: prevMeter,
         actual_physical_meter: finalMeterReading,
+        has_mismatch: hasOmset ? hasMismatch : false,
         discrepancy_reason: hasOmset && hasMismatch ? discrepancyReason.trim() : null,
         store_share_amount: hasOmset ? storeShareAmount : 0,
         photo_machine_url: urlMachine,
@@ -504,19 +610,23 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         photo_optional_url: urlOptional,
         latitude,
         longitude,
+        transaction_date: today,
       };
 
       const { error } = await supabase.from('droppings').insert(payload);
 
       if (error) {
-        console.warn('DB dropping insert fallback:', error);
+        console.error('Supabase dropping insert error:', error);
+        throw new Error('Gagal menyimpan transaksi ke database: ' + error.message);
       }
 
       // Update machine's last_counter_meter
-      await supabase
-        .from('machines')
-        .update({ last_counter_meter: finalMeterReading })
-        .eq('id', store.current_machine_id);
+      if (store.current_machine_id) {
+        await supabase
+          .from('machines')
+          .update({ last_counter_meter: finalMeterReading })
+          .eq('id', store.current_machine_id);
+      }
 
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
       setSubmitSuccess(
@@ -525,8 +635,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
           : `Sukses! Kunjungan toko "${store.name}" (pencocokan meteran: ${finalMeterReading}) berhasil dicatat.`
       );
       resetForm();
-      fetchTodayDroppings();
-      fetchActiveStores();
+      await fetchTodayDroppings();
+      await fetchActiveStores();
     } catch (err: any) {
       console.error('Dropping error:', err);
       alert(err.message || 'Gagal menyimpan transaksi dropping.');
@@ -573,11 +683,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <span>Daftar Kunjungan Toko {profile?.username ? (profile.username.charAt(0).toUpperCase() + profile.username.slice(1)) : 'Petugas'}</span>
+                  <span>Daftar dropping {profile?.username ? (profile.username.charAt(0).toUpperCase() + profile.username.slice(1)) : 'Budi'}</span>
                 </h2>
-                <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                  {currentBranch?.name || 'Cabang'}
-                </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
                 Pilih toko mitra untuk mencatat pencocokan meteran mesin dan penarikan koin omset hari ini.
@@ -631,93 +738,68 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             {/* Stores List */}
             <div className="space-y-3">
               {filteredStores.map((store) => {
-                const todayTx = todayDroppings.find((t) => t.store_id === store.id);
-                const isVisited = Boolean(todayTx);
+                const todayTx = todayDroppings.find(
+                  (t) => t.store_id === store.id || (t.store && t.store.name === store.name)
+                );
+
+                const hasOmsetTaken = Boolean(
+                  todayTx && (
+                    todayTx.has_omset === true ||
+                    (typeof todayTx.has_omset === 'string' && todayTx.has_omset === 'true') ||
+                    (typeof todayTx.coins_collected === 'number' && todayTx.coins_collected > 0)
+                  )
+                );
+
+                // Status dynamic configuration
+                let statusLabel = 'Belum Dikunjungi';
+                let StatusIcon = Clock;
+                // Hitam putih dengan kontras tinggi di light & dark mode
+                let buttonStyle = 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
+
+                if (todayTx) {
+                  if (hasOmsetTaken) {
+                    // Omset sudah diambil
+                    statusLabel = 'Kunjungan Selesai';
+                    StatusIcon = CheckCircle2;
+                    buttonStyle = 'bg-emerald-600 text-white font-bold hover:bg-emerald-500 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500';
+                  } else {
+                    // Kunjungan tercatat tetapi belum ambil omset
+                    statusLabel = 'Belum Ambil Omset';
+                    StatusIcon = Coins;
+                    buttonStyle = 'bg-amber-400 text-slate-950 font-bold hover:bg-amber-300 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300';
+                  }
+                }
 
                 return (
                   <div
                     key={store.id}
-                    className={`p-4 rounded-2xl border transition shadow-xs ${
-                      isVisited
-                        ? 'bg-white dark:bg-slate-900 border-emerald-200 dark:border-emerald-800/60'
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700'
-                    }`}
+                    className="p-3.5 sm:p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs transition hover:border-slate-300 dark:hover:border-slate-700 space-y-3"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                            {store.name}
-                          </h3>
-                          {isVisited ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Sudah Dikunjungi
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300">
-                              <Clock className="w-3 h-3" />
-                              Belum Dikunjungi
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                          <span>{store.address}</span>
-                        </p>
-                      </div>
+                    {/* [namatoko] [nomormesin] */}
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        {store.name}
+                      </h3>
+                      <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
+                        {store.machine?.machine_code || 'Tanpa Mesin'}
+                      </span>
                     </div>
 
-                    {/* Machine & Meter Info */}
-                    <div className="mt-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between text-xs">
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">
-                          Unit Mesin:
-                        </span>
-                        <span className="font-extrabold font-mono text-slate-900 dark:text-white">
-                          {store.machine?.machine_code || 'Tanpa Mesin'}
-                        </span>
+                    {/* [tombolstatus]: [icon] [status] [arrow right] */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedStoreId(store.id);
+                        setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
+                      }}
+                      className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition active:scale-[0.98] cursor-pointer shadow-xs ${buttonStyle}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className="w-4 h-4 flex-shrink-0" />
+                        <span>{statusLabel}</span>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 block">
-                          Meteran Terakhir:
-                        </span>
-                        <span className="font-black font-mono text-indigo-700 dark:text-indigo-400">
-                          {(store.machine?.last_counter_meter ?? 0).toLocaleString('id-ID')}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* If visited today, show brief summary */}
-                    {isVisited && todayTx && (
-                      <div className="mt-2.5 p-2 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-[11px] text-emerald-900 dark:text-emerald-200 flex items-center justify-between font-semibold">
-                        <span>Kunjungan Hari Ini:</span>
-                        <span className="font-bold">
-                          {todayTx.has_omset
-                            ? `${todayTx.coins_collected} Koin (${formatIDR(todayTx.gross_omset || 0)})`
-                            : `Meteran dicocokkan: ${todayTx.actual_physical_meter}`}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Action Button */}
-                    <div className="mt-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedStoreId(store.id);
-                          setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
-                        }}
-                        className={`w-full py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition active:scale-[0.98] cursor-pointer shadow-xs ${
-                          isVisited
-                            ? 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200'
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
-                        }`}
-                      >
-                        <span>{isVisited ? 'Update / Kunjungi Ulang Toko' : 'Mulai Kunjungan & Dropping'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                      <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                    </button>
                   </div>
                 );
               })}
@@ -811,36 +893,181 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             {/* 2. Tiga Foto Wajib Terlebih Dahulu */}
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  3 Foto Wajib (Selesaikan Terlebih Dahulu)
-                </h3>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    3 Foto Wajib (Saling Terhubung)
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Foto 1, 2, dan 3 dapat diambil berurutan tanpa keluar kamera, atau satu per satu.
+                  </p>
+                </div>
+
+                {/* Tombol Ambil Semua Sekaligus */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Cari step yang belum terisi, atau mulai dari 0
+                    const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
+                    setMultiStepStartIndex(firstUnfilled);
+                    setIsMultiStepCameraOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Mulai Foto</span>
+                </button>
               </div>
 
-              {/* 1. Foto Mesin / Boneka */}
-              <CameraCapture
-                label="1. Foto Mesin / Boneka"
-                subLabel="Ambil foto unit mesin dan boneka tampak depan"
-                required={true}
-                onPhotoCaptured={({ base64 }) => setPhotoMachine(base64)}
-              />
+              {/* Slot Kartu Foto (Bisa diklik untuk ambil/lihat masing-masing) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* Foto Mesin / Boneka */}
+                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <img src="/boneka.png" alt="Boneka" className="w-4 h-4 object-contain inline-block" />
+                      Mesin / Boneka <span className="text-rose-500">*</span>
+                    </span>
+                    {photoMachine && (
+                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                      </span>
+                    )}
+                  </div>
+                  {photoMachine ? (
+                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                      <img src={photoMachine} alt="Foto Mesin" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(0);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Foto Ulang
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMultiStepStartIndex(0);
+                        setIsMultiStepCameraOpen(true);
+                      }}
+                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <img src="/boneka.png" alt="Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Mesin</span>
+                    </button>
+                  )}
+                </div>
 
-              {/* 2. Foto Nomor Mesin */}
-              <CameraCapture
-                label="2. Foto Nomor Mesin"
-                subLabel="Ambil foto plat kode / nomor unit mesin"
-                required={true}
-                onPhotoCaptured={({ base64 }) => setPhotoMachineNumber(base64)}
-              />
+                {/* Foto Nomor Mesin */}
+                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <img src="/nomor.png" alt="Nomor" className="w-4 h-4 object-contain inline-block" />
+                      Nomor Mesin <span className="text-rose-500">*</span>
+                    </span>
+                    {photoMachineNumber && (
+                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                      </span>
+                    )}
+                  </div>
+                  {photoMachineNumber ? (
+                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                      <img src={photoMachineNumber} alt="Foto Nomor Mesin" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(1);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Foto Ulang
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMultiStepStartIndex(1);
+                        setIsMultiStepCameraOpen(true);
+                      }}
+                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <img src="/nomor.png" alt="Nomor Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Nomor Mesin</span>
+                    </button>
+                  )}
+                </div>
 
-              {/* 3. Foto Koin */}
-              <CameraCapture
-                label="3. Foto Koin"
-                subLabel="Ambil foto fisik koin yang berada di mesin"
-                required={true}
-                onPhotoCaptured={({ base64 }) => setPhotoCoin(base64)}
-              />
+                {/* Foto Koin */}
+                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <img src="/coin.png" alt="Koin" className="w-4 h-4 object-contain inline-block" />
+                      Foto Koin <span className="text-rose-500">*</span>
+                    </span>
+                    {photoCoin && (
+                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                      </span>
+                    )}
+                  </div>
+                  {photoCoin ? (
+                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                      <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(2);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Foto Ulang
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMultiStepStartIndex(2);
+                        setIsMultiStepCameraOpen(true);
+                      }}
+                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                    >
+                      <img src="/coin.png" alt="Koin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Koin</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Connected Multi-Step In-App Camera Modal */}
+            <MultiStepCameraModal
+              isOpen={isMultiStepCameraOpen}
+              onClose={() => setIsMultiStepCameraOpen(false)}
+              steps={MANDATORY_PHOTO_STEPS}
+              initialStepIndex={multiStepStartIndex}
+              initialPhotos={{
+                photoMachine,
+                photoMachineNumber,
+                photoCoin,
+                photoOptional,
+              }}
+              onFinish={(results) => {
+                if (results.photoMachine !== undefined) setPhotoMachine(results.photoMachine);
+                if (results.photoMachineNumber !== undefined) setPhotoMachineNumber(results.photoMachineNumber);
+                if (results.photoCoin !== undefined) setPhotoCoin(results.photoCoin);
+                if (results.photoOptional !== undefined) setPhotoOptional(results.photoOptional);
+              }}
+            />
 
             {/* 3. Section: Pencocokan Angka Meteran & Checklist Ambil Koin */}
             <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs transition-colors">
@@ -1102,7 +1329,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             <div className="pt-1">
               <CameraCapture
                 label="Foto Tambahan (Opsional)"
-                subLabel="Ambil foto tambahan jika ada kondisi khusus mesin atau toko"
+                subLabel="Ambil foto kondisi khusus"
                 required={false}
                 onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
               />
