@@ -77,7 +77,7 @@ const DEMO_DROPPING_STORES: Store[] = [
       machine_code: 'MSN-SBY-002',
       status: 'terpasang',
       current_store_id: '22222222-0000-0000-0000-000000000002',
-      last_counter_meter: 250,
+      last_counter_meter: 1234,
       notes: null,
       created_at: new Date().toISOString(),
     },
@@ -230,7 +230,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
 
   // Selected store and machine metrics
   const selectedStore = activeStores.find((s) => s.id === selectedStoreId);
-  const prevMeter = selectedStore?.machine?.last_counter_meter ?? 0;
+  const storeTodayDropping = todayDroppings.find((d) => d.store_id === selectedStoreId);
+  const prevMeter = storeTodayDropping?.actual_physical_meter ?? selectedStore?.machine?.last_counter_meter ?? 0;
   const coinsCollected = hasOmset ? (parseInt(coinsCollectedStr.replace(/[^0-9]/g, ''), 10) || 0) : 0;
   const grossOmset = coinsCollected * 1000;
   const calculatedNewMeter = prevMeter + coinsCollected;
@@ -278,7 +279,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         .from('stores')
         .select(`
           *,
-          machine:machines(*)
+          machine:machines!stores_current_machine_id_fkey(*)
         `)
         .eq('branch_id', activeBranchId)
         .in('status', ['terpasang', 'terkirim'])
@@ -570,6 +571,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             ? `Tersimpan secara OFFLINE di HP (${reasonMsg})! Data & foto kunjungan aman dan akan tersinkron otomatis begitu sinyal kembali stabil.`
             : 'Tersimpan secara OFFLINE di HP! Data akan terunggah otomatis saat Anda terhubung ke internet.'
         );
+        setActiveStores((prev) =>
+          prev.map((s) =>
+            s.id === store.id && s.machine
+              ? { ...s, machine: { ...s.machine, last_counter_meter: finalMeterReading } }
+              : s
+          )
+        );
         resetForm();
         fetchTodayDroppings();
       } catch (dbErr: any) {
@@ -639,6 +647,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         hasOmset
           ? `Sukses! Dropping "${store.name}" berhasil dicatat: ${coinsCollected} Koin (${formatIDR(grossOmset)}). Setoran bersih: ${formatIDR(netDepositAmount)}.`
           : `Sukses! Kunjungan toko "${store.name}" (pencocokan meteran: ${finalMeterReading}) berhasil dicatat.`
+      );
+      setActiveStores((prev) =>
+        prev.map((s) =>
+          s.id === store.id && s.machine
+            ? { ...s, machine: { ...s.machine, last_counter_meter: finalMeterReading } }
+            : s
+        )
       );
       resetForm();
       await fetchTodayDroppings();
