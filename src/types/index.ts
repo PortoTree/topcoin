@@ -210,6 +210,7 @@ export interface DailyBranchBackup {
 
 export interface OfflineDroppingRecord {
   localId?: number;
+  id?: string;
   branch_id?: string;
   dropping_user_id: string;
   store_id: string;
@@ -219,6 +220,7 @@ export interface OfflineDroppingRecord {
   coins_collected?: number;
   previous_counter_meter?: number;
   actual_physical_meter?: number | null;
+  has_mismatch?: boolean;
   discrepancy_reason?: string | null;
   store_share_amount?: number;
   has_omset?: boolean;
