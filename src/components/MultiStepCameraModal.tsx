@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Camera,
   RefreshCw,
   CheckCircle2,
   X,
@@ -9,11 +8,6 @@ import {
   ArrowLeft,
   Check,
   RotateCcw,
-  Bot,
-  Hash,
-  Coins,
-  Receipt,
-  FilePlus,
   ChevronUp,
 } from 'lucide-react';
 

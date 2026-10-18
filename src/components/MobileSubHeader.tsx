@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Calendar } from 'lucide-react';
-import { BranchSelector } from './BranchSelector';
 
 export const MobileSubHeader: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<Date>(new Date());

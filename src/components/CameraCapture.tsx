@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle2, X, AlertTriangle, SwitchCamera, ShieldCheck, Lock } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2, X, SwitchCamera, ShieldCheck, Lock } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
 
 interface CameraCaptureProps {
