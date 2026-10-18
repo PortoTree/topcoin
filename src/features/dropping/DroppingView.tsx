@@ -432,13 +432,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         if (!rec.localId) continue;
 
         try {
-          const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
-            uploadToCloudinary(rec.photo_machine_blob || '', 'droppings/machine'),
-            uploadToCloudinary(rec.photo_machine_number_blob || '', 'droppings/machine_number'),
-            uploadToCloudinary(rec.photo_coin_blob || '', 'droppings/coin'),
-            rec.photo_nota_blob ? uploadToCloudinary(rec.photo_nota_blob, 'droppings/nota') : Promise.resolve(null),
-            rec.photo_optional_blob ? uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : Promise.resolve(null),
-          ]);
+          const urlMachine = await uploadToCloudinary(rec.photo_machine_blob || '', 'droppings/machine');
+          const urlMachineNumber = await uploadToCloudinary(rec.photo_machine_number_blob || '', 'droppings/machine_number');
+          const urlCoin = await uploadToCloudinary(rec.photo_coin_blob || '', 'droppings/coin');
+          const urlNota = rec.photo_nota_blob ? await uploadToCloudinary(rec.photo_nota_blob, 'droppings/nota') : null;
+          const urlOptional = rec.photo_optional_blob ? await uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : null;
 
           const today = new Date().toISOString().split('T')[0];
           const { error } = await supabase.from('droppings').insert({
@@ -538,8 +536,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       ? (actualPhysicalMeter ?? calculatedNewMeter)
       : (parseInt(noOmsetMeterStr, 10) || prevMeter);
 
-    // If offline, save directly to IndexedDB
-    if (!navigator.onLine) {
+    const saveOfflineFallback = async (reasonMsg?: string) => {
       try {
         await offlineDb.offlineDroppings.add({
           branch_id: activeBranchId,
@@ -550,8 +547,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
           machine_code: store.machine?.machine_code || '',
           has_omset: hasOmset,
           coins_collected: hasOmset ? coinsCollected : 0,
+          gross_omset: hasOmset ? grossOmset : 0,
           previous_counter_meter: prevMeter,
           actual_physical_meter: finalMeterReading,
+          has_mismatch: hasOmset ? hasMismatch : false,
           discrepancy_reason: hasOmset && hasMismatch ? discrepancyReason.trim() : null,
           store_share_amount: hasOmset ? storeShareAmount : 0,
           photo_machine_blob: photoMachine,
@@ -566,7 +565,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         });
 
         confetti({ particleCount: 50, spread: 60 });
-        setSubmitSuccess('Tersimpan secara OFFLINE di HP! Data akan terunggah otomatis saat Anda terhubung ke internet.');
+        setSubmitSuccess(
+          reasonMsg
+            ? `Tersimpan secara OFFLINE di HP (${reasonMsg})! Data & foto kunjungan aman dan akan tersinkron otomatis begitu sinyal kembali stabil.`
+            : 'Tersimpan secara OFFLINE di HP! Data akan terunggah otomatis saat Anda terhubung ke internet.'
+        );
         resetForm();
         fetchTodayDroppings();
       } catch (dbErr: any) {
@@ -574,18 +577,21 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       } finally {
         setIsSubmitting(false);
       }
+    };
+
+    // If offline, save directly to IndexedDB
+    if (!navigator.onLine) {
+      await saveOfflineFallback();
       return;
     }
 
-    // If online, upload to Cloudinary & insert to Supabase
+    // If online, upload sequentially to Cloudinary & insert to Supabase
     try {
-      const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
-        uploadToCloudinary(photoMachine, 'droppings/machine'),
-        uploadToCloudinary(photoMachineNumber, 'droppings/machine_number'),
-        uploadToCloudinary(photoCoin, 'droppings/coin'),
-        photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
-        photoOptional ? uploadToCloudinary(photoOptional, 'droppings/optional') : Promise.resolve(null),
-      ]);
+      const urlMachine = await uploadToCloudinary(photoMachine, 'droppings/machine');
+      const urlMachineNumber = await uploadToCloudinary(photoMachineNumber, 'droppings/machine_number');
+      const urlCoin = await uploadToCloudinary(photoCoin, 'droppings/coin');
+      const urlNota = photoNota ? await uploadToCloudinary(photoNota, 'droppings/nota') : null;
+      const urlOptional = photoOptional ? await uploadToCloudinary(photoOptional, 'droppings/optional') : null;
 
       const today = new Date().toISOString().split('T')[0];
       const payload = {
@@ -638,8 +644,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       await fetchTodayDroppings();
       await fetchActiveStores();
     } catch (err: any) {
-      console.error('Dropping error:', err);
-      alert(err.message || 'Gagal menyimpan transaksi dropping.');
+      console.warn('Online upload failed, falling back to local Dexie storage:', err);
+      // Fallback: save to Dexie so technician never loses data!
+      await saveOfflineFallback('Koneksi tidak stabil / ' + (err.message || 'Gagal terhubung'));
     } finally {
       setIsSubmitting(false);
     }

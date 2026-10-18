@@ -42,8 +42,28 @@ export async function uploadToCloudinary(
 
   const selectedPreset = customPreset || resolvePreset(folder);
 
+  let fileToSend: Blob | string = blobOrBase64;
+  if (typeof blobOrBase64 === 'string' && blobOrBase64.startsWith('data:')) {
+    try {
+      const parts = blobOrBase64.split(',');
+      const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/webp';
+      const binary = atob(parts[1]);
+      const array = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        array[i] = binary.charCodeAt(i);
+      }
+      fileToSend = new Blob([array], { type: mime });
+    } catch {
+      fileToSend = blobOrBase64;
+    }
+  }
+
   const formData = new FormData();
-  formData.append('file', blobOrBase64);
+  if (fileToSend instanceof Blob) {
+    formData.append('file', fileToSend, 'photo.webp');
+  } else {
+    formData.append('file', fileToSend);
+  }
   formData.append('upload_preset', selectedPreset);
 
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
