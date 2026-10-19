@@ -1097,14 +1097,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 ))}
               </div>
 
-              {/* Tombol [+ Tambah tugas] */}
+              {/* Tombol Tambah Rute Lain */}
               <button
                 type="button"
                 onClick={handleAddRelocationItem}
                 className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center gap-2 transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 cursor-pointer active:scale-98"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Tambah Tugas Relokasi Mesin</span>
+                <span>Tambah rute lain</span>
               </button>
             </div>
 
