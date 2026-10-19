@@ -909,14 +909,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       {/* Tab: Logistik Task Dispatching */}
       {activeTab === 'driver_dispatch' && (
-        <div className="space-y-5 animate-in fade-in duration-150">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <div className="space-y-6 animate-in fade-in duration-150">
+          <div className="pb-1 space-y-1">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Truck className="w-5 h-5 text-amber-500" />
-              Dispatching Tugas Logistik
+              Relokasi Mesin
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
-              Buat dan delegasikan tugas relokasi unit mesin ke tim Logistik cabang.
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Buat jadwal pemindahan/relokasi mesin ke petugas
             </p>
           </div>
 
