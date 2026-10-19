@@ -16,11 +16,11 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithPin: (identifier: string, pin: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
-  checkInToday: (chosenRole?: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir') => Promise<{ success: boolean; message?: string }>;
+  checkInToday: (chosenRole?: 'dropping' | 'marketing' | 'logistik' | 'driver' | 'sales' | 'kurir') => Promise<{ success: boolean; message?: string }>;
   updateStaffRole: (
     userId: string,
     newRole: UserRole,
-    assignedTask?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
+    assignedTask?: 'logistik' | 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
   ) => Promise<{ success: boolean; message?: string }>;
   switchDemoRole: (role: UserRole) => Promise<void>;
   refreshAttendance: () => Promise<void>;
@@ -109,11 +109,22 @@ const DEMO_PROFILES: Record<string, Partial<UserProfile>> = {
     is_active: true,
     deletion_status: 'active',
   },
+  logistik: {
+    id: '66666666-6666-6666-6666-666666666666',
+    username: 'logistik',
+    full_name: 'Dodi (Logistik Surabaya)',
+    role: 'logistik',
+    branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+    phone: '08666666666',
+    pin: '123456',
+    is_active: true,
+    deletion_status: 'active',
+  },
   driver: {
     id: '66666666-6666-6666-6666-666666666666',
-    username: 'driver',
-    full_name: 'Dodi (Driver Surabaya)',
-    role: 'driver',
+    username: 'logistik',
+    full_name: 'Dodi (Logistik Surabaya)',
+    role: 'logistik',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     phone: '08666666666',
     pin: '123456',
@@ -122,9 +133,9 @@ const DEMO_PROFILES: Record<string, Partial<UserProfile>> = {
   },
   kurir: {
     id: '66666666-6666-6666-6666-666666666666',
-    username: 'driver',
-    full_name: 'Dodi (Driver Surabaya)',
-    role: 'driver',
+    username: 'logistik',
+    full_name: 'Dodi (Logistik Surabaya)',
+    role: 'logistik',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     phone: '08666666666',
     pin: '123456',
@@ -393,7 +404,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const checkInToday = async (
-    customRole?: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir'
+    customRole?: 'dropping' | 'marketing' | 'logistik' | 'driver' | 'sales' | 'kurir'
   ): Promise<{ success: boolean; message?: string }> => {
     if (!profile) return { success: false, message: 'Anda belum login.' };
 
@@ -402,7 +413,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Default directly to profile's assigned role from Admin/BM
       const roleToUse = customRole || profile.role;
       const normalizedRole: UserRole =
-        roleToUse === 'sales' ? 'marketing' : roleToUse === 'kurir' ? 'driver' : (roleToUse as UserRole);
+        roleToUse === 'sales'
+          ? 'marketing'
+          : roleToUse === 'kurir' || roleToUse === 'driver'
+          ? 'logistik'
+          : (roleToUse as UserRole);
 
       const { data, error } = await supabase
         .from('attendances')
@@ -448,13 +463,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateStaffRole = async (
     userId: string,
     newRole: UserRole,
-    assignedTask?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
+    assignedTask?: 'logistik' | 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
   ): Promise<{ success: boolean; message?: string }> => {
     try {
+      const normalizedTargetRole: UserRole =
+        newRole === 'sales' ? 'marketing' : newRole === 'kurir' || newRole === 'driver' ? 'logistik' : newRole;
+      const normalizedAssignedTask =
+        assignedTask === 'admin_cabang'
+          ? null
+          : assignedTask === 'driver'
+          ? 'logistik'
+          : assignedTask;
+
       // 1. Build payload
-      const updatePayload: Record<string, any> = { role: newRole };
+      const updatePayload: Record<string, any> = { role: normalizedTargetRole };
       if (assignedTask !== undefined) {
-        updatePayload.assigned_task = assignedTask === 'admin_cabang' ? null : assignedTask;
+        updatePayload.assigned_task = normalizedAssignedTask;
       }
 
       // Update Supabase profiles table
@@ -471,9 +495,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profile && profile.id === userId) {
         const updated = {
           ...profile,
-          role: newRole,
+          role: normalizedTargetRole,
           ...(assignedTask !== undefined
-            ? { assigned_task: assignedTask === 'admin_cabang' ? null : assignedTask }
+            ? { assigned_task: normalizedAssignedTask }
             : {}),
         };
         setProfile(updated);
@@ -483,8 +507,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 3. If there is an active attendance today for this staff, update attendance role as well
       // so the staff layout shifts immediately without needing to wait for reset
       const workDate = getCurrentWorkDate(new Date(), resetTimeConfig);
-      const normalizedRole: UserRole =
-        newRole === 'sales' ? 'marketing' : newRole === 'kurir' ? 'driver' : newRole;
+      const normalizedRole: UserRole = normalizedTargetRole;
 
       await supabase
         .from('attendances')
@@ -548,8 +571,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const chosenFieldRole =
           chosenProfile.role === 'marketing' || chosenProfile.role === 'sales'
             ? 'marketing'
-            : chosenProfile.role === 'driver' || chosenProfile.role === 'kurir'
-            ? 'driver'
+            : chosenProfile.role === 'logistik' || chosenProfile.role === 'driver' || chosenProfile.role === 'kurir'
+            ? 'logistik'
             : 'dropping';
 
         const mockAtt: Attendance = {

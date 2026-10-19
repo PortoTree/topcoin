@@ -5,8 +5,9 @@ export type UserRole =
   | 'admin_cabang' 
   | 'marketing' 
   | 'dropping' 
-  | 'driver'
+  | 'logistik'
   // Legacy aliases for backward compatibility during phased migration
+  | 'driver'
   | 'admin'
   | 'sales'
   | 'kurir';
@@ -41,7 +42,7 @@ export interface UserProfile {
   pin?: string;
   auth_provider?: 'pin' | 'google';
   branch_id?: string | null;
-  assigned_task?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null;
+  assigned_task?: 'logistik' | 'marketing' | 'dropping' | 'admin_cabang' | 'driver' | null;
   is_active: boolean;
   deletion_status?: 'active' | 'pending_deletion';
   deletion_requested_by?: string | null;
@@ -104,13 +105,14 @@ export interface Store {
   marketing?: UserProfile;
 }
 
-export type DriverTaskType = 'pasang_baru' | 'relokasi_mesin' | 'tarik_rusak' | 'antar_koin';
+export type LogistikTaskType = 'relokasi_mesin' | 'opsional' | 'pasang_baru' | 'tarik_rusak' | 'antar_koin';
+export type DriverTaskType = LogistikTaskType;
 export type DriverTaskStatus = 'assigned' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface DriverTask {
   id: string;
   branch_id: string;
-  task_type: DriverTaskType;
+  task_type: LogistikTaskType;
   driver_id: string;
   assigned_by: string;
   store_id?: string | null;
@@ -130,6 +132,8 @@ export interface DriverTask {
   target_store?: Store;
   machine?: Machine;
 }
+
+export type LogistikTask = DriverTask;
 
 export interface DroppingTransaction {
   id: string;

@@ -55,8 +55,8 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
     if (staff.role === 'admin_cabang' || staff.role === 'admin') {
       if (staff.assigned_task && staff.assigned_task !== 'admin_cabang') {
         const taskName =
-          staff.assigned_task === 'driver'
-            ? 'Driver'
+          staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+            ? 'Logistik'
             : staff.assigned_task === 'marketing'
             ? 'Marketing'
             : 'Dropping';
@@ -70,9 +70,9 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
         className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
       };
     }
-    if (staff.role === 'driver' || staff.role === 'kurir') {
+    if (staff.role === 'logistik' || staff.role === 'driver' || staff.role === 'kurir') {
       return {
-        label: 'Driver',
+        label: 'Logistik',
         className: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
       };
     }
@@ -226,7 +226,7 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
     const newAssignedTask = isAdmin
       ? isPengelola
         ? null
-        : (selectedValue as 'driver' | 'marketing' | 'dropping')
+        : (selectedValue as 'logistik' | 'marketing' | 'dropping' | 'driver')
       : null;
     const targetRole: UserRole = isAdmin ? 'admin_cabang' : (selectedValue as UserRole);
 
@@ -705,7 +705,7 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                       Pengelola
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Kendali kas, penugasan driver, dan monitoring omset cabang
+                      Kendali kas, penugasan tim lapangan, dan monitoring omset cabang
                     </span>
                   </div>
                   {(!staff.assigned_task || staff.assigned_task === 'admin_cabang') && (
@@ -720,27 +720,27 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                 type="button"
                 onClick={() => {
                   close();
-                  handleChangeStaffRole(staff, 'driver');
+                  handleChangeStaffRole(staff, 'logistik');
                 }}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
                   (staff.role === 'admin_cabang' || staff.role === 'admin'
-                    ? staff.assigned_task === 'driver'
-                    : staff.role === 'driver')
+                    ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+                    : staff.role === 'logistik' || staff.role === 'driver')
                     ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                     : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
-                    Driver
+                    Logistik
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Penarikan setoran koin & operasional rute cabang
+                    Relokasi unit mesin dan tugas operasional armada
                   </span>
                 </div>
                 {(staff.role === 'admin_cabang' || staff.role === 'admin'
-                  ? staff.assigned_task === 'driver'
-                  : staff.role === 'driver') && (
+                  ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+                  : staff.role === 'logistik' || staff.role === 'driver') && (
                   <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
                     <Check className="w-3.5 h-3.5" />
                   </div>

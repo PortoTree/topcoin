@@ -162,7 +162,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
         setMyStores((prev) => [mockStore, ...prev]);
       }
 
-      setSuccessMsg(`Toko "${name}" berhasil didaftarkan! Tiket siap ditugaskan ke Driver.`);
+      setSuccessMsg(`Toko "${name}" berhasil didaftarkan! Tiket siap ditugaskan ke Logistik.`);
       toast.success(`Toko "${name}" berhasil didaftarkan! Tiket siap ditugaskan.`);
       setName('');
       setAddress('');
@@ -343,13 +343,13 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
                 switch (store.status) {
                   case 'proses':
                     return {
-                      label: 'Menunggu Pengiriman Driver',
+                      label: 'Menunggu Penugasan Logistik',
                       color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
                       icon: Clock,
                     };
                   case 'dikirim':
                     return {
-                      label: 'Dalam Perjalanan Driver',
+                      label: 'Dalam Operasional Logistik',
                       color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-500/30',
                       icon: Truck,
                     };

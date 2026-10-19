@@ -14,8 +14,7 @@ import {
   Eye,
   ShieldAlert,
   Coins,
-  PackagePlus,
-  Wrench,
+  Sparkles,
   X,
   MoreVertical,
   AlertTriangle,
@@ -57,13 +56,12 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileSuccess, setReconcileSuccess] = useState<string | null>(null);
 
-  // Driver Dispatch State
-  const [selectedTaskType, setSelectedTaskType] = useState<DriverTaskType>('pasang_baru');
+  // Driver & Logistik Dispatch State
+  const [selectedTaskType, setSelectedTaskType] = useState<DriverTaskType>('relokasi_mesin');
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [selectedTargetStoreId, setSelectedTargetStoreId] = useState<string>('');
   const [selectedMachineId, setSelectedMachineId] = useState<string>('');
-  const [dispatchCoinAmount, setDispatchCoinAmount] = useState<string>('500');
   const [dispatchNotes, setDispatchNotes] = useState<string>('');
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState<string | null>(null);
@@ -72,7 +70,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [newStaffUsername, setNewStaffUsername] = useState('');
   const [newStaffFullName, setNewStaffFullName] = useState('');
-  const [newStaffRole, setNewStaffRole] = useState<'marketing' | 'dropping' | 'driver'>('dropping');
+  const [newStaffRole, setNewStaffRole] = useState<'marketing' | 'dropping' | 'logistik' | 'driver'>('dropping');
   const [newStaffPin, setNewStaffPin] = useState('123456');
   const [isAddingStaff, setIsAddingStaff] = useState(false);
 
@@ -94,8 +92,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     if (staff.role === 'admin_cabang' || staff.role === 'admin') {
       if (staff.assigned_task && staff.assigned_task !== 'admin_cabang') {
         const taskName =
-          staff.assigned_task === 'driver'
-            ? 'Driver'
+          staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+            ? 'Logistik'
             : staff.assigned_task === 'marketing'
             ? 'Marketing'
             : 'Dropping';
@@ -109,10 +107,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
       };
     }
-    if (staff.role === 'driver' || staff.role === 'kurir') {
+    if (staff.role === 'logistik' || staff.role === 'driver' || staff.role === 'kurir') {
       return {
-        label: 'Driver',
-        className: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
+        label: 'Logistik',
+        className: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
       };
     }
     if (staff.role === 'dropping') {
@@ -315,17 +313,27 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   };
 
-  // Handle Dispatch Driver Task
+  // Handle Dispatch Logistik Task
   const handleDispatchTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile) return;
 
     if (!selectedDriverId) {
-      toast.warning('Pilih driver yang akan ditugaskan.');
+      toast.warning('Pilih staf logistik yang akan ditugaskan.');
       return;
     }
-    if (!selectedStoreId && selectedTaskType !== 'tarik_rusak') {
-      toast.warning('Pilih toko tujuan.');
+    if (selectedTaskType === 'relokasi_mesin') {
+      if (!selectedStoreId) {
+        toast.warning('Pilih toko mitra asal relokasi.');
+        return;
+      }
+      if (!selectedTargetStoreId) {
+        toast.warning('Pilih toko mitra tujuan baru.');
+        return;
+      }
+    }
+    if (selectedTaskType === 'opsional' && !dispatchNotes.trim()) {
+      toast.warning('Wajib mengisi keterangan / rincian tugas opsional.');
       return;
     }
 
@@ -340,7 +348,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         store_id: selectedStoreId || null,
         target_store_id: selectedTaskType === 'relokasi_mesin' ? selectedTargetStoreId : null,
         machine_id: selectedMachineId || null,
-        coin_amount: selectedTaskType === 'antar_koin' ? parseInt(dispatchCoinAmount, 10) || 500 : 0,
+        coin_amount: 0,
         status: 'assigned',
         notes: dispatchNotes.trim() || null,
       };
@@ -349,13 +357,13 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       if (error) console.warn('DB dispatch task fallback:', error);
 
       confetti({ particleCount: 40, spread: 50 });
-      setDispatchSuccess('Tugas berhasil dibuat dan dikirimkan ke driver!');
-      toast.success('Tugas driver berhasil dikirimkan!');
+      setDispatchSuccess('Tugas berhasil dibuat dan dikirimkan ke staf logistik!');
+      toast.success('Tugas logistik berhasil dikirimkan!');
       setDispatchNotes('');
       fetchBranchData();
     } catch (err: any) {
       console.error('Dispatch error:', err);
-      toast.error(err.message || 'Gagal membuat tugas driver.');
+      toast.error(err.message || 'Gagal membuat tugas logistik.');
     } finally {
       setIsDispatching(false);
     }
@@ -425,7 +433,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   // Reassign Admin Cabang Task / Pengelola
   const handleChangeAdminTask = async (staff: UserProfile, selectedValue: string) => {
     const isPengelola = selectedValue === 'admin_cabang';
-    const newTask = isPengelola ? null : (selectedValue as 'driver' | 'marketing' | 'dropping');
+    const newTask = isPengelola ? null : (selectedValue as 'logistik' | 'marketing' | 'dropping' | 'driver');
     const label = isPengelola ? 'Pengelola' : selectedValue.toUpperCase();
 
     try {
@@ -481,12 +489,19 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   };
 
-  const driversList = branchStaff.filter((s) => s.role === 'driver');
+  const driversList = branchStaff.filter(
+    (s) =>
+      s.role === 'logistik' ||
+      s.role === 'driver' ||
+      s.role === 'kurir' ||
+      s.assigned_task === 'logistik' ||
+      s.assigned_task === 'driver'
+  );
   const warehouseMachines = machines.filter((m) => m.status === 'gudang');
 
   // Khusus Tab Tugas Lapangan Aktif: Render langsung tampilan tugas penuh tanpa padding ganda & banner redundan
   if (activeTab === 'admin_task' && profile?.assigned_task) {
-    if (profile.assigned_task === 'driver') {
+    if (profile.assigned_task === 'logistik' || profile.assigned_task === 'driver') {
       return <DriverView activeTab="driver_tasks" />;
     }
     if (profile.assigned_task === 'marketing') {
@@ -705,16 +720,16 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Driver Task Dispatching */}
+      {/* Tab: Logistik Task Dispatching */}
       {activeTab === 'driver_dispatch' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Truck className="w-5 h-5 text-amber-500" />
-              Dispatching Tugas Driver
+              Dispatching Tugas Logistik
             </h2>
             <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-              Buat dan tugaskan tiket operasional unit mesin ke armada Driver cabang.
+              Buat dan delegasikan tugas relokasi unit atau tugas opsional ke tim Logistik cabang.
             </p>
           </div>
 
@@ -726,17 +741,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           )}
 
           <form onSubmit={handleDispatchTask} className="space-y-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-            {/* 1. Jenis Tugas */}
+            {/* 1. Jenis Tugas: Hanya Relokasi Mesin dan Opsional */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Pilih Jenis Tugas *
               </label>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: 'pasang_baru', label: 'Pasang Baru', icon: PackagePlus },
-                  { id: 'relokasi_mesin', label: 'Relokasi Mesin', icon: Truck },
-                  { id: 'tarik_rusak', label: 'Tarik Unit Rusak', icon: Wrench },
-                  { id: 'antar_koin', label: 'Antar Stok Koin', icon: Coins },
+                  { id: 'relokasi_mesin', label: 'Relokasi Mesin', icon: Truck, desc: 'Pindah unit antar toko' },
+                  { id: 'opsional', label: 'Tugas Opsional', icon: Sparkles, desc: 'Tugas fleksibel lapangan' },
                 ].map((item) => {
                   const Icon = item.icon;
                   const isSelected = selectedTaskType === item.id;
@@ -745,24 +758,27 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       key={item.id}
                       type="button"
                       onClick={() => setSelectedTaskType(item.id as DriverTaskType)}
-                      className={`p-2.5 rounded-xl border text-xs font-extrabold flex items-center gap-2 transition cursor-pointer ${
+                      className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
                         isSelected
-                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-400 shadow-xs'
-                          : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'
+                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-400 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      <Icon className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                      <span className="truncate">{item.label}</span>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Icon className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-xs font-extrabold truncate">{item.label}</span>
+                      </div>
+                      <span className="text-[10px] opacity-75 font-medium">{item.desc}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* 2. Pilih Driver */}
+            {/* 2. Pilih Staf Logistik */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Tugaskan ke Driver *
+                Tugaskan ke Staf Logistik *
               </label>
               <select
                 required
@@ -770,7 +786,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 onChange={(e) => setSelectedDriverId(e.target.value)}
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
               >
-                <option value="">-- Pilih Driver Cabang --</option>
+                <option value="">-- Pilih Staf Logistik Cabang --</option>
                 {driversList.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.full_name} ({d.username})
@@ -779,98 +795,130 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               </select>
             </div>
 
-            {/* 3. Pilih Toko */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Toko Mitra Tujuan *
-              </label>
-              <select
-                required
-                value={selectedStoreId}
-                onChange={(e) => setSelectedStoreId(e.target.value)}
-                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-              >
-                <option value="">-- Pilih Toko --</option>
-                {stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.address}) - Status: {s.status}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Jika Relokasi Mesin: Toko Asal, Toko Tujuan, Mesin */}
+            {selectedTaskType === 'relokasi_mesin' ? (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Toko Mitra Asal (Lokasi Saat Ini) *
+                  </label>
+                  <select
+                    required
+                    value={selectedStoreId}
+                    onChange={(e) => {
+                      setSelectedStoreId(e.target.value);
+                      const st = stores.find((s) => s.id === e.target.value);
+                      if (st?.current_machine_id) {
+                        setSelectedMachineId(st.current_machine_id);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- Pilih Toko Asal --</option>
+                    {stores.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.address}) {s.machine ? `• [${s.machine.machine_code}]` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            {/* If Relocation: Target Store */}
-            {selectedTaskType === 'relokasi_mesin' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Pindahkan ke Toko Mitra Baru *
-                </label>
-                <select
-                  required
-                  value={selectedTargetStoreId}
-                  onChange={(e) => setSelectedTargetStoreId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-                >
-                  <option value="">-- Pilih Toko Tujuan Relokasi --</option>
-                  {stores
-                    .filter((s) => s.id !== selectedStoreId)
-                    .map((s) => (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Pindahkan ke Toko Mitra Baru *
+                  </label>
+                  <select
+                    required
+                    value={selectedTargetStoreId}
+                    onChange={(e) => setSelectedTargetStoreId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- Pilih Toko Tujuan Relokasi --</option>
+                    {stores
+                      .filter((s) => s.id !== selectedStoreId)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.address})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Unit Mesin yang Direlokasi (Opsional)
+                  </label>
+                  <select
+                    value={selectedMachineId}
+                    onChange={(e) => setSelectedMachineId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- Pilih Mesin (Bisa Otomatis dari Toko Asal) --</option>
+                    {machines.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.machine_code} - Status: {m.status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : (
+              /* Jika Tugas Opsional: Fleksibel, Toko Opsional */
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Toko Mitra Terkait (Opsional / Fleksibel)
+                  </label>
+                  <select
+                    value={selectedStoreId}
+                    onChange={(e) => setSelectedStoreId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- Umum / Tanpa Toko Khusus --</option>
+                    {stores.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} ({s.address})
                       </option>
                     ))}
-                </select>
-              </div>
-            )}
+                  </select>
+                </div>
 
-            {/* If Pasang Baru: Pilih Unit Mesin dari Gudang */}
-            {selectedTaskType === 'pasang_baru' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Unit Mesin dari Gudang Cabang *
-                </label>
-                <select
-                  required
-                  value={selectedMachineId}
-                  onChange={(e) => setSelectedMachineId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-                >
-                  <option value="">-- Pilih Unit Mesin di Gudang --</option>
-                  {warehouseMachines.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.machine_code} (Counter: {m.last_counter_meter})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* If Antar Koin: Input Jumlah Koin */}
-            {selectedTaskType === 'antar_koin' && (
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Jumlah Stok Koin yang Diantar *
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={dispatchCoinAmount}
-                  onChange={(e) => setDispatchCoinAmount(e.target.value)}
-                  placeholder="500"
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white"
-                />
-              </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Unit Mesin Terkait (Opsional)
+                  </label>
+                  <select
+                    value={selectedMachineId}
+                    onChange={(e) => setSelectedMachineId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="">-- Tidak ada mesin khusus --</option>
+                    {machines.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.machine_code} ({m.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Instruksi Khusus untuk Driver (Opsional)
+                {selectedTaskType === 'opsional'
+                  ? 'Instruksi / Rincian Tugas Opsional *'
+                  : 'Catatan / Instruksi Relokasi (Opsional)'}
               </label>
               <textarea
+                required={selectedTaskType === 'opsional'}
                 rows={2}
                 value={dispatchNotes}
                 onChange={(e) => setDispatchNotes(e.target.value)}
-                placeholder="Misal: Bertemu dengan Ibu Ratna di kasir..."
+                placeholder={
+                  selectedTaskType === 'opsional'
+                    ? 'Misal: Cek instalasi kelistrikan, ganti spanduk, bantu pasang unit baru...'
+                    : 'Misal: Konfirmasi ke kasir sebelum angkat mesin...'
+                }
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
               />
             </div>
@@ -881,14 +929,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               className="w-full py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 active:scale-95 transition cursor-pointer"
             >
               <Truck className="w-4 h-4" />
-              <span>{isDispatching ? 'Menugaskan...' : 'Kirimkan Tiket Tugas ke Driver'}</span>
+              <span>{isDispatching ? 'Menugaskan...' : 'Kirimkan Tiket Tugas ke Logistik'}</span>
             </button>
           </form>
 
-          {/* List of Recent Driver Tasks */}
+          {/* List of Recent Tasks */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-2">
             <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">
-              Daftar Tugas Driver ({driverTasks.length})
+              Daftar Riwayat Tugas Logistik ({driverTasks.length})
             </h3>
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
               {driverTasks.map((t) => (
@@ -898,7 +946,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       {t.task_type.toUpperCase().replace('_', ' ')}: {t.store?.name}
                     </h4>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Driver: {t.driver?.full_name} • Status: {t.status}
+                      Petugas Logistik: {t.driver?.full_name} • Status: {t.status}
                     </p>
                   </div>
                   <span
@@ -1124,7 +1172,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 >
                   <option value="dropping">Dropping (Koleksi Omset)</option>
                   <option value="marketing">Marketing (Pendaftaran Toko)</option>
-                  <option value="driver">Driver (Logistik Mesin)</option>
+                  <option value="logistik">Logistik (Armada & Mesin)</option>
                 </select>
               </div>
 
@@ -1236,7 +1284,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       Pengelola
                     </span>
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Kendali kas, penugasan driver, dan monitoring omset cabang
+                      Kendali kas, penugasan tim logistik, dan monitoring omset cabang
                     </span>
                   </div>
                   {(!staff.assigned_task || staff.assigned_task === 'admin_cabang') && (
@@ -1252,30 +1300,30 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 onClick={() => {
                   close();
                   if (staff.role === 'admin_cabang' || staff.role === 'admin') {
-                    handleChangeAdminTask(staff, 'driver');
+                    handleChangeAdminTask(staff, 'logistik');
                   } else {
-                    handleChangeStaffRole(staff, 'driver');
+                    handleChangeStaffRole(staff, 'logistik');
                   }
                 }}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
                   (staff.role === 'admin_cabang' || staff.role === 'admin'
-                    ? staff.assigned_task === 'driver'
-                    : staff.role === 'driver')
+                    ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+                    : staff.role === 'logistik' || staff.role === 'driver')
                     ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                     : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <div>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
-                    Driver
+                    Logistik
                   </span>
                   <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Penarikan setoran koin & operasional rute cabang
+                    Relokasi unit mesin dan tugas operasional lapangan
                   </span>
                 </div>
                 {(staff.role === 'admin_cabang' || staff.role === 'admin'
-                  ? staff.assigned_task === 'driver'
-                  : staff.role === 'driver') && (
+                  ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+                  : staff.role === 'logistik' || staff.role === 'driver') && (
                   <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
                     <Check className="w-3.5 h-3.5" />
                   </div>

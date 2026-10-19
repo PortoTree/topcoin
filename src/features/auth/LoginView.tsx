@@ -209,14 +209,14 @@ export const LoginView: React.FC = () => {
               <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">dropping • 123456</div>
             </button>
 
-            {/* 6. Driver */}
+            {/* 6. Logistik */}
             <button
               type="button"
-              onClick={() => handleQuickDemo('driver')}
+              onClick={() => handleQuickDemo('logistik')}
               className="py-1.5 px-2 bg-amber-50 hover:bg-amber-100 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 border border-amber-200 dark:border-amber-500/30 rounded-lg text-left transition active:scale-95 cursor-pointer"
             >
-              <div className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300">6. Driver</div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">driver • 123456</div>
+              <div className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300">6. Logistik</div>
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">logistik • 123456</div>
             </button>
           </div>
         </div>

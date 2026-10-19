@@ -643,7 +643,7 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
                   <option value="admin_cabang">Admin Cabang (Kas & Dispatch)</option>
                   <option value="marketing">Marketing (Pendaftaran Toko)</option>
                   <option value="dropping">Dropping (Koleksi Omset)</option>
-                  <option value="driver">Driver (Logistik Mesin)</option>
+                  <option value="logistik">Logistik (Armada & Mesin)</option>
                 </select>
               </div>
 

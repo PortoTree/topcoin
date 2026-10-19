@@ -137,7 +137,7 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
-            Driver ({deliveries.length})
+            Logistik ({deliveries.length})
           </button>
         </div>
 
@@ -164,7 +164,7 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
                     </p>
                   </div>
                   <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-500/30">
-                    {a.role === 'sales' ? 'Marketing' : a.role === 'kurir' ? 'Driver' : 'Dropping'}
+                    {a.role === 'sales' || a.role === 'marketing' ? 'Marketing' : a.role === 'kurir' || a.role === 'driver' || a.role === 'logistik' ? 'Logistik' : 'Dropping'}
                   </span>
                 </div>
               ))

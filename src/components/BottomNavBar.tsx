@@ -45,14 +45,18 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         const taskItems = [];
         if (assignedTask && assignedTask !== 'admin_cabang') {
           const taskIcon =
-            assignedTask === 'driver' ? Truck : assignedTask === 'marketing' ? StoreIcon : ClipboardList;
+            assignedTask === 'logistik' || assignedTask === 'driver'
+              ? Truck
+              : assignedTask === 'marketing'
+              ? StoreIcon
+              : ClipboardList;
           taskItems.push({ id: 'admin_task', label: 'Tugas', icon: taskIcon });
         }
 
         return [
           ...taskItems,
           { id: 'monitoring', label: 'Live Omset', icon: TrendingUp },
-          { id: 'driver_dispatch', label: 'Tugas Driver', icon: Truck },
+          { id: 'driver_dispatch', label: 'Tugas Logistik', icon: Truck },
           { id: 'machines', label: 'Mesin & Toko', icon: Cpu },
           { id: 'employees', label: 'Karyawan', icon: Users },
         ];
@@ -63,10 +67,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
           { id: 'new_store', label: 'Input Toko', icon: StoreIcon },
           { id: 'my_stores', label: 'Daftar Toko', icon: ClipboardList },
         ];
+      case 'logistik':
       case 'driver':
       case 'kurir':
         return [
-          { id: 'driver_tasks', label: 'Tugas Driver', icon: Truck },
+          { id: 'driver_tasks', label: 'Tugas Logistik', icon: Truck },
           { id: 'completed_tasks', label: 'Selesai', icon: CheckCircle2 },
         ];
       case 'dropping':

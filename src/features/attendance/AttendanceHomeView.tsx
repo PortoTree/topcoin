@@ -28,7 +28,7 @@ export const AttendanceHomeView: React.FC = () => {
 
   const assignedRole = profile.role;
   const isMarketing = assignedRole === 'marketing' || assignedRole === 'sales';
-  const isDriver = assignedRole === 'driver' || assignedRole === 'kurir';
+  const isDriver = assignedRole === 'logistik' || assignedRole === 'driver' || assignedRole === 'kurir';
   const isDropping = !isMarketing && !isDriver; // Default to dropping
 
   const handleCheckIn = async () => {
@@ -130,12 +130,12 @@ export const AttendanceHomeView: React.FC = () => {
               <h2 className="text-xl font-black text-slate-900 dark:text-white capitalize">
                 {isDropping && 'Petugas Dropping'}
                 {isMarketing && 'Petugas Marketing'}
-                {isDriver && 'Driver Lapangan'}
+                {isDriver && 'Logistik Lapangan'}
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-[280px] mx-auto font-medium leading-relaxed">
                 {isDropping && 'Pencocokan angka meteran mesin, penarikan koin omset laci, dan input jatah toko mitra.'}
                 {isMarketing && 'Survei calon lokasi mitra, pendaftaran toko baru, dan pengajuan penempatan mesin.'}
-                {isDriver && 'Pengiriman unit mesin dari gudang ke toko mitra dan serah terima penempatan.'}
+                {isDriver && 'Relokasi unit mesin ke toko mitra, monitoring armada, dan tugas operasional lapangan.'}
               </p>
             </div>
 

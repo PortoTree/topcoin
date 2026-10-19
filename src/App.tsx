@@ -32,7 +32,7 @@ const MainAppContent: React.FC = () => {
       }
     }
     else if (current === 'marketing' || current === 'sales') setActiveTab('new_store');
-    else if (current === 'driver' || current === 'kurir') setActiveTab('driver_tasks');
+    else if (current === 'logistik' || current === 'driver' || current === 'kurir') setActiveTab('driver_tasks');
     else if (current === 'dropping') setActiveTab('store_visits'); // List kunjungan toko partner
   }, [activeRole, role, profile?.assigned_task]);
 
@@ -85,7 +85,7 @@ const MainAppContent: React.FC = () => {
         {(currentOperatingRole === 'marketing' || currentOperatingRole === 'sales') && (
           <MarketingView activeTab={activeTab} />
         )}
-        {(currentOperatingRole === 'driver' || currentOperatingRole === 'kurir') && (
+        {(currentOperatingRole === 'logistik' || currentOperatingRole === 'driver' || currentOperatingRole === 'kurir') && (
           <DriverView activeTab={activeTab} />
         )}
         {currentOperatingRole === 'dropping' && <DroppingView activeTab={activeTab} />}

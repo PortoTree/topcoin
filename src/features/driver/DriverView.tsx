@@ -33,11 +33,11 @@ const DEMO_DRIVER_TASKS: DriverTask[] = [
   {
     id: 'task-demo-1',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    task_type: 'pasang_baru',
+    task_type: 'relokasi_mesin',
     driver_id: '66666666-6666-6666-6666-666666666666',
     assigned_by: '33333333-3333-3333-3333-333333333333',
     status: 'assigned',
-    notes: 'Bawa unit MSN-SBY-001 dari gudang ke toko baru.',
+    notes: 'Relokasi unit MSN-SBY-001 dari Toko Berkah Mandiri ke Kedai Kopi Rezeki.',
     created_at: new Date().toISOString(),
     store: {
       id: 'store-demo-1',
@@ -47,32 +47,13 @@ const DEMO_DRIVER_TASKS: DriverTask[] = [
       phone: '081234567890',
       latitude: -7.265,
       longitude: 112.742,
-      status: 'proses',
-      current_machine_id: null,
+      status: 'terpasang',
+      current_machine_id: 'm-demo-1',
       photo_store_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
-    machine: {
-      id: 'm-demo-1',
-      machine_code: 'MSN-SBY-001',
-      status: 'gudang',
-      current_store_id: null,
-      notes: null,
-      created_at: new Date().toISOString(),
-    },
-  },
-  {
-    id: 'task-demo-2',
-    branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    task_type: 'antar_koin',
-    driver_id: '66666666-6666-6666-6666-666666666666',
-    assigned_by: '33333333-3333-3333-3333-333333333333',
-    coin_amount: 500,
-    status: 'assigned',
-    notes: 'Koin cadangan toko menipis, antar 500 koin.',
-    created_at: new Date().toISOString(),
-    store: {
+    target_store: {
       id: 'store-demo-2',
       name: 'Kedai Kopi Rezeki',
       address: 'Jl. Embong Malang No. 45, Surabaya',
@@ -81,20 +62,28 @@ const DEMO_DRIVER_TASKS: DriverTask[] = [
       latitude: -7.261,
       longitude: 112.738,
       status: 'terpasang',
-      current_machine_id: 'm-demo-2',
+      current_machine_id: null,
       photo_store_url: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
+    machine: {
+      id: 'm-demo-1',
+      machine_code: 'MSN-SBY-001',
+      status: 'terpasang',
+      current_store_id: 'store-demo-1',
+      notes: null,
+      created_at: new Date().toISOString(),
+    },
   },
   {
-    id: 'task-demo-3',
+    id: 'task-demo-2',
     branch_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    task_type: 'tarik_rusak',
+    task_type: 'opsional',
     driver_id: '66666666-6666-6666-6666-666666666666',
     assigned_by: '33333333-3333-3333-3333-333333333333',
-    status: 'in_progress',
-    notes: 'Pencapit koin tidak berfungsi. Tarik ke gudang.',
+    status: 'assigned',
+    notes: 'Cek kondisi fisik mesin dan instalasi spanduk di Warung Barokah.',
     created_at: new Date().toISOString(),
     store: {
       id: 'store-demo-3',
@@ -193,7 +182,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
         .update({
           status: 'completed',
           photo_evidence_url: photoUrl,
-          notes: executionNotes.trim() ? `${activeTaskToExecute.notes || ''} [Driver: ${executionNotes.trim()}]` : activeTaskToExecute.notes,
+          notes: executionNotes.trim() ? `${activeTaskToExecute.notes || ''} [Logistik: ${executionNotes.trim()}]` : activeTaskToExecute.notes,
           completed_at: new Date().toISOString(),
         })
         .eq('id', activeTaskToExecute.id);
@@ -257,17 +246,23 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
 
   const getTaskBadge = (type: DriverTaskType) => {
     switch (type) {
-      case 'pasang_baru':
-        return {
-          label: 'Pasang Mesin Baru',
-          color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30',
-          icon: PackagePlus,
-        };
       case 'relokasi_mesin':
         return {
           label: 'Relokasi Mesin',
           color: 'bg-blue-50 dark:bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-500/30',
           icon: Truck,
+        };
+      case 'opsional':
+        return {
+          label: 'Tugas Opsional',
+          color: 'bg-purple-50 dark:bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-500/30',
+          icon: Sparkles,
+        };
+      case 'pasang_baru':
+        return {
+          label: 'Pasang Baru',
+          color: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30',
+          icon: PackagePlus,
         };
       case 'tarik_rusak':
         return {
@@ -281,6 +276,12 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
           color: 'bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/30',
           icon: Coins,
         };
+      default:
+        return {
+          label: 'Tugas Logistik',
+          color: 'bg-slate-50 dark:bg-slate-500/10 text-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-500/30',
+          icon: Truck,
+        };
     }
   };
 
@@ -293,7 +294,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Truck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                Daftar Tugas Lapangan
+                Daftar Tugas Logistik
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
                 {tasks.length} tiket tugas aktif di {currentBranch?.name || 'Cabang'}
