@@ -124,6 +124,12 @@ export interface DriverTask {
   notes?: string | null;
   completed_at?: string | null;
   created_at: string;
+  // Relocation tracking
+  pickup_photo_url?: string | null;
+  pickup_notes?: string | null;
+  pickup_at?: string | null;
+  last_coin_meter?: number | null;
+  delivery_notes?: string | null;
   // Joins
   branch?: Branch;
   driver?: UserProfile;

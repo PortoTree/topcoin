@@ -18,6 +18,9 @@ import {
   Sparkles,
   FileText,
   Pencil,
+  Navigation,
+  Gauge,
+  Clock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DriverTask, DriverTaskType } from '../../types';
@@ -117,11 +120,27 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
   const [completedTasks, setCompletedTasks] = useState<DriverTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Execution Modal State
+  // Execution Modal State (Non-relocation tasks)
   const [activeTaskToExecute, setActiveTaskToExecute] = useState<DriverTask | null>(null);
   const [evidencePhotoBlob, setEvidencePhotoBlob] = useState<Blob | string | null>(null);
   const [executionNotes, setExecutionNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 1. Relocation Pickup Modal State ("Diangkut" -> in_progress)
+  const [pickupTaskToExecute, setPickupTaskToExecute] = useState<DriverTask | null>(null);
+  const [pickupPhotoBlob, setPickupPhotoBlob] = useState<Blob | string | null>(null);
+  const [pickupNotes, setPickupNotes] = useState('');
+  const [isSubmittingPickup, setIsSubmittingPickup] = useState(false);
+
+  // 2. Relocation Delivery Modal State ("Dikirim" -> completed)
+  const [deliveryTaskToExecute, setDeliveryTaskToExecute] = useState<DriverTask | null>(null);
+  const [deliveryPhotoBlob, setDeliveryPhotoBlob] = useState<Blob | string | null>(null);
+  const [deliveryCoinMeter, setDeliveryCoinMeter] = useState('');
+  const [deliveryNotes, setDeliveryNotes] = useState('');
+  const [isSubmittingDelivery, setIsSubmittingDelivery] = useState(false);
+
+  // 3. Relocation Summary Modal State ("Berhasil dipindah")
+  const [summaryTask, setSummaryTask] = useState<DriverTask | null>(null);
 
   // Instruction & Notes Modal State
   const [selectedInstruction, setSelectedInstruction] = useState<{ storeName: string; notes: string } | null>(null);
@@ -248,27 +267,123 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     }
   };
 
-  // Mark task as In Transit ("Diangkut")
-  const handleMarkAsInTransit = async (task: DriverTask) => {
+  // 1. Confirm Machine Pickup ("Diangkut" -> in_progress)
+  const handleConfirmPickup = async () => {
+    if (!pickupTaskToExecute) return;
+    setIsSubmittingPickup(true);
     try {
+      let photoUrl: string | null = null;
+      if (pickupPhotoBlob) {
+        photoUrl = await uploadToCloudinary(pickupPhotoBlob, 'driver_tasks');
+      }
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('driver_tasks')
-        .update({ status: 'in_progress' })
-        .eq('id', task.id);
+        .update({
+          status: 'in_progress',
+          pickup_photo_url: photoUrl,
+          pickup_notes: pickupNotes.trim() || null,
+          pickup_at: now,
+        })
+        .eq('id', pickupTaskToExecute.id);
 
-      if (error) console.warn('DB in_progress fallback:', error);
+      if (error) console.warn('DB update pickup fallback:', error);
+
+      const updatedTask: DriverTask = {
+        ...pickupTaskToExecute,
+        status: 'in_progress',
+        pickup_photo_url: photoUrl,
+        pickup_notes: pickupNotes.trim() || null,
+        pickup_at: now,
+      };
 
       setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: 'in_progress' } : t))
+        prev.map((t) => (t.id === pickupTaskToExecute.id ? updatedTask : t))
       );
 
-      toast.success(
-        task.task_type === 'relokasi_mesin'
-          ? 'Mesin telah diangkut! Rute pengantaran diarahkan ke Toko Tujuan.'
-          : 'Status tugas diperbarui menjadi sedang berjalan.'
-      );
+      toast.success('Mesin berhasil diangkut! Mengarahkan ke toko tujuan.');
+      setPickupTaskToExecute(null);
+      setPickupPhotoBlob(null);
+      setPickupNotes('');
     } catch (err: any) {
-      toast.error('Gagal memperbarui status tugas.');
+      console.error('Error confirming pickup:', err);
+      toast.error(err.message || 'Gagal memproses pengangkutan mesin.');
+    } finally {
+      setIsSubmittingPickup(false);
+    }
+  };
+
+  // 2. Confirm Machine Delivery ("Dikirim" -> completed)
+  const handleConfirmDelivery = async () => {
+    if (!deliveryTaskToExecute) return;
+    setIsSubmittingDelivery(true);
+    try {
+      let photoUrl: string | null = null;
+      if (deliveryPhotoBlob) {
+        photoUrl = await uploadToCloudinary(deliveryPhotoBlob, 'driver_tasks');
+      }
+      const now = new Date().toISOString();
+      const meterVal = deliveryCoinMeter.trim() ? parseInt(deliveryCoinMeter, 10) : null;
+
+      const { error: taskErr } = await supabase
+        .from('driver_tasks')
+        .update({
+          status: 'completed',
+          photo_evidence_url: photoUrl,
+          last_coin_meter: isNaN(meterVal as number) ? null : meterVal,
+          delivery_notes: deliveryNotes.trim() || null,
+          completed_at: now,
+        })
+        .eq('id', deliveryTaskToExecute.id);
+
+      if (taskErr) console.warn('DB update delivery fallback:', taskErr);
+
+      // Auto update store & machine
+      if (deliveryTaskToExecute.target_store_id && deliveryTaskToExecute.machine_id) {
+        await supabase
+          .from('machines')
+          .update({ current_store_id: deliveryTaskToExecute.target_store_id })
+          .eq('id', deliveryTaskToExecute.machine_id);
+        await supabase
+          .from('stores')
+          .update({
+            current_machine_id: deliveryTaskToExecute.machine_id,
+            status: 'terpasang',
+          })
+          .eq('id', deliveryTaskToExecute.target_store_id);
+      }
+
+      // Confetti feedback
+      try {
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+      } catch {
+        // ignore
+      }
+
+      const updatedTask: DriverTask = {
+        ...deliveryTaskToExecute,
+        status: 'completed',
+        photo_evidence_url: photoUrl,
+        last_coin_meter: isNaN(meterVal as number) ? null : meterVal,
+        delivery_notes: deliveryNotes.trim() || null,
+        completed_at: now,
+      };
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === deliveryTaskToExecute.id ? updatedTask : t))
+      );
+      setCompletedTasks((prev) => [updatedTask, ...prev]);
+
+      toast.success('Tugas relokasi selesai! Mesin berhasil dipindahkan.');
+      setDeliveryTaskToExecute(null);
+      setDeliveryPhotoBlob(null);
+      setDeliveryCoinMeter('');
+      setDeliveryNotes('');
+    } catch (err: any) {
+      console.error('Error confirming delivery:', err);
+      toast.error(err.message || 'Gagal menyelesaikan tugas relokasi.');
+    } finally {
+      setIsSubmittingDelivery(false);
     }
   };
 
@@ -371,10 +486,12 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             tasks.map((task) => {
               const isRelocation = task.task_type === 'relokasi_mesin';
               const isInTransit = task.status === 'in_progress';
+              const isCompleted = task.status === 'completed';
 
-              // If in transit during relocation, target store is the destination!
+              // Saat belum diangkut ('assigned') -> currentStore adalah Toko Asal (task.store)
+              // Saat sudah diangkut ('in_progress' atau 'completed') -> currentStore adalah Toko Tujuan (task.target_store || task.store)
               const currentStore =
-                isRelocation && isInTransit && task.target_store
+                isRelocation && (isInTransit || isCompleted) && task.target_store
                   ? task.target_store
                   : task.store || task.target_store;
 
@@ -422,7 +539,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     <span className="line-clamp-2">{storeAddress}</span>
                   </p>
 
-                  {/* Row 3: [logo wa] [logo maps.png] [icon pensil] [tombol dynamic "Diangkut" dan "Berhasil dipindah"] */}
+                  {/* Row 3: [logo wa] [logo maps.png] [icon pensil] [tombol dynamic] */}
                   <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                     {/* Logo WA (pakai whatsapp.png) */}
                     <a
@@ -471,26 +588,43 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       <Pencil className="w-4 h-4" />
                     </button>
 
-                    {/* Tombol dynamic "Diangkut" (Hitam Putih sesuai tema) dan "Berhasil dipindah" */}
+                    {/* Tombol dynamic: 1. Diangkut -> 2. Dikirim -> 3. Berhasil dipindah */}
                     {isRelocation ? (
-                      !isInTransit ? (
+                      task.status === 'assigned' ? (
+                        /* 1. Diangkut (Hitam Putih) */
                         <button
                           type="button"
-                          onClick={() => handleMarkAsInTransit(task)}
+                          onClick={() => {
+                            setPickupTaskToExecute(task);
+                            setPickupPhotoBlob(null);
+                            setPickupNotes('');
+                          }}
                           className="flex-1 py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/15 dark:shadow-white/10 active:scale-95 transition cursor-pointer"
                         >
                           <Truck className="w-3.5 h-3.5" />
                           <span>Diangkut</span>
                         </button>
-                      ) : (
+                      ) : task.status === 'in_progress' ? (
+                        /* 2. Dikirim (Warna Biru) */
                         <button
                           type="button"
                           onClick={() => {
-                            setActiveTaskToExecute(task);
-                            setEvidencePhotoBlob(null);
-                            setExecutionNotes('');
+                            setDeliveryTaskToExecute(task);
+                            setDeliveryPhotoBlob(null);
+                            setDeliveryCoinMeter('');
+                            setDeliveryNotes('');
                           }}
-                          className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-95 transition cursor-pointer"
+                        >
+                          <Navigation className="w-3.5 h-3.5" />
+                          <span>Dikirim</span>
+                        </button>
+                      ) : (
+                        /* 3. Berhasil dipindah (Hijau Emerald -> Trigger Summary) */
+                        <button
+                          type="button"
+                          onClick={() => setSummaryTask(task)}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Berhasil dipindah</span>
@@ -580,6 +714,18 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                         Lihat Foto Bukti Lapangan
                       </a>
                     </div>
+                  )}
+
+                  {/* Tombol Lihat Ringkasan Relokasi */}
+                  {task.task_type === 'relokasi_mesin' && (
+                    <button
+                      type="button"
+                      onClick={() => setSummaryTask(task)}
+                      className="w-full mt-2 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Lihat Ringkasan Relokasi</span>
+                    </button>
                   )}
                 </div>
               );
@@ -671,6 +817,371 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1. Modal Pengangkutan Mesin ("Diangkut" -> in_progress) */}
+      {pickupTaskToExecute && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-slate-900 dark:text-white" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Pengangkutan Mesin (Toko Asal)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickupTaskToExecute(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Task Info Summary */}
+            <div className="bg-slate-50 dark:bg-slate-950/70 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-slate-900 dark:text-white">
+                  {pickupTaskToExecute.store?.name}
+                </span>
+                {pickupTaskToExecute.machine && (
+                  <span className="text-[10px] font-black bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
+                    {pickupTaskToExecute.machine.machine_code}
+                  </span>
+                )}
+              </div>
+              <div className="text-slate-500 dark:text-slate-400">
+                {pickupTaskToExecute.store?.address}
+              </div>
+            </div>
+
+            {/* Camera Capture (Opsional) */}
+            <CameraCapture
+              label="Foto Bukti Pengangkutan (Opsional)"
+              subLabel="Ambil foto mesin saat diangkut dari toko asal"
+              required={false}
+              onPhotoCaptured={({ base64 }) => setPickupPhotoBlob(base64)}
+            />
+
+            {/* Catatan (Opsional) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Catatan Pengangkutan (Opsional)
+              </label>
+              <textarea
+                rows={2}
+                value={pickupNotes}
+                onChange={(e) => setPickupNotes(e.target.value)}
+                placeholder="Misal: Mesin sudah dinaikkan ke armada pick-up, kondisi aman..."
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white"
+              />
+            </div>
+
+            {/* Submit Action: "Berhasil diangkut" */}
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setPickupTaskToExecute(null)}
+                className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingPickup}
+                onClick={handleConfirmPickup}
+                className="flex-1 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-slate-900/20 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmittingPickup ? (
+                  <span>Menyimpan...</span>
+                ) : (
+                  <>
+                    <Truck className="w-4 h-4" />
+                    <span>Berhasil diangkut</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Modal Pengiriman Mesin ("Dikirim" -> completed) */}
+      {deliveryTaskToExecute && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  Penempatan di Toko Tujuan
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeliveryTaskToExecute(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Task Info Summary */}
+            <div className="bg-blue-50/60 dark:bg-blue-950/40 p-3 rounded-2xl border border-blue-200 dark:border-blue-800 text-xs space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="font-extrabold text-blue-950 dark:text-blue-200">
+                  {deliveryTaskToExecute.target_store?.name || deliveryTaskToExecute.store?.name}
+                </span>
+                {deliveryTaskToExecute.machine && (
+                  <span className="text-[10px] font-black bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-700">
+                    {deliveryTaskToExecute.machine.machine_code}
+                  </span>
+                )}
+              </div>
+              <div className="text-blue-800/80 dark:text-blue-300">
+                {deliveryTaskToExecute.target_store?.address || deliveryTaskToExecute.store?.address}
+              </div>
+            </div>
+
+            {/* Camera Capture (Opsional) */}
+            <CameraCapture
+              label="Foto Bukti Penempatan (Opsional)"
+              subLabel="Ambil foto mesin yang sudah terpasang di toko tujuan"
+              required={false}
+              onPhotoCaptured={({ base64 }) => setDeliveryPhotoBlob(base64)}
+            />
+
+            {/* Kolom Nomor Meteran Koin Terakhir (Opsional) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Nomor Meteran Koin Terakhir (Opsional)
+              </label>
+              <div className="relative">
+                <Gauge className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                <input
+                  type="number"
+                  value={deliveryCoinMeter}
+                  onChange={(e) => setDeliveryCoinMeter(e.target.value)}
+                  placeholder="Misal: 14250"
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <span className="text-[10px] text-slate-400 mt-1 block">
+                Catat angka counter meter fisik yang tertera di mesin saat serah terima.
+              </span>
+            </div>
+
+            {/* Catatan (Opsional) */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Catatan Penempatan (Opsional)
+              </label>
+              <textarea
+                rows={2}
+                value={deliveryNotes}
+                onChange={(e) => setDeliveryNotes(e.target.value)}
+                placeholder="Misal: Sudah ditest colok listrik & koin berjalan lancar..."
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Submit Action: "Selesaikan tugas" */}
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeliveryTaskToExecute(null)}
+                className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingDelivery}
+                onClick={handleConfirmDelivery}
+                className="flex-1 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-blue-600/25 active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmittingDelivery ? (
+                  <span>Menyimpan...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Selesaikan tugas</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Modal Ringkasan Relokasi ("Berhasil dipindah" -> Summary) */}
+      {summaryTask && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    Ringkasan Relokasi Mesin
+                  </h3>
+                  <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    Tugas Berhasil Diselesaikan
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSummaryTask(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Machine Badge */}
+            {summaryTask.machine && (
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
+                <span className="text-slate-500 font-bold">Unit Mesin:</span>
+                <span className="font-black text-slate-900 dark:text-white bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600">
+                  {summaryTask.machine.machine_code}
+                </span>
+              </div>
+            )}
+
+            {/* Timeline */}
+            <div className="space-y-4 pt-1">
+              {/* Step 1: Diangkut (Toko Asal) */}
+              <div className="relative pl-6 border-l-2 border-slate-300 dark:border-slate-700 space-y-2">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 text-[9px] font-black">
+                  1
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900 dark:text-white">
+                    Tahap 1: Diangkut
+                  </span>
+                  {summaryTask.pickup_at && (
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Clock className="w-3 h-3" />
+                      {new Date(summaryTask.pickup_at).toLocaleString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                  <div className="font-extrabold text-slate-900 dark:text-white">
+                    {summaryTask.store?.name || 'Toko Asal'}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {summaryTask.store?.address}
+                  </div>
+                  {summaryTask.pickup_notes && (
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <strong>Catatan:</strong> {summaryTask.pickup_notes}
+                    </div>
+                  )}
+                  {summaryTask.pickup_photo_url ? (
+                    <a
+                      href={summaryTask.pickup_photo_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline pt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Lihat Foto Bukti Pengangkutan
+                    </a>
+                  ) : (
+                    <div className="text-[10px] text-slate-400 italic">
+                      Tidak menyertakan foto pengangkutan
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Step 2: Dikirim & Selesai (Toko Tujuan) */}
+              <div className="relative pl-6 border-l-2 border-emerald-500 space-y-2">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[9px] font-black">
+                  2
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-900 dark:text-white">
+                    Tahap 2: Selesai Dikirim & Ditempatkan
+                  </span>
+                  {summaryTask.completed_at && (
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
+                      <Clock className="w-3 h-3" />
+                      {new Date(summaryTask.completed_at).toLocaleString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1.5">
+                  <div className="font-extrabold text-slate-900 dark:text-white">
+                    {summaryTask.target_store?.name || summaryTask.store?.name}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {summaryTask.target_store?.address || summaryTask.store?.address}
+                  </div>
+                  {/* Meteran Koin Terakhir */}
+                  <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                    <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1">
+                      <Gauge className="w-3.5 h-3.5 text-emerald-600" />
+                      Meteran Koin Terakhir:
+                    </span>
+                    <span className="text-xs font-black text-slate-900 dark:text-white">
+                      {summaryTask.last_coin_meter != null
+                        ? `${summaryTask.last_coin_meter.toLocaleString('id-ID')} koin`
+                        : 'Tidak dicatat'}
+                    </span>
+                  </div>
+                  {summaryTask.delivery_notes && (
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <strong>Catatan:</strong> {summaryTask.delivery_notes}
+                    </div>
+                  )}
+                  {summaryTask.photo_evidence_url ? (
+                    <a
+                      href={summaryTask.photo_evidence_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-1"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Lihat Foto Bukti Penempatan
+                    </a>
+                  ) : (
+                    <div className="text-[10px] text-slate-400 italic">
+                      Tidak menyertakan foto penempatan
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setSummaryTask(null)}
+              className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs cursor-pointer transition active:scale-98"
+            >
+              Tutup Ringkasan
+            </button>
           </div>
         </div>
       )}
