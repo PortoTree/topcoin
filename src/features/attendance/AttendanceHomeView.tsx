@@ -12,10 +12,11 @@ import {
   ShieldAlert,
   Sun,
   Moon,
+  LogOut,
 } from 'lucide-react';
 
 export const AttendanceHomeView: React.FC = () => {
-  const { profile, checkInToday } = useAuth();
+  const { profile, checkInToday, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,6 +80,23 @@ export const AttendanceHomeView: React.FC = () => {
             ) : (
               <Sun className="w-4 h-4 text-amber-400 fill-amber-400/30 transition-colors" />
             )}
+          </button>
+
+          {/* Logout button */}
+          <button
+            type="button"
+            onClick={async () => {
+              const confirmLogout = window.confirm('Keluar dari sesi akun Anda?');
+              if (confirmLogout) {
+                await logout();
+              }
+            }}
+            className="w-9 h-9 sm:w-auto sm:px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-90 cursor-pointer shadow-xs"
+            title="Keluar / Logout Akun"
+            aria-label="Keluar dari akun"
+          >
+            <LogOut className="w-4 h-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Keluar</span>
           </button>
         </div>
       </div>

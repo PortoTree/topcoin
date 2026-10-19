@@ -7,7 +7,6 @@ import { AttendanceHomeView } from './features/attendance/AttendanceHomeView';
 import { MobileHeader } from './components/MobileHeader';
 import { MobileSubHeader } from './components/MobileSubHeader';
 import { BottomNavBar } from './components/BottomNavBar';
-import { FloatingDevLogout } from './components/FloatingDevLogout';
 import { OwnerView } from './features/owner/OwnerView';
 import { BranchManagerView } from './features/branch_manager/BranchManagerView';
 import { AdminCabangView } from './features/admin_cabang/AdminCabangView';
@@ -61,7 +60,6 @@ const MainAppContent: React.FC = () => {
     return (
       <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
         <AttendanceHomeView />
-        <FloatingDevLogout />
       </div>
     );
   }
@@ -95,9 +93,6 @@ const MainAppContent: React.FC = () => {
 
       {/* Mobile Ergonomic Bottom Navigation */}
       <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* Movable Floating Dev Logout Button (Stages dev only) */}
-      <FloatingDevLogout />
     </div>
   );
 };

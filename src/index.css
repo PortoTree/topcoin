@@ -83,3 +83,61 @@ html.dark .mobile-container {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 }
+
+/* Bottom Sheet / Action Sheet Animations */
+@keyframes sheetSlideUp {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes sheetSlideDown {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes backdropFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes backdropFadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-sheet-slide-up {
+  animation: sheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+}
+
+.animate-sheet-slide-down {
+  animation: sheetSlideDown 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+  will-change: transform;
+}
+
+.animate-backdrop-fade-in {
+  animation: backdropFadeIn 0.25s ease-out forwards;
+  will-change: opacity;
+}
+
+.animate-backdrop-fade-out {
+  animation: backdropFadeOut 0.22s ease-in forwards;
+  will-change: opacity;
+}
+

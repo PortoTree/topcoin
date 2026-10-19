@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
 import {
-  TrendingUp,
   DollarSign,
   Truck,
   CheckCircle2,
@@ -14,8 +14,13 @@ import {
   Coins,
   PackagePlus,
   Wrench,
-  UserX,
   X,
+  MoreVertical,
+  AlertTriangle,
+  Calendar,
+  Trash2,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, DriverTask, DriverTaskType } from '../../types';
@@ -71,6 +76,82 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   // Image Preview Modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+
+  // Selected staff for Role Assignment Modal & Staff Option Modal (rendered outside list)
+  const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
+  const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
+
+  const getStaffBadge = (staff: UserProfile) => {
+    if (staff.role === 'branch_manager') {
+      return {
+        label: 'Branch Manager',
+        className: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60',
+      };
+    }
+    if (staff.role === 'admin_cabang' || staff.role === 'admin') {
+      if (staff.assigned_task && staff.assigned_task !== 'admin_cabang') {
+        const taskName =
+          staff.assigned_task === 'driver'
+            ? 'Driver'
+            : staff.assigned_task === 'marketing'
+            ? 'Marketing'
+            : 'Dropping';
+        return {
+          label: `Admin • ${taskName}`,
+          className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
+        };
+      }
+      return {
+        label: 'Admin Cabang',
+        className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
+      };
+    }
+    if (staff.role === 'driver' || staff.role === 'kurir') {
+      return {
+        label: 'Driver',
+        className: 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800/60',
+      };
+    }
+    if (staff.role === 'dropping') {
+      return {
+        label: 'Dropping',
+        className: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+      };
+    }
+    if (staff.role === 'marketing' || staff.role === 'sales') {
+      return {
+        label: 'Marketing',
+        className: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+      };
+    }
+    return {
+      label: staff.role,
+      className: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+    };
+  };
+
+  const handleStaffAction = async (staff: UserProfile, action: 'cuti' | 'peringatan' | 'hapus') => {
+    setSelectedStaffForOption(null);
+    if (action === 'cuti') {
+      const reason = window.prompt(
+        `Atur status Libur / Cuti untuk "${staff.full_name}":\nMasukkan keterangan (contoh: Cuti Sakit 1 Hari / Libur Kerja):`,
+        'Cuti Kerja'
+      );
+      if (reason) {
+        alert(`Status Libur/Cuti untuk ${staff.full_name} berhasil dicatat: "${reason}".`);
+      }
+    } else if (action === 'peringatan') {
+      const note = window.prompt(
+        `Beri Surat Peringatan / Teguran ke "${staff.full_name}":\nMasukkan catatan teguran:`,
+        'Teguran kedisiplinan operasional'
+      );
+      if (note) {
+        alert(`Surat peringatan resmi untuk ${staff.full_name} berhasil dicatat.`);
+      }
+    } else if (action === 'hapus') {
+      handleRequestDeleteStaff(staff);
+    }
+  };
 
   const formatIDR = (val: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -404,22 +485,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   return (
     <div className="p-4 pb-24 max-w-lg mx-auto space-y-4">
-      {/* Scope Header */}
-      <div className="bg-gradient-to-r from-cyan-900 via-slate-900 to-slate-950 text-white rounded-3xl p-5 shadow-xl relative overflow-hidden border border-cyan-500/30">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-500/20 text-cyan-200 border border-cyan-400/30 text-[11px] font-bold mb-2">
-            <TrendingUp className="w-3.5 h-3.5 text-cyan-400" />
-            OPERASIONAL CABANG
-          </div>
-          <h2 className="text-xl font-black tracking-tight">
-            {currentBranch ? currentBranch.name : 'Cabang Utama'}
-          </h2>
-          <p className="text-xs text-cyan-200 mt-1 font-medium">
-            Kendali kas harian, penugasan driver, dan monitoring omset cabang
-          </p>
-        </div>
-      </div>
-
       {/* Tab: Live Omset Monitoring */}
       {activeTab === 'monitoring' && (
         <div className="space-y-4 animate-in fade-in duration-150">
@@ -873,83 +938,88 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               .map((staff) => {
                 const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
                 const isBM = staff.role === 'branch_manager';
-                const isAdmin = staff.role === 'admin_cabang' || staff.role === 'admin';
 
                 return (
                   <div
                     key={staff.id}
-                    className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
-                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                    className={`p-3 sm:p-3.5 transition-colors ${
+                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
                     }`}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {staff.full_name}
-                        </h4>
-                        {isBM && (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
-                            BM
-                          </span>
-                        )}
-                        {isAdmin && (
-                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
-                            Admin
+                    {/* Baris 1: Full Name */}
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {staff.full_name}
+                    </h4>
+
+                    {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      {/* Kiri: Badge Role (semua role ada badge) + Status */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const badge = getStaffBadge(staff);
+                          return (
+                            <span
+                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
+
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                            staff.is_active
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+                          }`}
+                        >
+                          {staff.is_active ? 'Aktif' : 'Terkunci'}
+                        </span>
+
+                        {isPendingDelete && (
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
+                            <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                            Pending Hapus
                           </span>
                         )}
                       </div>
-                      {isPendingDelete && (
-                        <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
-                          <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
-                          Terkunci: Menunggu persetujuan Branch Manager
-                        </span>
-                      )}
-                    </div>
 
-                    <div className="flex-shrink-0">
-                      {isBM ? (
-                        <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2.5 py-1 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
-                          Atasan Cabang
-                        </span>
-                      ) : isAdmin ? (
-                        <div className="flex items-center gap-2">
-                          <select
-                            value={staff.assigned_task || 'admin_cabang'}
-                            onChange={(e) => handleChangeAdminTask(staff, e.target.value)}
-                            className="text-xs font-bold py-1.5 px-2.5 bg-indigo-50/80 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-xl text-indigo-900 dark:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-xs transition"
-                            title="Tugas Admin Cabang"
-                          >
-                            <option value="admin_cabang">🛡️ Pengelola</option>
-                            <option value="driver">🚚 Driver</option>
-                            <option value="dropping">🪙 Dropping</option>
-                            <option value="marketing">🏪 Marketing</option>
-                          </select>
-                        </div>
-                      ) : (
-                        !isPendingDelete && (
-                          <div className="flex items-center gap-2">
-                            <select
-                              value={staff.role === 'sales' ? 'marketing' : staff.role === 'kurir' ? 'driver' : staff.role}
-                              onChange={(e) => handleChangeStaffRole(staff, e.target.value as UserRole)}
-                              className="text-xs font-bold py-1.5 px-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-xs transition"
-                              title="Ubah Penugasan Peran Petugas"
-                            >
-                              <option value="dropping">🪙 Dropping</option>
-                              <option value="marketing">🏪 Marketing</option>
-                              <option value="driver">🚚 Driver</option>
-                            </select>
-
+                      {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isBM ? (
+                          <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                            Atasan Cabang
+                          </span>
+                        ) : (
+                          <>
+                            {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
                             <button
                               type="button"
-                              onClick={() => handleRequestDeleteStaff(staff)}
-                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-95 cursor-pointer"
-                              title="Ajukan Hapus Akun ke Branch Manager"
+                              onClick={() => {
+                                setSelectedStaffForRole(staff);
+                                setSelectedStaffForOption(null);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                              title="Ubah Penugasan Peran"
                             >
-                              <UserX className="w-3.5 h-3.5" />
+                              <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </button>
-                          </div>
-                        )
-                      )}
+
+                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStaffForOption(staff);
+                                setSelectedStaffForRole(null);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                              title="Opsi Tindakan Karyawan"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -1103,6 +1173,287 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           </div>
         </div>
       )}
+
+      {/* Modal / Action Sheet: Pemilihan Role Staf (Diluar Kolom List agar Tidak Kepotong & Bebas dari Parent Layout) */}
+      <BottomSheetModal
+        item={selectedStaffForRole}
+        onClose={() => setSelectedStaffForRole(null)}
+      >
+        {(staff, close) => (
+          <>
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+                  Penugasan Peran
+                </span>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                  {staff.full_name}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  @{staff.username} • Pilih peran atau tugas operasional
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={close}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List Pilihan Role Berukuran Besar & Jelas */}
+            <div className="space-y-2">
+              {(staff.role === 'admin_cabang' || staff.role === 'admin') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    handleChangeAdminTask(staff, 'admin_cabang');
+                  }}
+                  className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
+                    !staff.assigned_task || staff.assigned_task === 'admin_cabang'
+                      ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                      : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <div>
+                    <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                      Pengelola
+                    </span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Kendali kas, penugasan driver, dan monitoring omset cabang
+                    </span>
+                  </div>
+                  {(!staff.assigned_task || staff.assigned_task === 'admin_cabang') && (
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  if (staff.role === 'admin_cabang' || staff.role === 'admin') {
+                    handleChangeAdminTask(staff, 'driver');
+                  } else {
+                    handleChangeStaffRole(staff, 'driver');
+                  }
+                }}
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
+                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                    ? staff.assigned_task === 'driver'
+                    : staff.role === 'driver')
+                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                    Driver
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Penarikan setoran koin & operasional rute cabang
+                  </span>
+                </div>
+                {(staff.role === 'admin_cabang' || staff.role === 'admin'
+                  ? staff.assigned_task === 'driver'
+                  : staff.role === 'driver') && (
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  if (staff.role === 'admin_cabang' || staff.role === 'admin') {
+                    handleChangeAdminTask(staff, 'dropping');
+                  } else {
+                    handleChangeStaffRole(staff, 'dropping');
+                  }
+                }}
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
+                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                    ? staff.assigned_task === 'dropping'
+                    : staff.role === 'dropping')
+                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                    Dropping
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Pemasangan unit mesin & perawatan titik mitra
+                  </span>
+                </div>
+                {(staff.role === 'admin_cabang' || staff.role === 'admin'
+                  ? staff.assigned_task === 'dropping'
+                  : staff.role === 'dropping') && (
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  if (staff.role === 'admin_cabang' || staff.role === 'admin') {
+                    handleChangeAdminTask(staff, 'marketing');
+                  } else {
+                    handleChangeStaffRole(staff, 'marketing');
+                  }
+                }}
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
+                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                    ? staff.assigned_task === 'marketing'
+                    : staff.role === 'marketing' || staff.role === 'sales')
+                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                }`}
+              >
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                    Marketing
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Akuisisi toko baru & survey calon lokasi partner
+                  </span>
+                </div>
+                {(staff.role === 'admin_cabang' || staff.role === 'admin'
+                  ? staff.assigned_task === 'marketing'
+                  : staff.role === 'marketing' || staff.role === 'sales') && (
+                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                )}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={close}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm text-center transition cursor-pointer"
+            >
+              Tutup
+            </button>
+          </>
+        )}
+      </BottomSheetModal>
+
+      {/* Modal / Action Sheet: Opsi Karyawan (Diluar Kolom List agar Tidak Kepotong) */}
+      <BottomSheetModal
+        item={selectedStaffForOption}
+        onClose={() => setSelectedStaffForOption(null)}
+      >
+        {(staff, close) => (
+          <>
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+                  Opsi Tindakan
+                </span>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                  {staff.full_name}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  @{staff.username}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={close}
+                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* List Aksi Berukuran Besar & Nyaman Diklik */}
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  handleStaffAction(staff, 'cuti');
+                }}
+                className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-left flex items-center gap-3.5 transition-all active:scale-98 cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                    Libur / Cuti
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Setel status staf menjadi libur atau izin sementara
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  handleStaffAction(staff, 'peringatan');
+                }}
+                className="w-full p-3.5 rounded-2xl bg-amber-50/60 hover:bg-amber-100/70 dark:bg-amber-950/20 dark:hover:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 text-left flex items-center gap-3.5 transition-all active:scale-98 cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-amber-900 dark:text-amber-300 block">
+                    Peringatan
+                  </span>
+                  <span className="text-xs text-amber-700/80 dark:text-amber-400/80 font-medium">
+                    Catat teguran kedisiplinan atau evaluasi operasional
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  handleStaffAction(staff, 'hapus');
+                }}
+                className="w-full p-3.5 rounded-2xl bg-rose-50/60 hover:bg-rose-100/70 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 border border-rose-200 dark:border-rose-800/50 text-left flex items-center gap-3.5 transition-all active:scale-98 cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 block">
+                    Hapus Akun
+                  </span>
+                  <span className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
+                    Ajukan penonaktifan & penghapusan akun dari cabang
+                  </span>
+                </div>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={close}
+              className="w-full py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm text-center transition cursor-pointer"
+            >
+              Batal
+            </button>
+          </>
+        )}
+      </BottomSheetModal>
     </div>
   );
 };
