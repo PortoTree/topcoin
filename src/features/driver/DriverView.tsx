@@ -9,16 +9,15 @@ import {
   MapPin,
   CheckCircle2,
   RefreshCw,
-  Cpu,
   Coins,
   ArrowRight,
   ExternalLink,
-  MessageCircle,
   Wrench,
   PackagePlus,
-  Clock,
   X,
   Sparkles,
+  FileText,
+  Pencil,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DriverTask, DriverTaskType } from '../../types';
@@ -123,6 +122,11 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
   const [evidencePhotoBlob, setEvidencePhotoBlob] = useState<Blob | string | null>(null);
   const [executionNotes, setExecutionNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Instruction & Notes Modal State
+  const [selectedInstruction, setSelectedInstruction] = useState<{ storeName: string; notes: string } | null>(null);
+  const [editingTaskNotes, setEditingTaskNotes] = useState<DriverTask | null>(null);
+  const [taskNoteInput, setTaskNoteInput] = useState('');
 
   const activeBranchId = currentBranch?.id || profile?.branch_id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -244,6 +248,53 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     }
   };
 
+  // Mark task as In Transit ("Diangkut")
+  const handleMarkAsInTransit = async (task: DriverTask) => {
+    try {
+      const { error } = await supabase
+        .from('driver_tasks')
+        .update({ status: 'in_progress' })
+        .eq('id', task.id);
+
+      if (error) console.warn('DB in_progress fallback:', error);
+
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, status: 'in_progress' } : t))
+      );
+
+      toast.success(
+        task.task_type === 'relokasi_mesin'
+          ? 'Mesin telah diangkut! Rute pengantaran diarahkan ke Toko Tujuan.'
+          : 'Status tugas diperbarui menjadi sedang berjalan.'
+      );
+    } catch (err: any) {
+      toast.error('Gagal memperbarui status tugas.');
+    }
+  };
+
+  // Save Task Note from Pencil Icon
+  const handleSaveTaskNote = async () => {
+    if (!editingTaskNotes) return;
+    try {
+      const { error } = await supabase
+        .from('driver_tasks')
+        .update({ notes: taskNoteInput.trim() || null })
+        .eq('id', editingTaskNotes.id);
+
+      if (error) console.warn('DB update task note fallback:', error);
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === editingTaskNotes.id ? { ...t, notes: taskNoteInput.trim() || null } : t
+        )
+      );
+      toast.success('Catatan berhasil disimpan.');
+      setEditingTaskNotes(null);
+    } catch (err: any) {
+      toast.error('Gagal menyimpan catatan.');
+    }
+  };
+
   const getTaskBadge = (type: DriverTaskType) => {
     switch (type) {
       case 'relokasi_mesin':
@@ -318,101 +369,162 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             </div>
           ) : (
             tasks.map((task) => {
-              const badge = getTaskBadge(task.task_type);
-              const BadgeIcon = badge.icon;
+              const isRelocation = task.task_type === 'relokasi_mesin';
+              const isInTransit = task.status === 'in_progress';
+
+              // If in transit during relocation, target store is the destination!
+              const currentStore =
+                isRelocation && isInTransit && task.target_store
+                  ? task.target_store
+                  : task.store || task.target_store;
+
+              const storeName = currentStore ? currentStore.name : 'Outlet Mitra';
+              const storeAddress = currentStore?.address || 'Alamat belum diinput';
+              const storePhone = currentStore?.phone;
+              const storeLat = currentStore?.latitude;
+              const storeLng = currentStore?.longitude;
 
               return (
                 <div
                   key={task.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3 shadow-xs transition-colors"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-2.5 shadow-xs transition-colors"
                 >
-                  {/* Top Bar Type */}
+                  {/* Row 1: [namatoko] [icon intruksi dynamic, muncul hanya ketika ada intruksi] */}
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${badge.color}`}
-                    >
-                      <BadgeIcon className="w-3.5 h-3.5 flex-shrink-0" />
-                      {badge.label}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 flex items-center gap-1 font-semibold">
-                      <Clock className="w-3 h-3" />
-                      {task.status === 'in_progress' ? 'Sedang Jalan' : 'Tersedia'}
-                    </span>
-                  </div>
-
-                  {/* Store & Machine Details */}
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                      {task.store ? task.store.name : 'Outlet Mitra'}
-                    </h3>
-                    {task.store?.address && (
-                      <p className="text-xs text-slate-600 dark:text-slate-400 flex items-start gap-1 mt-1 font-medium">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-                        <span>{task.store.address}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Context Info (Unit Mesin / Koin) */}
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {task.machine && (
-                      <div className="px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 font-bold">
-                        <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-                        <span>Unit: {task.machine.machine_code}</span>
-                      </div>
-                    )}
-                    {task.coin_amount ? (
-                      <div className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 flex items-center gap-1.5 font-bold">
-                        <Coins className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{task.coin_amount} Koin (Rp {(task.coin_amount * 1000).toLocaleString('id-ID')})</span>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* Notes from Admin */}
-                  {task.notes && (
-                    <div className="text-[11px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 font-medium">
-                      <span className="font-bold text-slate-800 dark:text-slate-200">Instruksi Admin: </span>
-                      {task.notes}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+                        {storeName}
+                      </h3>
+                      {isRelocation && (
+                        <span
+                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                            isInTransit
+                              ? 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800'
+                              : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800'
+                          }`}
+                        >
+                          {isInTransit ? 'Toko Tujuan' : 'Toko Asal'}
+                        </span>
+                      )}
+                      {task.machine?.machine_code && (
+                        <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                          {task.machine.machine_code}
+                        </span>
+                      )}
                     </div>
-                  )}
 
-                  {/* Quick Action Navigation & Execution */}
-                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-                    {task.store?.phone && (
-                      <a
-                        href={`https://wa.me/${task.store.phone.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center cursor-pointer"
-                        title="Chat WA Toko"
+                    {/* Icon instruksi dynamic, muncul hanya ketika ada instruksi */}
+                    {task.notes && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedInstruction({ storeName, notes: task.notes! })}
+                        className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 transition cursor-pointer flex-shrink-0 flex items-center gap-1 active:scale-95 shadow-2xs"
+                        title="Lihat Instruksi Admin"
                       >
-                        <MessageCircle className="w-4 h-4" />
-                      </a>
+                        <FileText className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-extrabold">Instruksi</span>
+                      </button>
                     )}
-                    {task.store?.latitude && task.store?.longitude && (
-                      <a
-                        href={`https://maps.google.com/?q=${task.store.latitude},${task.store.longitude}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 flex items-center justify-center cursor-pointer"
-                        title="Navigasi Google Maps"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    )}
+                  </div>
+
+                  {/* Row 2: [alamat] */}
+                  <p className="text-xs text-slate-500 dark:text-slate-400 flex items-start gap-1 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                    <span className="line-clamp-2">{storeAddress}</span>
+                  </p>
+
+                  {/* Row 3: [logo wa] [logo maps.png] [icon pensil] [tombol dynamic "Diangkut" dan "Berhasil dipindah"] */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                    {/* Logo WA */}
+                    <a
+                      href={storePhone ? `https://wa.me/${storePhone.replace(/[^0-9]/g, '')}` : undefined}
+                      onClick={(e) => {
+                        if (!storePhone) {
+                          e.preventDefault();
+                          toast.info('Nomor WhatsApp toko belum terdaftar.');
+                        }
+                      }}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition border cursor-pointer active:scale-95 shadow-2xs ${
+                        storePhone
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-600 border-slate-200 dark:border-slate-700'
+                      }`}
+                      title={storePhone ? `Chat WA: ${storePhone}` : 'Nomor WA tidak tersedia'}
+                    >
+                      <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                        <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2zm.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24zm4.52 11.64c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.15.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.49-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1s.9 2.44 1.03 2.61c.13.17 1.77 2.7 4.29 3.79.6.26 1.07.41 1.44.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3z"/>
+                      </svg>
+                    </a>
+
+                    {/* Logo Maps.png */}
+                    <a
+                      href={
+                        storeLat && storeLng
+                          ? `https://maps.google.com/?q=${storeLat},${storeLng}`
+                          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeAddress || storeName)}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center justify-center flex-shrink-0 transition shadow-2xs cursor-pointer active:scale-95"
+                      title="Buka Google Maps"
+                    >
+                      <img src="/maps.png" alt="Google Maps" className="w-5 h-5 object-contain" />
+                    </a>
+
+                    {/* Icon Pensil (Edit Catatan Petugas) */}
                     <button
                       type="button"
                       onClick={() => {
-                        setActiveTaskToExecute(task);
-                        setEvidencePhotoBlob(null);
-                        setExecutionNotes('');
+                        setEditingTaskNotes(task);
+                        setTaskNoteInput(task.notes || '');
                       }}
-                      className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20 active:scale-95 transition cursor-pointer"
+                      className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center flex-shrink-0 transition cursor-pointer active:scale-95 shadow-2xs"
+                      title="Edit Catatan Lapangan"
                     >
-                      <span>Eksekusi & Selesaikan</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <Pencil className="w-4 h-4" />
                     </button>
+
+                    {/* Tombol dynamic "Diangkut" dan "Berhasil dipindah" */}
+                    {isRelocation ? (
+                      !isInTransit ? (
+                        <button
+                          type="button"
+                          onClick={() => handleMarkAsInTransit(task)}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-600/20 active:scale-95 transition cursor-pointer"
+                        >
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>Diangkut</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTaskToExecute(task);
+                            setEvidencePhotoBlob(null);
+                            setExecutionNotes('');
+                          }}
+                          className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 active:scale-95 transition cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Berhasil dipindah</span>
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveTaskToExecute(task);
+                          setEvidencePhotoBlob(null);
+                          setExecutionNotes('');
+                        }}
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
+                      >
+                        <span>Selesaikan Tugas</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -572,6 +684,91 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     <span>Selesaikan Tugas</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Instruction Viewing Modal */}
+      {selectedInstruction && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-3.5 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-500" />
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Instruksi Tugas</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedInstruction(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                {selectedInstruction.storeName}
+              </span>
+              <div className="text-xs text-slate-700 dark:text-slate-300 bg-amber-50/70 dark:bg-amber-950/30 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/60 leading-relaxed font-medium">
+                {selectedInstruction.notes}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedInstruction(null)}
+              className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs cursor-pointer transition active:scale-98"
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Editing Task Notes Modal */}
+      {editingTaskNotes && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-3.5 border border-slate-200 dark:border-slate-800 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-indigo-500" />
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Catatan Lapangan</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTaskNotes(null)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Tulis / Edit Catatan untuk Tugas Ini:
+              </label>
+              <textarea
+                rows={3}
+                value={taskNoteInput}
+                onChange={(e) => setTaskNoteInput(e.target.value)}
+                placeholder="Misal: Sudah telepon kasir, parkiran belakang aman..."
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingTaskNotes(null)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer active:scale-98"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTaskNote}
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-98 transition"
+              >
+                Simpan Catatan
               </button>
             </div>
           </div>
