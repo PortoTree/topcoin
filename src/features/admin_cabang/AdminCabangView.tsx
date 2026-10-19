@@ -909,14 +909,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       {/* Tab: Logistik Task Dispatching */}
       {activeTab === 'driver_dispatch' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+        <div className="space-y-5 animate-in fade-in duration-150">
+          <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Truck className="w-5 h-5 text-amber-500" />
               Dispatching Tugas Logistik
             </h2>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">
-              Buat dan delegasikan tugas relokasi unit atau tugas opsional ke tim Logistik cabang.
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+              Buat dan delegasikan tugas relokasi unit mesin ke tim Logistik cabang.
             </p>
           </div>
 
@@ -927,7 +927,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </div>
           )}
 
-          <form onSubmit={handleDispatchTask} className="space-y-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
+          <form onSubmit={handleDispatchTask} className="space-y-5">
             {/* 1. Pilih Petugas Logistik (Bisa Lebih Dari 1 Orang) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -941,32 +941,32 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
               {/* Selected Staff Tags */}
               {selectedOfficerIds.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 min-h-[42px] items-center">
+                <div className="flex flex-wrap gap-2 pt-0.5">
                   {selectedOfficerIds.map((id) => {
                     const staff = branchStaff.find((s) => s.id === id);
                     if (!staff) return null;
                     return (
                       <span
                         key={id}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700 shadow-2xs animate-in zoom-in-95"
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-2xs animate-in zoom-in-95"
                       >
-                        <span className="w-4 h-4 rounded-full bg-indigo-600 text-white text-[9px] flex items-center justify-center font-black">
+                        <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-black">
                           {staff.full_name.charAt(0)}
                         </span>
                         <span>{staff.full_name}</span>
                         <button
                           type="button"
                           onClick={() => toggleOfficerSelection(id)}
-                          className="hover:bg-indigo-200 dark:hover:bg-indigo-800 rounded-full p-0.5 text-indigo-600 dark:text-indigo-300 transition"
+                          className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </span>
                     );
                   })}
                 </div>
               ) : (
-                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
+                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                   <span>Belum ada staf logistik dipilih. Klik tombol di bawah untuk memilih tim.</span>
                 </div>
@@ -978,7 +978,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   setShowStaffPickerModal(true);
                   setStaffPickerSearch('');
                 }}
-                className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 shadow-2xs"
+                className="w-full py-3 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 shadow-2xs"
               >
                 <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>
@@ -990,191 +990,191 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </div>
 
             {/* Form Tugas Relokasi Mesin */}
-            <div className="space-y-3.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Daftar Unit Mesin yang Direlokasi ({relocationItems.length}) *
-                  </label>
-                  <span className="text-[10px] text-slate-500 font-medium">
-                    Toko Asal &rarr; Toko Tujuan
-                  </span>
-                </div>
-
-                {relocationItems.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 rounded-2xl space-y-3 shadow-2xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold">
-                          {idx + 1}
-                        </span>
-                        Tugas Relokasi #{idx + 1}
-                      </span>
-                      {relocationItems.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRelocationItem(idx)}
-                          className="text-rose-500 hover:text-rose-600 text-xs font-bold flex items-center gap-1 p-1 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* 2. Pindah Dari... (Nomor Mesin & Nama Toko) */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Pindah dari... (Nomor Mesin &amp; Nama Toko) *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPickerModal({ type: 'origin', itemIndex: idx });
-                          setPickerSearch('');
-                        }}
-                        className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
-                          item.originStoreId
-                            ? 'bg-white dark:bg-slate-900 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                            : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400'
-                        }`}
-                      >
-                        {item.originStoreId ? (
-                          <div className="min-w-0 pr-2">
-                            <div className="flex items-center gap-2">
-                              {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' && (
-                                <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
-                                  {item.machineCode}
-                                </span>
-                              )}
-                              <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                                {item.originStoreName}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                              {item.originStoreAddress}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-slate-400 text-xs">
-                            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                            <span>Klik untuk cari nomor mesin atau nama toko...</span>
-                          </div>
-                        )}
-                        <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      </button>
-                    </div>
-
-                    {/* 3. Dipindah Ke... (Nama Toko Tujuan) */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                        Dipindah ke... (Nama Toko Tujuan) *
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPickerModal({ type: 'target', itemIndex: idx });
-                          setPickerSearch('');
-                        }}
-                        className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
-                          item.targetStoreId
-                            ? 'bg-white dark:bg-slate-900 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                            : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400'
-                        }`}
-                      >
-                        {item.targetStoreId ? (
-                          <div className="min-w-0 pr-2">
-                            <span className="font-extrabold text-xs text-slate-900 dark:text-white block truncate">
-                              {item.targetStoreName}
-                            </span>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                              {item.targetStoreAddress}
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-slate-400 text-xs">
-                            <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                            <span>Klik untuk cari nama toko tujuan...</span>
-                          </div>
-                        )}
-                        <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {/* 6. Tombol [+ Tambah tugas] */}
-                <button
-                  type="button"
-                  onClick={handleAddRelocationItem}
-                  className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700/80 hover:border-indigo-500 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center gap-2 transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 cursor-pointer active:scale-98"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>+ Tambah Tugas Relokasi Mesin</span>
-                </button>
-
-                {/* 5. Preview UI: [ Pindah dari...] -> [Dipindah ke...] */}
-                {relocationItems.some((i) => i.originStoreId && i.targetStoreId) && (
-                  <div className="p-3.5 bg-gradient-to-br from-indigo-50/90 to-blue-50/50 dark:from-indigo-950/40 dark:to-slate-900 border border-indigo-200 dark:border-indigo-800/80 rounded-2xl space-y-2.5 shadow-xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-wider text-indigo-800 dark:text-indigo-300 flex items-center gap-1.5">
-                        <Truck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                        Preview Rute Relokasi
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-                        {relocationItems.filter((i) => i.originStoreId && i.targetStoreId).length} Unit Mesin
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      {relocationItems.map((item) => {
-                        if (!item.originStoreId && !item.targetStoreId) return null;
-                        return (
-                          <div
-                            key={item.id}
-                            className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs"
-                          >
-                            <div className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800/70 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                              <span className="text-[9px] uppercase font-black text-slate-400 block mb-0.5">
-                                Pindah Dari
-                              </span>
-                              <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                                {item.originStoreName || '(Belum dipilih)'}
-                              </div>
-                              {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' && (
-                                <span className="inline-block mt-1 text-[9px] font-mono font-black bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
-                                  {item.machineCode}
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </div>
-
-                            <div className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-800/70 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
-                              <span className="text-[9px] uppercase font-black text-slate-400 block mb-0.5">
-                                Dipindah Ke
-                              </span>
-                              <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                                {item.targetStoreName || '(Belum dipilih)'}
-                              </div>
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
-                                {item.targetStoreAddress || '-'}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+            <div className="space-y-4 pt-1">
+              <div className="flex items-center justify-between pb-1 border-b border-slate-200 dark:border-slate-800">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Daftar Unit Mesin yang Direlokasi ({relocationItems.length}) *
+                </label>
+                <span className="text-[10px] text-slate-500 font-medium">
+                  Toko Asal &rarr; Toko Tujuan
+                </span>
               </div>
 
+              {relocationItems.map((item, idx) => (
+                <div
+                  key={item.id}
+                  className="space-y-3 pb-4 border-b border-slate-200/80 dark:border-slate-800/80 last:border-b-0 last:pb-0"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <span className="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] flex items-center justify-center font-bold">
+                        {idx + 1}
+                      </span>
+                      Tugas Relokasi #{idx + 1}
+                    </span>
+                    {relocationItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRelocationItem(idx)}
+                        className="text-rose-500 hover:text-rose-600 text-xs font-bold flex items-center gap-1 p-1 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Hapus</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 2. Pindah Dari... (Nomor Mesin & Nama Toko) */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Pindah dari... (Nomor Mesin &amp; Nama Toko) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickerModal({ type: 'origin', itemIndex: idx });
+                        setPickerSearch('');
+                      }}
+                      className={`w-full p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                        item.originStoreId
+                          ? 'bg-white dark:bg-slate-900 border-indigo-400/80 dark:border-indigo-600 shadow-2xs'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {item.originStoreId ? (
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-2">
+                            {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' && (
+                              <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                                {item.machineCode}
+                              </span>
+                            )}
+                            <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
+                              {item.originStoreName}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {item.originStoreAddress}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span>Klik untuk cari nomor mesin atau nama toko...</span>
+                        </div>
+                      )}
+                      <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    </button>
+                  </div>
+
+                  {/* 3. Dipindah Ke... (Nama Toko Tujuan) */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Dipindah ke... (Nama Toko Tujuan) *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPickerModal({ type: 'target', itemIndex: idx });
+                        setPickerSearch('');
+                      }}
+                      className={`w-full p-3.5 rounded-xl border text-left transition cursor-pointer flex items-center justify-between ${
+                        item.targetStoreId
+                          ? 'bg-white dark:bg-slate-900 border-indigo-400/80 dark:border-indigo-600 shadow-2xs'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                      }`}
+                    >
+                      {item.targetStoreId ? (
+                        <div className="min-w-0 pr-2">
+                          <span className="font-extrabold text-xs text-slate-900 dark:text-white block truncate">
+                            {item.targetStoreName}
+                          </span>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {item.targetStoreAddress}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Search className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span>Klik untuk cari nama toko tujuan...</span>
+                        </div>
+                      )}
+                      <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {/* 6. Tombol [+ Tambah tugas] */}
+              <button
+                type="button"
+                onClick={handleAddRelocationItem}
+                className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center gap-2 transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 cursor-pointer active:scale-98"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Tambah Tugas Relokasi Mesin</span>
+              </button>
+
+              {/* 5. Preview UI: [ Pindah dari...] -> [Dipindah ke...] */}
+              {relocationItems.some((i) => i.originStoreId && i.targetStoreId) && (
+                <div className="space-y-2.5 pt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                      <Truck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      Preview Rute Relokasi
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      {relocationItems.filter((i) => i.originStoreId && i.targetStoreId).length} Unit Mesin
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {relocationItems.map((item) => {
+                      if (!item.originStoreId && !item.targetStoreId) return null;
+                      return (
+                        <div
+                          key={item.id}
+                          className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-2.5 shadow-2xs"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[9px] uppercase font-black text-slate-400 block mb-0.5">
+                              Pindah Dari
+                            </span>
+                            <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {item.originStoreName || '(Belum dipilih)'}
+                            </div>
+                            {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' && (
+                              <span className="inline-block mt-1 text-[9px] font-mono font-black bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 px-1.5 py-0.5 rounded border border-amber-300 dark:border-amber-700">
+                                {item.machineCode}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <span className="text-[9px] uppercase font-black text-slate-400 block mb-0.5">
+                              Dipindah Ke
+                            </span>
+                            <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                              {item.targetStoreName || '(Belum dipilih)'}
+                            </div>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
+                              {item.targetStoreAddress || '-'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
                 Catatan / Instruksi Relokasi (Opsional)
               </label>
               <textarea
@@ -1182,7 +1182,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 value={dispatchNotes}
                 onChange={(e) => setDispatchNotes(e.target.value)}
                 placeholder="Misal: Konfirmasi ke kasir sebelum angkat mesin..."
-                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
               />
             </div>
 
@@ -1197,33 +1197,40 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           </form>
 
           {/* List of Recent Tasks */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-2">
-            <h3 className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">
-              Daftar Riwayat Tugas Logistik ({driverTasks.length})
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Riwayat Tugas Logistik ({driverTasks.length})
             </h3>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {driverTasks.map((t) => (
-                <div key={t.id} className="py-2.5 flex items-center justify-between text-xs">
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 dark:text-white">
-                      {t.task_type.toUpperCase().replace('_', ' ')}: {t.store?.name}
-                    </h4>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Petugas Logistik: {t.driver?.full_name} • Status: {t.status}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      t.status === 'completed'
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
-                    }`}
+            {driverTasks.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">Belum ada riwayat tugas logistik.</p>
+            ) : (
+              <div className="space-y-2">
+                {driverTasks.map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between text-xs shadow-2xs"
                   >
-                    {t.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+                    <div>
+                      <h4 className="font-extrabold text-slate-900 dark:text-white">
+                        {t.task_type.toUpperCase().replace('_', ' ')}: {t.store?.name}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Petugas: {t.driver?.full_name} • Status: {t.status}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        t.status === 'completed'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
+                      }`}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
