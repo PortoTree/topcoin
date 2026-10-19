@@ -410,7 +410,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
 
                     {/* Nomor mesin berada di kanan (tukar posisi dengan instruksi) */}
                     {task.machine?.machine_code && (
-                      <span className="text-[10px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                      <span className="text-xs font-black tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 flex-shrink-0 shadow-2xs">
                         {task.machine.machine_code}
                       </span>
                     )}
