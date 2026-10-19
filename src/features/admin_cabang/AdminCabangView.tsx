@@ -910,7 +910,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       {/* Tab: Logistik Task Dispatching */}
       {activeTab === 'driver_dispatch' && (
         <div className="space-y-6 animate-in fade-in duration-150">
-          <div className="pb-1 space-y-1">
+          <div className="space-y-1 pb-4">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Truck className="w-5 h-5 text-amber-500" />
               Relokasi Mesin
@@ -927,7 +927,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </div>
           )}
 
-          <form onSubmit={handleDispatchTask} className="space-y-5">
+          <form onSubmit={handleDispatchTask} className="space-y-6 pt-3">
             {/* 1. Pilih Petugas Logistik (Bisa Lebih Dari 1 Orang) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
