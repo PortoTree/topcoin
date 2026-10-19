@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ActionPromptModal } from './ActionPromptModal';
 import { LogOut, GripVertical } from 'lucide-react';
 
 export const FloatingDevLogout: React.FC = () => {
@@ -94,17 +95,15 @@ export const FloatingDevLogout: React.FC = () => {
     }
   };
 
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
   const handleLogout = () => {
-    const confirmLogout = window.confirm(
-      `[DEV LOGOUT]\nKeluar dari akun "${profile.full_name || profile.username}"?`
-    );
-    if (confirmLogout) {
-      logout();
-    }
+    setShowLogoutConfirm(true);
   };
 
   return (
-    <div
+    <>
+      <div
       ref={buttonRef}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -124,5 +123,28 @@ export const FloatingDevLogout: React.FC = () => {
         <span className="whitespace-nowrap">Keluar (Dev)</span>
       </div>
     </div>
+
+    {/* Modal Konfirmasi Logout Dev */}
+    <ActionPromptModal
+      config={
+        showLogoutConfirm
+          ? {
+              type: 'confirm',
+              variant: 'danger',
+              title: 'Konfirmasi Keluar (Dev)',
+              subtitle: profile ? `${profile.full_name || profile.username}` : undefined,
+              message: 'Keluar dari sesi akun saat ini dan kembali ke menu login?',
+              confirmLabel: 'Ya, Keluar',
+              cancelLabel: 'Batal',
+              onConfirm: () => {
+                setShowLogoutConfirm(false);
+                logout();
+              },
+            }
+          : null
+      }
+      onClose={() => setShowLogoutConfirm(false)}
+    />
+  </>
   );
 };

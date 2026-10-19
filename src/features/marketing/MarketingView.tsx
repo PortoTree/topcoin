@@ -19,6 +19,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import type { Store } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface MarketingViewProps {
   activeTab: string;
@@ -83,7 +84,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
   // GPS Auto-detect
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('Perangkat Anda tidak mendukung pendeteksi GPS.');
+      toast.warning('Perangkat Anda tidak mendukung pendeteksi GPS.');
       return;
     }
 
@@ -97,7 +98,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
       },
       (error) => {
         console.error('GPS error:', error);
-        alert('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
+        toast.error('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
         setIsGettingGps(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -110,7 +111,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
     if (!profile) return;
 
     if (!name.trim() || !address.trim() || !ownerName.trim()) {
-      alert('Mohon isi nama toko, alamat, dan nama pemilik.');
+      toast.warning('Mohon isi nama toko, alamat, dan nama pemilik.');
       return;
     }
 
@@ -162,6 +163,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
       }
 
       setSuccessMsg(`Toko "${name}" berhasil didaftarkan! Tiket siap ditugaskan ke Driver.`);
+      toast.success(`Toko "${name}" berhasil didaftarkan! Tiket siap ditugaskan.`);
       setName('');
       setAddress('');
       setOwnerName('');
@@ -174,7 +176,7 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
       fetchMyStores();
     } catch (err: any) {
       console.error('Submit store error:', err);
-      alert(err.message || 'Gagal mendaftarkan toko.');
+      toast.error(err.message || 'Gagal mendaftarkan toko.');
     } finally {
       setIsSubmitting(false);
     }

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DriverTask, DriverTaskType } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface DriverViewProps {
   activeTab: string;
@@ -177,7 +178,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     if (!activeTaskToExecute) return;
 
     if (!evidencePhotoBlob) {
-      alert('Wajib jepret foto bukti penyelesaian tugas langsung dari kamera!');
+      toast.warning('Wajib jepret foto bukti penyelesaian tugas langsung dari kamera!');
       return;
     }
 
@@ -245,10 +246,10 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
       setActiveTaskToExecute(null);
       setEvidencePhotoBlob(null);
       setExecutionNotes('');
-      alert('Tugas berhasil diselesaikan & terverifikasi!');
+      toast.success('Tugas berhasil diselesaikan & terverifikasi!');
     } catch (err: any) {
       console.error('Error completing task:', err);
-      alert(err.message || 'Gagal menyelesaikan tugas.');
+      toast.error(err.message || 'Gagal menyelesaikan tugas.');
     } finally {
       setIsSubmitting(false);
     }

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, RefreshCw, CheckCircle2, X, SwitchCamera, ShieldCheck, Lock } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
+import { toast } from '../context/ToastContext';
 
 interface CameraCaptureProps {
   label: string;
@@ -188,7 +189,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       onPhotoCaptured({ base64, blob });
     } catch (err) {
       console.error('Error compressing image:', err);
-      alert('Gagal memproses foto dari kamera. Coba ulangi.');
+      toast.error('Gagal memproses foto dari kamera. Coba ulangi.');
     } finally {
       if (hardwareInputRef.current) hardwareInputRef.current.value = '';
     }

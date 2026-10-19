@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface DroppingViewProps {
   activeTab: string;
@@ -420,7 +421,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
   // Handle Offline Synchronization
   const syncOfflineRecords = async () => {
     if (!navigator.onLine) {
-      alert('Perangkat Anda masih dalam keadaan offline. Cari sinyal terlebih dahulu.');
+      toast.warning('Perangkat Anda masih dalam keadaan offline. Cari sinyal terlebih dahulu.');
       return;
     }
 
@@ -476,7 +477,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       }
 
       fetchTodayDroppings();
-      alert('Sinkronisasi data offline selesai!');
+      toast.success('Sinkronisasi data offline selesai!');
     } catch (err) {
       console.error('Sync error:', err);
     } finally {
@@ -490,45 +491,45 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     if (!profile) return;
 
     if (!selectedStoreId) {
-      alert('Silakan pilih toko mitra yang dikunjungi.');
+      toast.warning('Silakan pilih toko mitra yang dikunjungi.');
       return;
     }
 
     // 1. Validasi 3 Foto Wajib Terlebih Dahulu
     if (!photoMachine) {
-      alert('Wajib melampirkan Foto 1: Foto Mesin / Boneka.');
+      toast.warning('Wajib melampirkan Foto 1: Foto Mesin / Boneka.');
       return;
     }
     if (!photoMachineNumber) {
-      alert('Wajib melampirkan Foto 2: Foto Nomor Mesin.');
+      toast.warning('Wajib melampirkan Foto 2: Foto Nomor Mesin.');
       return;
     }
     if (!photoCoin) {
-      alert('Wajib melampirkan Foto 3: Foto Koin.');
+      toast.warning('Wajib melampirkan Foto 3: Foto Koin.');
       return;
     }
 
     // 2. Validasi Omset jika checklist dicentang, atau validasi meteran jika tidak dicentang
     if (hasOmset) {
       if (coinsCollected <= 0) {
-        alert('Karena checklist penarikan koin dicentang, masukkan total koin terambil di laci (harus lebih dari 0).');
+        toast.warning('Karena checklist penarikan koin dicentang, masukkan total koin terambil di laci (harus lebih dari 0).');
         return;
       }
 
       if (hasMismatch && !discrepancyReason.trim()) {
-        alert('Ada selisih meteran fisik! Wajib mengisi kolom Catatan Kendala Selisih.');
+        toast.warning('Ada selisih meteran fisik! Wajib mengisi kolom Catatan Kendala Selisih.');
         return;
       }
     } else {
       if (!noOmsetMeterStr.trim()) {
-        alert('Silakan masukkan angka meteran yang terbaca di mesin saat ini.');
+        toast.warning('Silakan masukkan angka meteran yang terbaca di mesin saat ini.');
         return;
       }
     }
 
     const store = activeStores.find((s) => s.id === selectedStoreId);
     if (!store || !store.current_machine_id) {
-      alert('Toko ini tidak memiliki unit mesin aktif.');
+      toast.warning('Toko ini tidak memiliki unit mesin aktif.');
       return;
     }
 
@@ -583,7 +584,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         resetForm();
         fetchTodayDroppings();
       } catch (dbErr: any) {
-        alert('Gagal menyimpan offline: ' + dbErr.message);
+        toast.error('Gagal menyimpan offline: ' + dbErr.message);
       } finally {
         setIsSubmitting(false);
       }

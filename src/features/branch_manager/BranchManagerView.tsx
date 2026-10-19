@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { ActionPromptModal, type ActionPromptConfig } from '../../components/ActionPromptModal';
+import { toast } from '../../context/ToastContext';
 import { useBranch } from '../../context/BranchContext';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -41,6 +43,7 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
   // Selected staff for Role Assignment Modal & Staff Option Modal (rendered outside list)
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
+  const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
 
   const getStaffBadge = (staff: UserProfile) => {
     if (staff.role === 'branch_manager') {
@@ -152,56 +155,68 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
   }, [fetchBMData]);
 
   // Handle Approve Account Deletion (Permanent Removal)
-  const handleApproveDeletion = async (user: UserProfile) => {
-    const confirmed = window.confirm(
-      `KONFIRMASI FINAL BM:\n\nSetujui penghapusan akun "${user.full_name}" (${user.username}) secara permanen? Tindakan ini tidak dapat dibatalkan.`
-    );
-    if (!confirmed) return;
-
-    try {
-      // Delete from DB
-      await supabase.from('profiles').delete().eq('id', user.id);
-
-      setPendingDeletions((prev) => prev.filter((u) => u.id !== user.id));
-      setBranchStaff((prev) => prev.filter((u) => u.id !== user.id));
-
-      confetti({ particleCount: 50, spread: 60 });
-      setActionSuccess(`Akun "${user.full_name}" resmi dihapus secara permanen dari sistem.`);
-    } catch (err: any) {
-      console.error('Error approving deletion:', err);
-      alert(err.message || 'Gagal menghapus akun.');
-    }
+  const handleApproveDeletion = (user: UserProfile) => {
+    setActionPrompt({
+      type: 'confirm',
+      variant: 'danger',
+      title: 'Setujui Hapus Permanen',
+      subtitle: `${user.full_name} (@${user.username})`,
+      message: 'Setujui penghapusan akun ini secara permanen dari sistem? Tindakan ini tidak dapat dibatalkan.',
+      confirmLabel: 'Ya, Hapus Permanen',
+      cancelLabel: 'Batal',
+      onConfirm: async () => {
+        try {
+          await supabase.from('profiles').delete().eq('id', user.id);
+          setPendingDeletions((prev) => prev.filter((u) => u.id !== user.id));
+          setBranchStaff((prev) => prev.filter((u) => u.id !== user.id));
+          confetti({ particleCount: 50, spread: 60 });
+          const successMsg = `Akun "${user.full_name}" resmi dihapus permanen.`;
+          setActionSuccess(successMsg);
+          toast.success(successMsg);
+        } catch (err: any) {
+          console.error('Error approving deletion:', err);
+          toast.error(err.message || 'Gagal menghapus akun.');
+        }
+      },
+    });
   };
 
   // Handle Reject Account Deletion (Restore to Active)
-  const handleRejectDeletion = async (user: UserProfile) => {
-    const confirmed = window.confirm(
-      `PULIHKAN AKUN:\n\nBatalkan permohonan hapus dan aktifkan kembali akun "${user.full_name}" (${user.username})?`
-    );
-    if (!confirmed) return;
+  const handleRejectDeletion = (user: UserProfile) => {
+    setActionPrompt({
+      type: 'confirm',
+      variant: 'primary',
+      title: 'Pulihkan Akun Karyawan',
+      subtitle: `${user.full_name} (@${user.username})`,
+      message: 'Batalkan permohonan hapus dan aktifkan kembali akses login staf ini?',
+      confirmLabel: 'Ya, Pulihkan Akun',
+      cancelLabel: 'Batal',
+      onConfirm: async () => {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              deletion_status: 'active',
+              is_active: true,
+              deletion_requested_by: null,
+              deletion_requested_at: null,
+            })
+            .eq('id', user.id);
 
-    try {
-      await supabase
-        .from('profiles')
-        .update({
-          deletion_status: 'active',
-          is_active: true,
-          deletion_requested_by: null,
-          deletion_requested_at: null,
-        })
-        .eq('id', user.id);
-
-      setPendingDeletions((prev) => prev.filter((u) => u.id !== user.id));
-      setBranchStaff((prev) =>
-        prev.map((u) => (u.id === user.id ? { ...u, deletion_status: 'active', is_active: true } : u))
-      );
-
-      confetti({ particleCount: 40, spread: 50 });
-      setActionSuccess(`Akun "${user.full_name}" berhasil dipulihkan! Akses login dibuka kembali.`);
-    } catch (err: any) {
-      console.error('Error restoring account:', err);
-      alert(err.message || 'Gagal memulihkan akun.');
-    }
+          setPendingDeletions((prev) => prev.filter((u) => u.id !== user.id));
+          setBranchStaff((prev) =>
+            prev.map((u) => (u.id === user.id ? { ...u, deletion_status: 'active', is_active: true } : u))
+          );
+          confetti({ particleCount: 40, spread: 50 });
+          const restoreMsg = `Akun "${user.full_name}" berhasil dipulihkan!`;
+          setActionSuccess(restoreMsg);
+          toast.success(restoreMsg);
+        } catch (err: any) {
+          console.error('Error restoring account:', err);
+          toast.error(err.message || 'Gagal memulihkan akun.');
+        }
+      },
+    });
   };
 
   // Reassign staff role / duty from BM
@@ -221,11 +236,6 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
         : `Admin Cabang + Tugas ${selectedValue.toUpperCase()}`
       : selectedValue.toUpperCase();
 
-    const confirmChange = window.confirm(
-      `[SUPERVISI BM] Ubah penugasan ${staff.full_name} (${staff.username}) menjadi "${label}"?`
-    );
-    if (!confirmChange) return;
-
     try {
       const res = await updateStaffRole(staff.id, targetRole, newAssignedTask);
       if (res.success) {
@@ -236,57 +246,74 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
               : s
           )
         );
-        setActionSuccess(
-          `Penugasan ${staff.full_name} berhasil diubah menjadi "${label}"! Navigasi dan tugas staf langsung disesuaikan.`
-        );
+        toast.success(`Penugasan ${staff.full_name} kini menjadi "${label}"!`);
       } else {
-        alert(res.message || 'Gagal mengubah tugas staf.');
+        toast.error(res.message || 'Gagal mengubah tugas staf.');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan saat mengubah tugas.');
+      toast.error(err.message || 'Terjadi kesalahan saat mengubah tugas.');
     }
   };
 
   const handleStaffAction = async (staff: UserProfile, action: 'cuti' | 'peringatan' | 'hapus') => {
     setSelectedStaffForOption(null);
     if (action === 'cuti') {
-      const reason = window.prompt(
-        `[BM] Atur status Libur / Cuti untuk "${staff.full_name}":\nMasukkan keterangan (contoh: Cuti Sakit 1 Hari / Libur Operasional):`,
-        'Cuti Kerja'
-      );
-      if (reason) {
-        setActionSuccess(`Status Libur/Cuti untuk "${staff.full_name}" berhasil dicatat: "${reason}".`);
-      }
+      setActionPrompt({
+        type: 'prompt',
+        title: 'Atur Libur / Cuti',
+        subtitle: staff.full_name,
+        message: `Tentukan alasan atau keterangan izin libur operasional untuk ${staff.full_name}:`,
+        inputLabel: 'Keterangan Libur / Izin',
+        inputPlaceholder: 'Contoh: Izin urusan keluarga, sakit 1 hari...',
+        initialValue: 'Cuti Kerja',
+        confirmLabel: 'Simpan Status',
+        onConfirm: (reason) => {
+          toast.success(`Status Libur/Cuti untuk "${staff.full_name}" berhasil dicatat: "${reason || 'Cuti Kerja'}".`);
+        },
+      });
     } else if (action === 'peringatan') {
-      const note = window.prompt(
-        `[BM] Beri Surat Peringatan / Teguran ke "${staff.full_name}":\nMasukkan catatan teguran:`,
-        'Peringatan kedisiplinan & target cabang'
-      );
-      if (note) {
-        setActionSuccess(`Surat peringatan untuk "${staff.full_name}" berhasil diterbitkan.`);
-      }
+      setActionPrompt({
+        type: 'prompt',
+        variant: 'warning',
+        title: 'Surat Peringatan (SP)',
+        subtitle: staff.full_name,
+        message: `Catat teguran kedisiplinan atau target operasional untuk ${staff.full_name}:`,
+        inputLabel: 'Catatan Teguran / Peringatan',
+        inputPlaceholder: 'Contoh: Pelanggaran SOP operasional, target tidak tercapai...',
+        initialValue: 'Peringatan kedisiplinan & target cabang',
+        confirmLabel: 'Terbitkan SP',
+        onConfirm: (note) => {
+          toast.warning(`Surat peringatan untuk "${staff.full_name}" dicatat: ${note || 'Kedisiplinan'}`);
+        },
+      });
     } else if (action === 'hapus') {
-      const confirmed = window.confirm(
-        `[BM PERINGATAN HAPUS]\nHapus / Kunci akun "${staff.full_name}" (${staff.username}) dari cabang ini?`
-      );
-      if (!confirmed) return;
+      setActionPrompt({
+        type: 'confirm',
+        variant: 'danger',
+        title: 'Konfirmasi Hapus Akun',
+        subtitle: `${staff.full_name} (@${staff.username})`,
+        message: `Hapus / Kunci akun "${staff.full_name}" dari operasional cabang ini?`,
+        confirmLabel: 'Ya, Hapus Akun',
+        cancelLabel: 'Batal',
+        onConfirm: async () => {
+          try {
+            await supabase
+              .from('profiles')
+              .update({
+                deletion_status: 'pending_deletion',
+                is_active: false,
+              })
+              .eq('id', staff.id);
 
-      try {
-        await supabase
-          .from('profiles')
-          .update({
-            deletion_status: 'pending_deletion',
-            is_active: false,
-          })
-          .eq('id', staff.id);
-
-        setBranchStaff((prev) =>
-          prev.map((s) => (s.id === staff.id ? { ...s, is_active: false, deletion_status: 'pending_deletion' } : s))
-        );
-        setActionSuccess(`Akun "${staff.full_name}" berhasil dikunci dan ditandai untuk dihapus.`);
-      } catch (err: any) {
-        alert(err.message || 'Gagal menghapus akun.');
-      }
+            setBranchStaff((prev) =>
+              prev.map((s) => (s.id === staff.id ? { ...s, is_active: false, deletion_status: 'pending_deletion' } : s))
+            );
+            toast.success(`Akun "${staff.full_name}" berhasil dikunci dan ditandai untuk dihapus.`);
+          } catch (err: any) {
+            toast.error(err.message || 'Gagal menghapus akun.');
+          }
+        },
+      });
     }
   };
 
@@ -898,6 +925,12 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
           </>
         )}
       </BottomSheetModal>
+
+      {/* Modal Aksi Custom (Pengganti window.prompt & window.confirm) */}
+      <ActionPromptModal
+        config={actionPrompt}
+        onClose={() => setActionPrompt(null)}
+      />
     </div>
   );
 };

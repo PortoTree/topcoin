@@ -97,12 +97,16 @@ const MainAppContent: React.FC = () => {
   );
 };
 
+import { ToastProvider } from './context/ToastContext';
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <BranchProvider>
-          <MainAppContent />
+          <ToastProvider>
+            <MainAppContent />
+          </ToastProvider>
         </BranchProvider>
       </AuthProvider>
     </ThemeProvider>

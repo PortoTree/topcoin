@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Branch, UserProfile, UserRole, DroppingTransaction, Machine } from '../../types';
+import { toast } from '../../context/ToastContext';
+import { ActionPromptModal, type ActionPromptConfig } from '../../components/ActionPromptModal';
 
 interface OwnerViewProps {
   activeTab: string;
@@ -23,6 +25,9 @@ interface OwnerViewProps {
 
 export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
   const { currentBranch, isGlobalView, availableBranches, refreshBranches } = useBranch();
+
+  // Custom Action Prompt Modal state
+  const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
 
   // Data State
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -91,7 +96,7 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
   const handleAddBranch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBranchCode.trim() || !newBranchName.trim() || !newBranchCity.trim()) {
-      alert('Isi kode, nama cabang, dan kota.');
+      toast.warning('Isi kode, nama cabang, dan kota.');
       return;
     }
 
@@ -126,10 +131,10 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
       setNewBranchAddress('');
       setNewBranchPhone('');
       confetti({ particleCount: 40, spread: 50 });
-      alert('Cabang baru berhasil ditambahkan!');
+      toast.success('Cabang baru berhasil ditambahkan!');
     } catch (err: any) {
       console.error('Error adding branch:', err);
-      alert(err.message || 'Gagal menambah cabang.');
+      toast.error(err.message || 'Gagal menambah cabang.');
     }
   };
 
@@ -137,7 +142,7 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUserUsername.trim() || !newUserFullName.trim()) {
-      alert('Isi username dan nama lengkap.');
+      toast.warning('Isi username dan nama lengkap.');
       return;
     }
 
@@ -161,33 +166,40 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
       setNewUserUsername('');
       setNewUserFullName('');
       confetti({ particleCount: 40, spread: 50 });
-      alert(`Akun pengguna "${newUserFullName}" (${newUserRole}) berhasil dibuat!`);
+      toast.success(`Akun pengguna "${newUserFullName}" (${newUserRole}) berhasil dibuat!`);
     } catch (err: any) {
       console.error('Error adding user:', err);
-      alert(err.message || 'Gagal membuat pengguna.');
+      toast.error(err.message || 'Gagal membuat pengguna.');
     }
   };
 
   // Handle Delete User Directly (Owner Authority)
   const handleDeleteUserDirect = async (u: UserProfile) => {
     if (u.role === 'owner') {
-      alert('Akun Owner tidak dapat dihapus.');
+      toast.warning('Akun Owner tidak dapat dihapus.');
       return;
     }
 
-    const confirmed = window.confirm(
-      `HAPUS PENGGUNA (OWNER OVERRIDE):\n\nHapus akun "${u.full_name}" (${u.username}) secara permanen?`
-    );
-    if (!confirmed) return;
-
-    try {
-      await supabase.from('profiles').delete().eq('id', u.id);
-      setUsers((prev) => prev.filter((user) => user.id !== u.id));
-      alert(`Akun "${u.username}" telah dihapus.`);
-    } catch (err: any) {
-      console.error('Error deleting user:', err);
-      alert(err.message || 'Gagal menghapus user.');
-    }
+    setActionPrompt({
+      type: 'confirm',
+      variant: 'danger',
+      title: 'Hapus Pengguna (Owner Override)',
+      subtitle: `${u.full_name} (@${u.username})`,
+      message: `Apakah Anda yakin ingin menghapus akun "${u.full_name}" (${u.username}) secara permanen?`,
+      confirmLabel: 'Ya, Hapus Permanen',
+      cancelLabel: 'Batal',
+      onConfirm: async () => {
+        setActionPrompt(null);
+        try {
+          await supabase.from('profiles').delete().eq('id', u.id);
+          setUsers((prev) => prev.filter((user) => user.id !== u.id));
+          toast.success(`Akun "${u.username}" telah dihapus.`);
+        } catch (err: any) {
+          console.error('Error deleting user:', err);
+          toast.error(err.message || 'Gagal menghapus user.');
+        }
+      },
+    });
   };
 
   // Generate and Download Backup JSON
@@ -198,9 +210,10 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
       setPreviewSnapshot(snapshot);
       downloadBackupJsonFile(snapshot);
       confetti({ particleCount: 50, spread: 60 });
+      toast.success(`Backup data cabang ${b.name} berhasil dibuat!`);
     } catch (err: any) {
       console.error('Backup error:', err);
-      alert(err.message || 'Gagal men-generate file backup JSON.');
+      toast.error(err.message || 'Gagal men-generate file backup JSON.');
     } finally {
       setIsGeneratingBackup(false);
     }
@@ -728,6 +741,9 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
           </div>
         </div>
       )}
+
+      {/* Modal Aksi Custom (Pengganti window.confirm) */}
+      <ActionPromptModal config={actionPrompt} onClose={() => setActionPrompt(null)} />
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BottomSheetModal } from '../../components/BottomSheetModal';
+import { ActionPromptModal, type ActionPromptConfig } from '../../components/ActionPromptModal';
+import { toast } from '../../context/ToastContext';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
@@ -80,6 +82,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   // Selected staff for Role Assignment Modal & Staff Option Modal (rendered outside list)
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
+  const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
 
   const getStaffBadge = (staff: UserProfile) => {
     if (staff.role === 'branch_manager') {
@@ -133,21 +136,34 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const handleStaffAction = async (staff: UserProfile, action: 'cuti' | 'peringatan' | 'hapus') => {
     setSelectedStaffForOption(null);
     if (action === 'cuti') {
-      const reason = window.prompt(
-        `Atur status Libur / Cuti untuk "${staff.full_name}":\nMasukkan keterangan (contoh: Cuti Sakit 1 Hari / Libur Kerja):`,
-        'Cuti Kerja'
-      );
-      if (reason) {
-        alert(`Status Libur/Cuti untuk ${staff.full_name} berhasil dicatat: "${reason}".`);
-      }
+      setActionPrompt({
+        type: 'prompt',
+        title: 'Atur Libur / Cuti',
+        subtitle: staff.full_name,
+        message: `Tentukan alasan atau keterangan izin libur operasional untuk ${staff.full_name}:`,
+        inputLabel: 'Keterangan Libur / Izin',
+        inputPlaceholder: 'Contoh: Izin urusan keluarga, sakit 1 hari...',
+        initialValue: 'Cuti Kerja',
+        confirmLabel: 'Simpan Status',
+        onConfirm: (reason) => {
+          toast.success(`Status Libur/Cuti untuk "${staff.full_name}" berhasil dicatat: "${reason || 'Cuti Kerja'}".`);
+        },
+      });
     } else if (action === 'peringatan') {
-      const note = window.prompt(
-        `Beri Surat Peringatan / Teguran ke "${staff.full_name}":\nMasukkan catatan teguran:`,
-        'Teguran kedisiplinan operasional'
-      );
-      if (note) {
-        alert(`Surat peringatan resmi untuk ${staff.full_name} berhasil dicatat.`);
-      }
+      setActionPrompt({
+        type: 'prompt',
+        variant: 'warning',
+        title: 'Surat Peringatan (SP)',
+        subtitle: staff.full_name,
+        message: `Catat teguran kedisiplinan atau evaluasi operasional untuk ${staff.full_name}:`,
+        inputLabel: 'Catatan Teguran / Pelanggaran',
+        inputPlaceholder: 'Contoh: Terlambat berturut-turut, selisih meteran...',
+        initialValue: 'Teguran kedisiplinan operasional',
+        confirmLabel: 'Terbitkan SP',
+        onConfirm: (note) => {
+          toast.warning(`Surat peringatan resmi untuk "${staff.full_name}" dicatat: ${note || 'Kedisiplinan'}`);
+        },
+      });
     } else if (action === 'hapus') {
       handleRequestDeleteStaff(staff);
     }
@@ -257,7 +273,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const handleSaveReconciliation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDroppingUserId) {
-      alert('Pilih petugas dropping yang akan direkonsiliasi.');
+      toast.warning('Pilih petugas dropping yang akan direkonsiliasi.');
       return;
     }
 
@@ -284,16 +300,16 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       if (error) console.warn('DB reconciliation fallback:', error);
 
       confetti({ particleCount: 50, spread: 60 });
-      setReconcileSuccess(
-        `Rekonsiliasi kas berhasil disetujui! Status: ${
-          status === 'matched' ? 'COCOK (Nol Selisih)' : `SELISIH ${formatIDR(cashDifference)}`
-        }.`
-      );
+      const successMsg = `Rekonsiliasi kas berhasil disetujui! Status: ${
+        status === 'matched' ? 'COCOK (Nol Selisih)' : `SELISIH ${formatIDR(cashDifference)}`
+      }.`;
+      setReconcileSuccess(successMsg);
+      toast.success(successMsg);
       setPhysicalCash('');
       setReconciliationNotes('');
     } catch (err: any) {
       console.error('Reconciliation error:', err);
-      alert(err.message || 'Gagal menyimpan rekonsiliasi kas.');
+      toast.error(err.message || 'Gagal menyimpan rekonsiliasi kas.');
     } finally {
       setIsReconciling(false);
     }
@@ -305,11 +321,11 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     if (!profile) return;
 
     if (!selectedDriverId) {
-      alert('Pilih driver yang akan ditugaskan.');
+      toast.warning('Pilih driver yang akan ditugaskan.');
       return;
     }
     if (!selectedStoreId && selectedTaskType !== 'tarik_rusak') {
-      alert('Pilih toko tujuan.');
+      toast.warning('Pilih toko tujuan.');
       return;
     }
 
@@ -334,72 +350,75 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       confetti({ particleCount: 40, spread: 50 });
       setDispatchSuccess('Tugas berhasil dibuat dan dikirimkan ke driver!');
+      toast.success('Tugas driver berhasil dikirimkan!');
       setDispatchNotes('');
       fetchBranchData();
     } catch (err: any) {
       console.error('Dispatch error:', err);
-      alert(err.message || 'Gagal membuat tugas driver.');
+      toast.error(err.message || 'Gagal membuat tugas driver.');
     } finally {
       setIsDispatching(false);
     }
   };
 
   // Handle Request Delete Employee (Hierarchical Deletion - Step 1: Lock & Pending Deletion)
-  const handleRequestDeleteStaff = async (staff: UserProfile) => {
-    const confirmed = window.confirm(
-      `PERINGATAN HAPUS AKUN:\n\nAjukan penghapusan akun untuk "${staff.full_name}" (${staff.username})?\n\nAkun akan LANGSUNG DIKUNCI (status: pending_deletion) dan diteruskan ke Branch Manager untuk konfirmasi final.`
-    );
-    if (!confirmed) return;
+  const handleRequestDeleteStaff = (staff: UserProfile) => {
+    setActionPrompt({
+      type: 'confirm',
+      variant: 'danger',
+      title: 'Ajukan Hapus Akun',
+      subtitle: `${staff.full_name} (@${staff.username})`,
+      message:
+        'Akun staf ini akan langsung dikunci (status: pending_deletion) dan diteruskan ke Branch Manager untuk konfirmasi final.',
+      confirmLabel: 'Ya, Ajukan Hapus',
+      cancelLabel: 'Batal',
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase
+            .from('profiles')
+            .update({
+              deletion_status: 'pending_deletion',
+              is_active: false,
+              deletion_requested_by: profile?.id,
+              deletion_requested_at: new Date().toISOString(),
+            })
+            .eq('id', staff.id);
 
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          deletion_status: 'pending_deletion',
-          is_active: false,
-          deletion_requested_by: profile?.id,
-          deletion_requested_at: new Date().toISOString(),
-        })
-        .eq('id', staff.id);
+          if (error) console.warn('DB delete lock fallback:', error);
 
-      if (error) console.warn('DB delete lock fallback:', error);
+          // Local update
+          setBranchStaff((prev) =>
+            prev.map((s) =>
+              s.id === staff.id
+                ? { ...s, deletion_status: 'pending_deletion', is_active: false }
+                : s
+            )
+          );
 
-      // Local update
-      setBranchStaff((prev) =>
-        prev.map((s) =>
-          s.id === staff.id
-            ? { ...s, deletion_status: 'pending_deletion', is_active: false }
-            : s
-        )
-      );
-
-      alert(`Akun "${staff.username}" berhasil dikunci dan permohonan telah diteruskan ke Branch Manager.`);
-    } catch (err: any) {
-      console.error('Delete request error:', err);
-      alert(err.message || 'Gagal mengajukan penghapusan akun.');
-    }
+          toast.success(`Akun "${staff.username}" berhasil dikunci dan permohonan diteruskan ke Branch Manager.`);
+        } catch (err: any) {
+          console.error('Delete request error:', err);
+          toast.error(err.message || 'Gagal mengajukan penghapusan akun.');
+        }
+      },
+    });
   };
 
   // Reassign staff role / duty (Dropping, Marketing, Driver)
   const handleChangeStaffRole = async (staff: UserProfile, newRole: UserRole) => {
     if (staff.role === newRole) return;
-    const confirmChange = window.confirm(
-      `Ubah tugas ${staff.full_name} (${staff.username}) dari ${staff.role.toUpperCase()} menjadi ${newRole.toUpperCase()}?`
-    );
-    if (!confirmChange) return;
-
     try {
       const res = await updateStaffRole(staff.id, newRole);
       if (res.success) {
         setBranchStaff((prev) =>
           prev.map((s) => (s.id === staff.id ? { ...s, role: newRole } : s))
         );
-        alert(`Sukses! Tugas ${staff.full_name} kini menjadi ${newRole.toUpperCase()}. Layout aplikasi staf akan otomatis disesuaikan.`);
+        toast.success(`Tugas ${staff.full_name} kini menjadi ${newRole.toUpperCase()}. Layout aplikasi staf otomatis disesuaikan.`);
       } else {
-        alert(res.message || 'Gagal mengubah tugas staf.');
+        toast.error(res.message || 'Gagal mengubah tugas staf.');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan saat mengubah tugas.');
+      toast.error(err.message || 'Terjadi kesalahan saat mengubah tugas.');
     }
   };
 
@@ -409,23 +428,18 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     const newTask = isPengelola ? null : (selectedValue as 'driver' | 'marketing' | 'dropping');
     const label = isPengelola ? 'Pengelola' : selectedValue.toUpperCase();
 
-    const confirmChange = window.confirm(
-      `Ubah penugasan ${staff.full_name} menjadi "${label}"?`
-    );
-    if (!confirmChange) return;
-
     try {
       const res = await updateStaffRole(staff.id, 'admin_cabang', newTask);
       if (res.success) {
         setBranchStaff((prev) =>
           prev.map((s) => (s.id === staff.id ? { ...s, assigned_task: newTask } : s))
         );
-        alert(`Sukses! Penugasan ${staff.full_name} kini menjadi ${label}. Tab tugas akan otomatis menyesuaikan.`);
+        toast.success(`Penugasan ${staff.full_name} kini menjadi ${label}. Tab tugas akan otomatis menyesuaikan.`);
       } else {
-        alert(res.message || 'Gagal mengubah penugasan admin.');
+        toast.error(res.message || 'Gagal mengubah penugasan admin.');
       }
     } catch (err: any) {
-      alert(err.message || 'Terjadi kesalahan saat mengubah penugasan admin.');
+      toast.error(err.message || 'Terjadi kesalahan saat mengubah penugasan admin.');
     }
   };
 
@@ -433,7 +447,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStaffUsername.trim() || !newStaffFullName.trim()) {
-      alert('Isi username dan nama lengkap.');
+      toast.warning('Isi username dan nama lengkap.');
       return;
     }
 
@@ -458,10 +472,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       setShowAddStaffModal(false);
       setNewStaffUsername('');
       setNewStaffFullName('');
-      alert(`Karyawan "${newStaffFullName}" (${newStaffRole}) berhasil didaftarkan!`);
+      toast.success(`Karyawan "${newStaffFullName}" (${newStaffRole}) berhasil didaftarkan!`);
     } catch (err: any) {
       console.error('Add staff error:', err);
-      alert(err.message || 'Gagal menambah karyawan.');
+      toast.error(err.message || 'Gagal menambah karyawan.');
     } finally {
       setIsAddingStaff(false);
     }
@@ -1454,6 +1468,12 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           </>
         )}
       </BottomSheetModal>
+
+      {/* Modal Aksi Custom (Pengganti window.prompt & window.confirm) */}
+      <ActionPromptModal
+        config={actionPrompt}
+        onClose={() => setActionPrompt(null)}
+      />
     </div>
   );
 };

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/useTheme';
 import { MyHistoryModal } from './MyHistoryModal';
+import { ActionPromptModal } from '../../components/ActionPromptModal';
+import { toast } from '../../context/ToastContext';
 import {
   History,
   Coins,
@@ -20,6 +22,7 @@ export const AttendanceHomeView: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   if (!profile) return null;
 
@@ -33,7 +36,9 @@ export const AttendanceHomeView: React.FC = () => {
     try {
       const res = await checkInToday();
       if (!res.success) {
-        alert(res.message || 'Gagal menyimpan absensi.');
+        toast.error(res.message || 'Gagal menyimpan absensi.');
+      } else {
+        toast.success('Absensi hari ini berhasil dicatat!');
       }
     } finally {
       setIsSubmitting(false);
@@ -85,12 +90,7 @@ export const AttendanceHomeView: React.FC = () => {
           {/* Logout button */}
           <button
             type="button"
-            onClick={async () => {
-              const confirmLogout = window.confirm('Keluar dari sesi akun Anda?');
-              if (confirmLogout) {
-                await logout();
-              }
-            }}
+            onClick={() => setShowLogoutConfirm(true)}
             className="w-9 h-9 sm:w-auto sm:px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 border border-rose-200 dark:border-rose-800/60 text-rose-600 dark:text-rose-400 font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all active:scale-90 cursor-pointer shadow-xs"
             title="Keluar / Logout Akun"
             aria-label="Keluar dari akun"
@@ -192,6 +192,28 @@ export const AttendanceHomeView: React.FC = () => {
           onClose={() => setShowHistoryModal(false)}
         />
       )}
+
+      {/* Modal Konfirmasi Logout Custom */}
+      <ActionPromptModal
+        config={
+          showLogoutConfirm
+            ? {
+                type: 'confirm',
+                variant: 'danger',
+                title: 'Konfirmasi Keluar',
+                subtitle: profile ? `${profile.full_name} (@${profile.username})` : undefined,
+                message: 'Apakah Anda yakin ingin keluar dari sesi akun ini?',
+                confirmLabel: 'Ya, Keluar',
+                cancelLabel: 'Batal',
+                onConfirm: async () => {
+                  setShowLogoutConfirm(false);
+                  await logout();
+                },
+              }
+            : null
+        }
+        onClose={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 };

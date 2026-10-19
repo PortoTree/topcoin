@@ -14,6 +14,7 @@ import {
   User,
 } from 'lucide-react';
 import type { DroppingTransaction, Store, Machine, UserProfile } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface AdminViewProps {
   activeTab: string;
@@ -157,7 +158,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
   const handleSaveReconciliation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDroppingUserId) {
-      alert('Pilih petugas dropping yang akan ditutup bukunya.');
+      toast.warning('Pilih petugas dropping yang akan ditutup bukunya.');
       return;
     }
 
@@ -181,15 +182,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
 
       if (error) throw error;
 
-      setReconcileSuccess(
-        `Rekonsiliasi tersimpan! Status: ${
-          status === 'matched' ? 'COCOK (Match 100%)' : 'UNMATCH (Ada Selisih)'
-        }`
-      );
+      const successMsg = `Rekonsiliasi tersimpan! Status: ${
+        status === 'matched' ? 'COCOK (Match 100%)' : 'UNMATCH (Ada Selisih)'
+      }`;
+      setReconcileSuccess(successMsg);
+      toast.success(successMsg);
       setPhysicalCash('');
       setReconciliationNotes('');
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan rekonsiliasi kas.');
+      toast.error(err.message || 'Gagal menyimpan rekonsiliasi kas.');
     } finally {
       setIsReconciling(false);
     }
@@ -199,7 +200,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
   const handleRelocateMachine = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMachineToMove || !targetStoreId) {
-      alert('Pilih mesin dan toko tujuan relokasi.');
+      toast.warning('Pilih mesin dan toko tujuan relokasi.');
       return;
     }
 
@@ -236,13 +237,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
         .update({ current_store_id: targetStoreId, status: 'terpasang' })
         .eq('id', selectedMachineToMove);
 
-      alert('Mesin berhasil dipindahkan ke toko baru!');
+      toast.success('Mesin berhasil dipindahkan ke toko baru!');
       setSelectedMachineToMove('');
       setTargetStoreId('');
       setRelocationReason('');
       fetchAdminData();
     } catch (err: any) {
-      alert(err.message || 'Gagal merelokasi mesin.');
+      toast.error(err.message || 'Gagal merelokasi mesin.');
     } finally {
       setIsRelocating(false);
     }
@@ -269,9 +270,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
           description: 'Jam reset harian untuk sesi login dan absen seluruh akun',
         },
       ]);
-      alert('Pengaturan privasi dan jam reset berhasil diperbarui!');
+      toast.success('Pengaturan privasi dan jam reset berhasil diperbarui!');
     } catch (err: any) {
-      alert(err.message || 'Gagal menyimpan pengaturan.');
+      toast.error(err.message || 'Gagal menyimpan pengaturan.');
     } finally {
       setIsSavingSettings(false);
     }

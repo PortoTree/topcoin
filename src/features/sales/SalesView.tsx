@@ -16,6 +16,7 @@ import {
   Navigation,
 } from 'lucide-react';
 import type { Store } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface SalesViewProps {
   activeTab: string;
@@ -71,7 +72,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ activeTab }) => {
   // GPS Auto-detect
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
-      alert('Perangkat Anda tidak mendukung pendeteksi GPS.');
+      toast.warning('Perangkat Anda tidak mendukung pendeteksi GPS.');
       return;
     }
 
@@ -85,7 +86,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ activeTab }) => {
       },
       (error) => {
         console.error('GPS error:', error);
-        alert('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
+        toast.error('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
         setIsGettingGps(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -98,7 +99,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ activeTab }) => {
     if (!profile) return;
 
     if (!name.trim() || !address.trim() || !ownerName.trim()) {
-      alert('Mohon isi nama toko, alamat, dan nama pemilik.');
+      toast.warning('Mohon isi nama toko, alamat, dan nama pemilik.');
       return;
     }
 
@@ -126,6 +127,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ activeTab }) => {
       if (error) throw error;
 
       setSuccessMsg(`Toko "${name}" berhasil didaftarkan! Menunggu kiriman mesin.`);
+      toast.success(`Toko "${name}" berhasil didaftarkan! Menunggu kiriman mesin.`);
       setName('');
       setAddress('');
       setOwnerName('');
@@ -138,7 +140,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ activeTab }) => {
       fetchMyStores();
     } catch (err: any) {
       console.error('Submit store error:', err);
-      alert(err.message || 'Gagal mendaftarkan toko.');
+      toast.error(err.message || 'Gagal mendaftarkan toko.');
     } finally {
       setIsSubmitting(false);
     }

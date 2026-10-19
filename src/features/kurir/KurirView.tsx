@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { Store, Machine } from '../../types';
+import { toast } from '../../context/ToastContext';
 
 interface KurirViewProps {
   activeTab: string;
@@ -83,7 +84,7 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
   // Action: Courier takes machine from warehouse and sets status to 'dikirim'
   const handleStartDelivery = async (store: Store, machineId: string) => {
     if (!profile || !machineId) {
-      alert('Pilih nomor mesin yang akan Anda bawa dari gudang.');
+      toast.warning('Pilih nomor mesin yang akan Anda bawa dari gudang.');
       return;
     }
 
@@ -107,9 +108,9 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
 
       fetchData();
       setSelectedStore(null);
-      alert('Status diubah ke "Dikirim". Silakan antar mesin ke toko.');
+      toast.success('Status diubah ke "Dikirim". Silakan antar mesin ke toko.');
     } catch (err: any) {
-      alert(err.message || 'Gagal memperbarui status pengiriman.');
+      toast.error(err.message || 'Gagal memperbarui status pengiriman.');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +120,7 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
   const handleConfirmDelivered = async (store: Store) => {
     if (!profile) return;
     if (!installedPhotoBlob) {
-      alert('Harap ambil foto bukti instalasi mesin di toko terlebih dahulu.');
+      toast.warning('Harap ambil foto bukti instalasi mesin di toko terlebih dahulu.');
       return;
     }
 
@@ -152,9 +153,9 @@ export const KurirView: React.FC<KurirViewProps> = ({ activeTab }) => {
       fetchData();
       setSelectedStore(null);
       setInstalledPhotoBlob(null);
-      alert(`Sukses! Toko "${store.name}" sudah aktif dan siap dikoleksi oleh tim Dropping.`);
+      toast.success(`Sukses! Toko "${store.name}" sudah aktif dan siap dikoleksi oleh tim Dropping.`);
     } catch (err: any) {
-      alert(err.message || 'Gagal menyelesaikan pengiriman.');
+      toast.error(err.message || 'Gagal menyelesaikan pengiriman.');
     } finally {
       setIsSubmitting(false);
     }
