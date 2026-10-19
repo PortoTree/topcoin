@@ -779,12 +779,16 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                 let buttonStyle = 'bg-slate-900 text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white';
 
                 if (todayTx) {
-                  StatusIcon = CheckCircle2;
-                  buttonStyle = 'bg-emerald-600 text-white font-bold hover:bg-emerald-500 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500';
                   if (hasOmsetTaken) {
-                    statusLabel = 'Kunjungan Selesai (Ada Omset)';
+                    // Omset sudah diambil
+                    statusLabel = 'Kunjungan Selesai';
+                    StatusIcon = CheckCircle2;
+                    buttonStyle = 'bg-emerald-600 text-white font-bold hover:bg-emerald-500 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500';
                   } else {
-                    statusLabel = 'Kunjungan Selesai (Cek Meteran)';
+                    // Kunjungan tercatat tetapi belum ambil omset
+                    statusLabel = 'Belum Ambil Omset';
+                    StatusIcon = Coins;
+                    buttonStyle = 'bg-amber-400 text-slate-950 font-bold hover:bg-amber-300 dark:bg-amber-400 dark:text-slate-950 dark:hover:bg-amber-300';
                   }
                 }
 
