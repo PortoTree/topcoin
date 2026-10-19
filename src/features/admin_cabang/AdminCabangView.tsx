@@ -1761,6 +1761,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               );
             });
 
+          const currentItem = relocationItems[picker.itemIndex];
+
           return (
             <>
               {/* Header */}
@@ -1787,12 +1789,11 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 </button>
               </div>
 
-              {/* Searchbox Input */}
+              {/* Searchbox Input (No autoFocus to prevent mobile keyboard auto popup) */}
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  autoFocus
                   value={pickerSearch}
                   onChange={(e) => setPickerSearch(e.target.value)}
                   placeholder={
@@ -1821,76 +1822,126 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       Tidak ditemukan toko atau nomor mesin dengan kata kunci &quot;{pickerSearch}&quot;.
                     </div>
                   ) : (
-                    filteredOriginList.map((item, i) => (
-                      <button
-                        key={`${item.storeId}-${item.machineId}-${i}`}
-                        type="button"
-                        onClick={() =>
-                          handleSelectOrigin(
-                            item.storeId,
-                            item.storeName,
-                            item.storeAddress,
-                            item.machineId,
-                            item.machineCode,
-                            picker.itemIndex
-                          )
-                        }
-                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-indigo-50/50 dark:hover:bg-slate-800 text-left transition cursor-pointer flex items-center justify-between group active:scale-98"
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' ? (
-                              <span className="text-[10px] font-mono font-extrabold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
-                                {item.machineCode}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic">
-                                Belum ada mesin
-                              </span>
-                            )}
-                            <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                              {item.storeName}
-                            </h4>
+                    filteredOriginList.map((item, i) => {
+                      const isSelected =
+                        currentItem?.originStoreId === item.storeId &&
+                        (item.machineId
+                          ? currentItem?.machineId === item.machineId
+                          : !currentItem?.machineId);
+
+                      return (
+                        <button
+                          key={`${item.storeId}-${item.machineId}-${i}`}
+                          type="button"
+                          onClick={() =>
+                            handleSelectOrigin(
+                              item.storeId,
+                              item.storeName,
+                              item.storeAddress,
+                              item.machineId,
+                              item.machineCode,
+                              picker.itemIndex
+                            )
+                          }
+                          className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between group active:scale-98 ${
+                            isSelected
+                              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-xs'
+                              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' ? (
+                                <span
+                                  className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
+                                    isSelected
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
+                                      : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                                  }`}
+                                >
+                                  {item.machineCode}
+                                </span>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic">
+                                  Belum ada mesin
+                                </span>
+                              )}
+                              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
+                                {item.storeName}
+                              </h4>
+                              {isSelected && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                  Terpilih
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
+                              <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                              {item.storeAddress || 'Alamat belum diinput'}
+                            </p>
                           </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            {item.storeAddress || 'Alamat belum diinput'}
-                          </p>
-                        </div>
-                        <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-indigo-600 group-hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center flex-shrink-0 transition">
-                          <Check className="w-3.5 h-3.5" />
-                        </div>
-                      </button>
-                    ))
+                          <div
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition border ${
+                              isSelected
+                                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                                : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-slate-400'
+                            }`}
+                          >
+                            <Check className="w-4 h-4 stroke-[2.5]" />
+                          </div>
+                        </button>
+                      );
+                    })
                   )
                 ) : filteredTargetList.length === 0 ? (
                   <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
                     Tidak ditemukan toko mitra tujuan dengan kata kunci &quot;{pickerSearch}&quot;.
                   </div>
                 ) : (
-                  filteredTargetList.map((st) => (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() =>
-                        handleSelectTarget(st.id, st.name, st.address, picker.itemIndex)
-                      }
-                      className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-indigo-50/50 dark:hover:bg-slate-800 text-left transition cursor-pointer flex items-center justify-between group active:scale-98"
-                    >
-                      <div className="min-w-0 pr-2">
-                        <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                          {st.name}
-                        </h4>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                          {st.address || 'Alamat belum diisi'}
-                        </p>
-                      </div>
-                      <div className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 group-hover:bg-indigo-600 group-hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center flex-shrink-0 transition">
-                        <Check className="w-3.5 h-3.5" />
-                      </div>
-                    </button>
-                  ))
+                  filteredTargetList.map((st) => {
+                    const isSelected = currentItem?.targetStoreId === st.id;
+
+                    return (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() =>
+                          handleSelectTarget(st.id, st.name, st.address, picker.itemIndex)
+                        }
+                        className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between group active:scale-98 ${
+                          isSelected
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-xs'
+                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
+                              {st.name}
+                            </h4>
+                            {isSelected && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                Terpilih
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                            <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                            {st.address || 'Alamat belum diisi'}
+                          </p>
+                        </div>
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition border ${
+                            isSelected
+                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
+                              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-slate-400'
+                          }`}
+                        >
+                          <Check className="w-4 h-4 stroke-[2.5]" />
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </>
