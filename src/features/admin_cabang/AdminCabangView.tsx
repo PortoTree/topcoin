@@ -14,7 +14,6 @@ import {
   Eye,
   ShieldAlert,
   Coins,
-  Sparkles,
   X,
   MoreVertical,
   AlertTriangle,
@@ -29,7 +28,7 @@ import {
   Plus,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, DriverTask, DriverTaskType } from '../../types';
+import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, DriverTask } from '../../types';
 import { DriverView } from '../driver/DriverView';
 import { MarketingView } from '../marketing/MarketingView';
 import { DroppingView } from '../dropping/DroppingView';
@@ -73,8 +72,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileSuccess, setReconcileSuccess] = useState<string | null>(null);
 
-  // Driver & Logistik Dispatch State
-  const [selectedTaskType, setSelectedTaskType] = useState<DriverTaskType>('relokasi_mesin');
+  // Driver & Logistik Dispatch State (Default: Relokasi Mesin)
   const [selectedOfficerIds, setSelectedOfficerIds] = useState<string[]>([]);
   const [relocationItems, setRelocationItems] = useState<RelocationTaskItem[]>([
     {
@@ -89,9 +87,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       targetStoreAddress: '',
     },
   ]);
-  // For 'opsional' task fallback
-  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
-  const [selectedMachineId, setSelectedMachineId] = useState<string>('');
   const [dispatchNotes, setDispatchNotes] = useState<string>('');
   const [isDispatching, setIsDispatching] = useState(false);
   const [dispatchSuccess, setDispatchSuccess] = useState<string | null>(null);
@@ -487,16 +482,9 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       return;
     }
 
-    if (selectedTaskType === 'relokasi_mesin') {
-      const incomplete = relocationItems.some((item) => !item.originStoreId || !item.targetStoreId);
-      if (incomplete) {
-        toast.warning('Lengkapi lokasi asal (pindah dari) dan tujuan (dipindah ke) untuk semua unit relokasi.');
-        return;
-      }
-    }
-
-    if (selectedTaskType === 'opsional' && !dispatchNotes.trim()) {
-      toast.warning('Wajib mengisi keterangan / rincian tugas opsional.');
+    const incomplete = relocationItems.some((item) => !item.originStoreId || !item.targetStoreId);
+    if (incomplete) {
+      toast.warning('Lengkapi lokasi asal (pindah dari) dan tujuan (dipindah ke) untuk semua unit relokasi.');
       return;
     }
 
@@ -528,54 +516,29 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       const teamTag = `[Tim Logistik: ${teamNames.join(', ')}]`;
 
-      if (selectedTaskType === 'relokasi_mesin') {
-        const payloads: any[] = [];
-        for (const item of relocationItems) {
-          for (const officerId of selectedOfficerIds) {
-            payloads.push({
-              branch_id: activeBranchId,
-              task_type: 'relokasi_mesin',
-              driver_id: officerId,
-              assigned_by: profile.id,
-              store_id: item.originStoreId,
-              target_store_id: item.targetStoreId,
-              machine_id: item.machineId || null,
-              coin_amount: 0,
-              status: 'assigned',
-              notes: dispatchNotes.trim() ? `${teamTag} ${dispatchNotes.trim()}` : teamTag,
-            });
-          }
-        }
-
-        const { error } = await supabase.from('driver_tasks').insert(payloads);
-        if (error) console.warn('DB dispatch task fallback:', error);
-      } else {
-        const payloads: any[] = [];
+      const payloads: any[] = [];
+      for (const item of relocationItems) {
         for (const officerId of selectedOfficerIds) {
           payloads.push({
             branch_id: activeBranchId,
-            task_type: 'opsional',
+            task_type: 'relokasi_mesin',
             driver_id: officerId,
             assigned_by: profile.id,
-            store_id: selectedStoreId || null,
-            target_store_id: null,
-            machine_id: selectedMachineId || null,
+            store_id: item.originStoreId,
+            target_store_id: item.targetStoreId,
+            machine_id: item.machineId || null,
             coin_amount: 0,
             status: 'assigned',
-            notes: `${teamTag} ${dispatchNotes.trim()}`,
+            notes: dispatchNotes.trim() ? `${teamTag} ${dispatchNotes.trim()}` : teamTag,
           });
         }
-
-        const { error } = await supabase.from('driver_tasks').insert(payloads);
-        if (error) console.warn('DB dispatch task fallback:', error);
       }
 
+      const { error } = await supabase.from('driver_tasks').insert(payloads);
+      if (error) console.warn('DB dispatch task fallback:', error);
+
       confetti({ particleCount: 50, spread: 60 });
-      const successMessage = `Tugas berhasil diterbitkan untuk ${selectedOfficerIds.length} petugas Logistik (${
-        selectedTaskType === 'relokasi_mesin'
-          ? `${relocationItems.length} unit relokasi`
-          : 'tugas opsional'
-      })!`;
+      const successMessage = `Tugas relokasi berhasil diterbitkan untuk ${selectedOfficerIds.length} petugas Logistik (${relocationItems.length} unit mesin)!`;
       setDispatchSuccess(successMessage);
       toast.success(successMessage);
       setDispatchNotes('');
@@ -965,40 +928,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           )}
 
           <form onSubmit={handleDispatchTask} className="space-y-3.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-            {/* 1. Jenis Tugas: Hanya Relokasi Mesin dan Opsional */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Pilih Jenis Tugas *
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'relokasi_mesin', label: 'Relokasi Mesin', icon: Truck, desc: 'Pindah unit antar toko' },
-                  { id: 'opsional', label: 'Tugas Opsional', icon: Sparkles, desc: 'Tugas fleksibel lapangan' },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  const isSelected = selectedTaskType === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setSelectedTaskType(item.id as DriverTaskType)}
-                      className={`p-3 rounded-2xl border text-left transition cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-400 shadow-xs'
-                          : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <Icon className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        <span className="text-xs font-extrabold truncate">{item.label}</span>
-                      </div>
-                      <span className="text-[10px] opacity-75 font-medium">{item.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             {/* 1. Pilih Petugas Logistik (Bisa Lebih Dari 1 Orang) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -1060,9 +989,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               </button>
             </div>
 
-            {/* Layout Khusus: Relokasi Mesin */}
-            {selectedTaskType === 'relokasi_mesin' ? (
-              <div className="space-y-3.5 pt-1">
+            {/* Form Tugas Relokasi Mesin */}
+            <div className="space-y-3.5 pt-1">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Daftar Unit Mesin yang Direlokasi ({relocationItems.length}) *
@@ -1244,63 +1172,16 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   </div>
                 )}
               </div>
-            ) : (
-              /* Jika Tugas Opsional: Fleksibel, Toko Opsional */
-              <>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Toko Mitra Terkait (Opsional / Fleksibel)
-                  </label>
-                  <select
-                    value={selectedStoreId}
-                    onChange={(e) => setSelectedStoreId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-                  >
-                    <option value="">-- Umum / Tanpa Toko Khusus --</option>
-                    {stores.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.address})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Unit Mesin Terkait (Opsional)
-                  </label>
-                  <select
-                    value={selectedMachineId}
-                    onChange={(e) => setSelectedMachineId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-                  >
-                    <option value="">-- Tidak ada mesin khusus --</option>
-                    {machines.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.machine_code} ({m.status})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                {selectedTaskType === 'opsional'
-                  ? 'Instruksi / Rincian Tugas Opsional *'
-                  : 'Catatan / Instruksi Relokasi (Opsional)'}
+                Catatan / Instruksi Relokasi (Opsional)
               </label>
               <textarea
-                required={selectedTaskType === 'opsional'}
                 rows={2}
                 value={dispatchNotes}
                 onChange={(e) => setDispatchNotes(e.target.value)}
-                placeholder={
-                  selectedTaskType === 'opsional'
-                    ? 'Misal: Cek instalasi kelistrikan, ganti spanduk, bantu pasang unit baru...'
-                    : 'Misal: Konfirmasi ke kasir sebelum angkat mesin...'
-                }
+                placeholder="Misal: Konfirmasi ke kasir sebelum angkat mesin..."
                 className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
               />
             </div>
