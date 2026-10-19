@@ -1127,7 +1127,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               className="w-full py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 active:scale-95 transition cursor-pointer"
             >
               <Truck className="w-4 h-4" />
-              <span>{isDispatching ? 'Menugaskan...' : 'Kirimkan Tiket Tugas ke Tim Logistik'}</span>
+              <span>{isDispatching ? 'Mengirim...' : 'Kirim ke petugas logistik'}</span>
             </button>
           </form>
 
