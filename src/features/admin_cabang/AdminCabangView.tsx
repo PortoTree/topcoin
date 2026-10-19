@@ -928,16 +928,11 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           )}
 
           <form onSubmit={handleDispatchTask} className="space-y-5">
-            {/* 1. Pilih Petugas Logistik (Bisa Lebih Dari 1 Orang) */}
+            {/* 1. Pilih Petugas Logistik */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Pilih Petugas Logistik *
-                </label>
-                <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                  (Bisa pilih &gt; 1 orang tim)
-                </span>
-              </div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                Pilih Petugas Logistik *
+              </label>
 
               {/* Selected Staff Tags */}
               {selectedOfficerIds.length > 0 ? (
@@ -984,7 +979,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 <span>
                   {selectedOfficerIds.length > 0
                     ? `Ubah / Tambah Petugas (${selectedOfficerIds.length} Terpilih)`
-                    : 'Pilih Petugas Logistik Lapangan'}
+                    : 'Pilih Petugas'}
                 </span>
               </button>
             </div>
