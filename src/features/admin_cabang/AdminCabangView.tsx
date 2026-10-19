@@ -18,14 +18,17 @@ import {
   X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { DroppingTransaction, Store, Machine, UserProfile, DriverTask, DriverTaskType } from '../../types';
+import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, DriverTask, DriverTaskType } from '../../types';
+import { DriverView } from '../driver/DriverView';
+import { MarketingView } from '../marketing/MarketingView';
+import { DroppingView } from '../dropping/DroppingView';
 
 interface AdminCabangViewProps {
   activeTab: string;
 }
 
 export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) => {
-  const { profile } = useAuth();
+  const { profile, updateStaffRole } = useAuth();
   const { currentBranch } = useBranch();
 
   // Branch ID
@@ -296,6 +299,55 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   };
 
+  // Reassign staff role / duty (Dropping, Marketing, Driver)
+  const handleChangeStaffRole = async (staff: UserProfile, newRole: UserRole) => {
+    if (staff.role === newRole) return;
+    const confirmChange = window.confirm(
+      `Ubah tugas ${staff.full_name} (${staff.username}) dari ${staff.role.toUpperCase()} menjadi ${newRole.toUpperCase()}?`
+    );
+    if (!confirmChange) return;
+
+    try {
+      const res = await updateStaffRole(staff.id, newRole);
+      if (res.success) {
+        setBranchStaff((prev) =>
+          prev.map((s) => (s.id === staff.id ? { ...s, role: newRole } : s))
+        );
+        alert(`Sukses! Tugas ${staff.full_name} kini menjadi ${newRole.toUpperCase()}. Layout aplikasi staf akan otomatis disesuaikan.`);
+      } else {
+        alert(res.message || 'Gagal mengubah tugas staf.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan saat mengubah tugas.');
+    }
+  };
+
+  // Reassign Admin Cabang Task / Pengelola
+  const handleChangeAdminTask = async (staff: UserProfile, selectedValue: string) => {
+    const isPengelola = selectedValue === 'admin_cabang';
+    const newTask = isPengelola ? null : (selectedValue as 'driver' | 'marketing' | 'dropping');
+    const label = isPengelola ? 'Pengelola' : selectedValue.toUpperCase();
+
+    const confirmChange = window.confirm(
+      `Ubah penugasan ${staff.full_name} menjadi "${label}"?`
+    );
+    if (!confirmChange) return;
+
+    try {
+      const res = await updateStaffRole(staff.id, 'admin_cabang', newTask);
+      if (res.success) {
+        setBranchStaff((prev) =>
+          prev.map((s) => (s.id === staff.id ? { ...s, assigned_task: newTask } : s))
+        );
+        alert(`Sukses! Penugasan ${staff.full_name} kini menjadi ${label}. Tab tugas akan otomatis menyesuaikan.`);
+      } else {
+        alert(res.message || 'Gagal mengubah penugasan admin.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan saat mengubah penugasan admin.');
+    }
+  };
+
   // Add new branch staff
   const handleAddStaff = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -336,6 +388,19 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   const driversList = branchStaff.filter((s) => s.role === 'driver');
   const warehouseMachines = machines.filter((m) => m.status === 'gudang');
+
+  // Khusus Tab Tugas Lapangan Aktif: Render langsung tampilan tugas penuh tanpa padding ganda & banner redundan
+  if (activeTab === 'admin_task' && profile?.assigned_task) {
+    if (profile.assigned_task === 'driver') {
+      return <DriverView activeTab="driver_tasks" />;
+    }
+    if (profile.assigned_task === 'marketing') {
+      return <MarketingView activeTab="new_store" />;
+    }
+    if (profile.assigned_task === 'dropping') {
+      return <DroppingView activeTab="store_visits" />;
+    }
+  }
 
   return (
     <div className="p-4 pb-24 max-w-lg mx-auto space-y-4">
@@ -794,47 +859,101 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
-            {branchStaff.map((staff) => {
-              const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
+            {[...branchStaff]
+              .sort((a, b) => {
+                // 1. Branch Manager always on top
+                if (a.role === 'branch_manager') return -1;
+                if (b.role === 'branch_manager') return 1;
+                // 2. Admin Cabang next
+                if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
+                if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
+                // 3. Alphabetical
+                return a.full_name.localeCompare(b.full_name);
+              })
+              .map((staff) => {
+                const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
+                const isBM = staff.role === 'branch_manager';
+                const isAdmin = staff.role === 'admin_cabang' || staff.role === 'admin';
 
-              return (
-                <div key={staff.id} className="p-3.5 flex items-center justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                        {staff.full_name}
-                      </h4>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 uppercase">
-                        {staff.role}
-                      </span>
+                return (
+                  <div
+                    key={staff.id}
+                    className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
+                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {staff.full_name}
+                        </h4>
+                        {isBM && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                            BM
+                          </span>
+                        )}
+                        {isAdmin && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60">
+                            Admin
+                          </span>
+                        )}
+                      </div>
+                      {isPendingDelete && (
+                        <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
+                          <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+                          Terkunci: Menunggu persetujuan Branch Manager
+                        </span>
+                      )}
                     </div>
-                    <p className="text-xs text-slate-500 font-mono mt-0.5">
-                      Username: {staff.username} • PIN: {staff.pin || '123456'}
-                    </p>
-                    {isPendingDelete && (
-                      <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
-                        <ShieldAlert className="w-3 h-3" />
-                        Terkunci: Menunggu persetujuan Branch Manager
-                      </span>
-                    )}
-                  </div>
 
-                  <div>
-                    {!isPendingDelete && staff.role !== 'admin_cabang' && (
-                      <button
-                        type="button"
-                        onClick={() => handleRequestDeleteStaff(staff)}
-                        className="py-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
-                        title="Ajukan Hapus Akun ke Branch Manager"
-                      >
-                        <UserX className="w-3.5 h-3.5" />
-                        <span>Hapus</span>
-                      </button>
-                    )}
+                    <div className="flex-shrink-0">
+                      {isBM ? (
+                        <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2.5 py-1 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                          Atasan Cabang
+                        </span>
+                      ) : isAdmin ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={staff.assigned_task || 'admin_cabang'}
+                            onChange={(e) => handleChangeAdminTask(staff, e.target.value)}
+                            className="text-xs font-bold py-1.5 px-2.5 bg-indigo-50/80 hover:bg-indigo-100/80 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-xl text-indigo-900 dark:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-xs transition"
+                            title="Tugas Admin Cabang"
+                          >
+                            <option value="admin_cabang">🛡️ Pengelola</option>
+                            <option value="driver">🚚 Driver</option>
+                            <option value="dropping">🪙 Dropping</option>
+                            <option value="marketing">🏪 Marketing</option>
+                          </select>
+                        </div>
+                      ) : (
+                        !isPendingDelete && (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={staff.role === 'sales' ? 'marketing' : staff.role === 'kurir' ? 'driver' : staff.role}
+                              onChange={(e) => handleChangeStaffRole(staff, e.target.value as UserRole)}
+                              className="text-xs font-bold py-1.5 px-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-xs transition"
+                              title="Ubah Penugasan Peran Petugas"
+                            >
+                              <option value="dropping">🪙 Dropping</option>
+                              <option value="marketing">🏪 Marketing</option>
+                              <option value="driver">🚚 Driver</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() => handleRequestDeleteStaff(staff)}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-400 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-95 cursor-pointer"
+                              title="Ajukan Hapus Akun ke Branch Manager"
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         </div>
       )}

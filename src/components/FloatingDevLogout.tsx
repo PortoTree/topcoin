@@ -96,7 +96,7 @@ export const FloatingDevLogout: React.FC = () => {
 
   const handleLogout = () => {
     const confirmLogout = window.confirm(
-      `[DEV LOGOUT]\nKeluar dari akun "${profile.username}"?`
+      `[DEV LOGOUT]\nKeluar dari akun "${profile.full_name || profile.username}"?`
     );
     if (confirmLogout) {
       logout();

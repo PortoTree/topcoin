@@ -16,7 +16,12 @@ interface AuthContextType {
   isLoading: boolean;
   loginWithPin: (identifier: string, pin: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
-  checkInToday: (chosenRole: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir') => Promise<{ success: boolean; message?: string }>;
+  checkInToday: (chosenRole?: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir') => Promise<{ success: boolean; message?: string }>;
+  updateStaffRole: (
+    userId: string,
+    newRole: UserRole,
+    assignedTask?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
+  ) => Promise<{ success: boolean; message?: string }>;
   switchDemoRole: (role: UserRole) => Promise<void>;
   refreshAttendance: () => Promise<void>;
 }
@@ -142,12 +147,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(() => {
-    const cached = localStorage.getItem(LOCAL_STORAGE_ATTENDANCE_KEY);
-    if (cached) {
+    const cachedProfileStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const cachedAttStr = localStorage.getItem(LOCAL_STORAGE_ATTENDANCE_KEY);
+    if (cachedAttStr && cachedProfileStr) {
       try {
-        const att: Attendance = JSON.parse(cached);
+        const cachedProfile: UserProfile = JSON.parse(cachedProfileStr);
+        const att: Attendance = JSON.parse(cachedAttStr);
         const currentWorkDate = getCurrentWorkDate();
-        if (att.work_date === currentWorkDate) {
+        if (att.user_id === cachedProfile.id && att.work_date === currentWorkDate) {
           return att;
         }
       } catch (e) {
@@ -257,6 +264,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => clearInterval(checkResetInterval);
   }, [profile, todayAttendance, resetTimeConfig]);
 
+  // Auto-sync staff profile role when Admin/BM reassigns it in the background
+  useEffect(() => {
+    if (!profile) return;
+
+    const syncLatestProfile = async () => {
+      try {
+        const { data: dbProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', profile.id)
+          .maybeSingle();
+
+        if (
+          dbProfile &&
+          (dbProfile.role !== profile.role ||
+            dbProfile.assigned_task !== profile.assigned_task ||
+            !isManagementRole(dbProfile.role))
+        ) {
+          if (
+            dbProfile.role !== profile.role ||
+            dbProfile.assigned_task !== profile.assigned_task
+          ) {
+            setProfile(dbProfile);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dbProfile));
+          }
+          if (!isManagementRole(dbProfile.role)) {
+            await fetchTodayAttendance(dbProfile.id, resetTimeConfig);
+          }
+        }
+      } catch (e) {
+        // ignore background sync errors
+      }
+    };
+
+    window.addEventListener('focus', syncLatestProfile);
+    const syncInterval = setInterval(syncLatestProfile, 5000); // Fast 5s background sync
+
+    return () => {
+      window.removeEventListener('focus', syncLatestProfile);
+      clearInterval(syncInterval);
+    };
+  }, [profile?.id, profile?.role, profile?.assigned_task, resetTimeConfig]);
+
   const loginWithPin = async (identifier: string, pin: string): Promise<{ success: boolean; message?: string }> => {
     setIsLoading(true);
     try {
@@ -324,7 +374,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(targetProfile);
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(targetProfile));
 
-      // If field worker, fetch attendance for today
+      // Clear any prior attendance cache to prevent cross-account contamination
+      setTodayAttendance(null);
+      localStorage.removeItem(LOCAL_STORAGE_ATTENDANCE_KEY);
+
+      // If field worker, fetch attendance for today specifically for this targetProfile
       if (!isManagementRole(targetProfile.role)) {
         await fetchTodayAttendance(targetProfile.id, resetTimeConfig);
       }
@@ -339,14 +393,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const checkInToday = async (
-    chosenRole: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir'
+    customRole?: 'dropping' | 'marketing' | 'driver' | 'sales' | 'kurir'
   ): Promise<{ success: boolean; message?: string }> => {
     if (!profile) return { success: false, message: 'Anda belum login.' };
 
     try {
       const workDate = getCurrentWorkDate(new Date(), resetTimeConfig);
+      // Default directly to profile's assigned role from Admin/BM
+      const roleToUse = customRole || profile.role;
       const normalizedRole: UserRole =
-        chosenRole === 'sales' ? 'marketing' : chosenRole === 'kurir' ? 'driver' : chosenRole;
+        roleToUse === 'sales' ? 'marketing' : roleToUse === 'kurir' ? 'driver' : (roleToUse as UserRole);
 
       const { data, error } = await supabase
         .from('attendances')
@@ -385,6 +441,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.error('Check in error:', err);
       return { success: false, message: err.message || 'Gagal menyimpan absensi.' };
+    }
+  };
+
+  // Admin Cabang / Branch Manager role reassignment handler
+  const updateStaffRole = async (
+    userId: string,
+    newRole: UserRole,
+    assignedTask?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      // 1. Build payload
+      const updatePayload: Record<string, any> = { role: newRole };
+      if (assignedTask !== undefined) {
+        updatePayload.assigned_task = assignedTask === 'admin_cabang' ? null : assignedTask;
+      }
+
+      // Update Supabase profiles table
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .update(updatePayload)
+        .eq('id', userId);
+
+      if (profileErr) {
+        console.warn('DB update staff role warning:', profileErr);
+      }
+
+      // 2. If this staff is the currently logged-in user, update profile state & storage immediately
+      if (profile && profile.id === userId) {
+        const updated = {
+          ...profile,
+          role: newRole,
+          ...(assignedTask !== undefined
+            ? { assigned_task: assignedTask === 'admin_cabang' ? null : assignedTask }
+            : {}),
+        };
+        setProfile(updated);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated));
+      }
+
+      // 3. If there is an active attendance today for this staff, update attendance role as well
+      // so the staff layout shifts immediately without needing to wait for reset
+      const workDate = getCurrentWorkDate(new Date(), resetTimeConfig);
+      const normalizedRole: UserRole =
+        newRole === 'sales' ? 'marketing' : newRole === 'kurir' ? 'driver' : newRole;
+
+      await supabase
+        .from('attendances')
+        .update({ role: normalizedRole })
+        .eq('user_id', userId)
+        .eq('work_date', workDate);
+
+      // If current user is this staff and already checked in today, update attendance in memory
+      if (profile && profile.id === userId && todayAttendance) {
+        const updatedAtt = { ...todayAttendance, role: normalizedRole };
+        setTodayAttendance(updatedAtt);
+        localStorage.setItem(LOCAL_STORAGE_ATTENDANCE_KEY, JSON.stringify(updatedAtt));
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('Update staff role error:', err);
+      return { success: false, message: err.message || 'Gagal mengubah peran staf.' };
     }
   };
 
@@ -480,6 +598,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithPin,
         logout,
         checkInToday,
+        updateStaffRole,
         switchDemoRole,
         refreshAttendance,
       }}

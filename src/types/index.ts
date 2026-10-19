@@ -41,6 +41,7 @@ export interface UserProfile {
   pin?: string;
   auth_provider?: 'pin' | 'google';
   branch_id?: string | null;
+  assigned_task?: 'driver' | 'marketing' | 'dropping' | 'admin_cabang' | null;
   is_active: boolean;
   deletion_status?: 'active' | 'pending_deletion';
   deletion_requested_by?: string | null;

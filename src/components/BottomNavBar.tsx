@@ -6,7 +6,6 @@ import {
   Truck,
   ClipboardList,
   CheckCircle2,
-  DollarSign,
   Building2,
   Users,
   ShieldCheck,
@@ -41,13 +40,23 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
           { id: 'branch_staff', label: 'Karyawan', icon: Users },
         ];
       case 'admin_cabang':
-      case 'admin':
+      case 'admin': {
+        const assignedTask = profile.assigned_task;
+        const taskItems = [];
+        if (assignedTask && assignedTask !== 'admin_cabang') {
+          const taskIcon =
+            assignedTask === 'driver' ? Truck : assignedTask === 'marketing' ? StoreIcon : ClipboardList;
+          taskItems.push({ id: 'admin_task', label: 'Tugas', icon: taskIcon });
+        }
+
         return [
+          ...taskItems,
           { id: 'monitoring', label: 'Live Omset', icon: TrendingUp },
-          { id: 'reconciliation', label: 'Tutup Kas', icon: DollarSign },
           { id: 'driver_dispatch', label: 'Tugas Driver', icon: Truck },
           { id: 'machines', label: 'Mesin & Toko', icon: Cpu },
+          { id: 'employees', label: 'Karyawan', icon: Users },
         ];
+      }
       case 'marketing':
       case 'sales':
         return [

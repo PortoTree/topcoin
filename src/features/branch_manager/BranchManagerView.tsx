@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useBranch } from '../../context/BranchContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import {
   ShieldAlert,
@@ -12,7 +13,7 @@ import {
   Clock,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { UserProfile, DroppingTransaction, Machine } from '../../types';
+import type { UserProfile, UserRole, DroppingTransaction, Machine } from '../../types';
 
 interface BranchManagerViewProps {
   activeTab: string;
@@ -20,6 +21,7 @@ interface BranchManagerViewProps {
 
 export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab }) => {
   const { currentBranch, availableBranches, setCurrentBranch } = useBranch();
+  const { updateStaffRole } = useAuth();
 
   // Pending Deletion Accounts
   const [pendingDeletions, setPendingDeletions] = useState<UserProfile[]>([]);
@@ -139,6 +141,49 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
     } catch (err: any) {
       console.error('Error restoring account:', err);
       alert(err.message || 'Gagal memulihkan akun.');
+    }
+  };
+
+  // Reassign staff role / duty from BM
+  const handleChangeStaffRole = async (staff: UserProfile, selectedValue: string) => {
+    const isAdmin = staff.role === 'admin_cabang' || staff.role === 'admin';
+    const isPengelola = selectedValue === 'admin_cabang';
+    const newAssignedTask = isAdmin
+      ? isPengelola
+        ? null
+        : (selectedValue as 'driver' | 'marketing' | 'dropping')
+      : null;
+    const targetRole: UserRole = isAdmin ? 'admin_cabang' : (selectedValue as UserRole);
+
+    const label = isAdmin
+      ? isPengelola
+        ? 'Pengelola Murni'
+        : `Admin Cabang + Tugas ${selectedValue.toUpperCase()}`
+      : selectedValue.toUpperCase();
+
+    const confirmChange = window.confirm(
+      `[SUPERVISI BM] Ubah penugasan ${staff.full_name} (${staff.username}) menjadi "${label}"?`
+    );
+    if (!confirmChange) return;
+
+    try {
+      const res = await updateStaffRole(staff.id, targetRole, newAssignedTask);
+      if (res.success) {
+        setBranchStaff((prev) =>
+          prev.map((s) =>
+            s.id === staff.id
+              ? { ...s, role: targetRole, assigned_task: newAssignedTask }
+              : s
+          )
+        );
+        setActionSuccess(
+          `Penugasan ${staff.full_name} berhasil diubah menjadi "${label}"! Navigasi dan tugas staf langsung disesuaikan.`
+        );
+      } else {
+        alert(res.message || 'Gagal mengubah tugas staf.');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Terjadi kesalahan saat mengubah tugas.');
     }
   };
 
@@ -390,27 +435,76 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
           </div>
 
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
-            {branchStaff.map((staff) => (
-              <div key={staff.id} className="p-3.5 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-extrabold text-slate-900 dark:text-white">
-                    {staff.full_name}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 font-mono">
-                    User: {staff.username} • Role: {staff.role}
-                  </p>
-                </div>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    staff.is_active
-                      ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300'
-                      : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300'
-                  }`}
-                >
-                  {staff.is_active ? 'Aktif' : 'Terkunci'}
-                </span>
-              </div>
-            ))}
+            {[...branchStaff]
+              .sort((a, b) => {
+                if (a.role === 'branch_manager') return -1;
+                if (b.role === 'branch_manager') return 1;
+                if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
+                if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
+                return a.full_name.localeCompare(b.full_name);
+              })
+              .map((staff) => {
+                const isBM = staff.role === 'branch_manager';
+                return (
+                  <div
+                    key={staff.id}
+                    className={`p-3.5 sm:p-4 flex items-center justify-between gap-3 transition-colors ${
+                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {staff.full_name}
+                        </h4>
+                        {isBM && (
+                          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60">
+                            BM (Anda)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {!isBM ? (
+                        <select
+                          value={
+                            staff.role === 'admin_cabang' || staff.role === 'admin'
+                              ? staff.assigned_task || 'admin_cabang'
+                              : staff.role === 'sales'
+                              ? 'marketing'
+                              : staff.role === 'kurir'
+                              ? 'driver'
+                              : staff.role
+                          }
+                          onChange={(e) => handleChangeStaffRole(staff, e.target.value)}
+                          className="text-xs font-bold py-1.5 px-2.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer shadow-xs transition"
+                          title="Ubah Penugasan Peran Petugas & Admin"
+                        >
+                          {(staff.role === 'admin_cabang' || staff.role === 'admin') && (
+                            <option value="admin_cabang">🛡️ Pengelola</option>
+                          )}
+                          <option value="driver">🚚 Driver</option>
+                          <option value="dropping">🪙 Dropping</option>
+                          <option value="marketing">🏪 Marketing</option>
+                        </select>
+                      ) : (
+                        <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2.5 py-1 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                          Atasan Cabang
+                        </span>
+                      )}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-1 rounded-lg ${
+                          staff.is_active
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+                        }`}
+                      >
+                        {staff.is_active ? 'Aktif' : 'Terkunci'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}

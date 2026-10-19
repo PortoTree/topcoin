@@ -296,21 +296,26 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     }
   }, [activeBranchId]);
 
-  // Fetch today's transactions for this dropping user
+  // Fetch today's transactions for the active branch (syncs across all field staff & roles)
   const fetchTodayDroppings = useCallback(async () => {
     if (!profile) return;
     try {
       const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
+      let query = supabase
         .from('droppings')
         .select(`
           *,
           store:stores(name, address),
           machine:machines(machine_code)
         `)
-        .eq('dropping_user_id', profile.id)
         .eq('transaction_date', today)
         .order('created_at', { ascending: false });
+
+      if (activeBranchId) {
+        query = query.eq('branch_id', activeBranchId);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.warn('Error fetching today droppings from Supabase:', error);
@@ -320,10 +325,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
 
       // Also merge any pending offline records from Dexie.js
       try {
-        const offlinePending = await offlineDb.offlineDroppings
-          .where('dropping_user_id')
-          .equals(profile.id)
-          .toArray();
+        const offlinePending = await offlineDb.offlineDroppings.toArray();
 
         if (offlinePending && offlinePending.length > 0) {
           const existingStoreIds = new Set(list.map((t) => t.store_id));
@@ -705,7 +707,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <span>Daftar dropping {profile?.username ? (profile.username.charAt(0).toUpperCase() + profile.username.slice(1)) : 'Budi'}</span>
+                  <span>Daftar dropping {profile?.full_name || 'Budi'}</span>
                 </h2>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">

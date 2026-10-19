@@ -25,11 +25,17 @@ const MainAppContent: React.FC = () => {
     const current = activeRole || role;
     if (current === 'owner') setActiveTab('global_recap');
     else if (current === 'branch_manager') setActiveTab('bm_overview');
-    else if (current === 'admin_cabang' || current === 'admin') setActiveTab('monitoring');
+    else if (current === 'admin_cabang' || current === 'admin') {
+      if (profile?.assigned_task && profile.assigned_task !== 'admin_cabang') {
+        setActiveTab('admin_task');
+      } else {
+        setActiveTab('monitoring');
+      }
+    }
     else if (current === 'marketing' || current === 'sales') setActiveTab('new_store');
     else if (current === 'driver' || current === 'kurir') setActiveTab('driver_tasks');
     else if (current === 'dropping') setActiveTab('store_visits'); // List kunjungan toko partner
-  }, [activeRole, role]);
+  }, [activeRole, role, profile?.assigned_task]);
 
   if (isLoading) {
     return (
