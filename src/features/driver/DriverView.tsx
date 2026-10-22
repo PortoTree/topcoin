@@ -17,13 +17,10 @@ import {
   PackagePlus,
   X,
   Sparkles,
-  FileText,
-  Pencil,
   Navigation,
   Gauge,
   Clock,
   Info,
-  Phone,
   Users,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -149,10 +146,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
   // 4. Task Information Detail Modal State
   const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<DriverTask | null>(null);
 
-  // Store Closed Modal State
-  const [reportingClosedTask, setReportingClosedTask] = useState<DriverTask | null>(null);
-  const [closedReasonInput, setClosedReasonInput] = useState('');
-  const [isSubmittingClosedReport, setIsSubmittingClosedReport] = useState(false);
+
 
   const activeBranchId = currentBranch?.id || profile?.branch_id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -420,38 +414,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     }
   };
 
-  // Save Store Closed Report
-  const handleSaveClosedReport = async () => {
-    if (!reportingClosedTask || isSubmittingClosedReport) return;
-    setIsSubmittingClosedReport(true);
-    try {
-      const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-      const closedTag = `[TOKO TUTUP ${nowTime}]: ${closedReasonInput.trim()}`;
-      const updatedNotes = reportingClosedTask.notes
-        ? `${reportingClosedTask.notes}\n${closedTag}`
-        : closedTag;
 
-      const { error } = await supabase
-        .from('driver_tasks')
-        .update({ notes: updatedNotes })
-        .eq('id', reportingClosedTask.id);
-
-      if (error) console.warn('DB update store closed report fallback:', error);
-
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === reportingClosedTask.id ? { ...t, notes: updatedNotes } : t
-        )
-      );
-      toast.success('Laporan toko tutup berhasil dikirim ke Admin Cabang!');
-      setReportingClosedTask(null);
-    } catch (err: any) {
-      console.error('Error reporting closed store:', err);
-      toast.error('Gagal mengirim laporan toko tutup.');
-    } finally {
-      setIsSubmittingClosedReport(false);
-    }
-  };
 
   const getTaskBadge = (type: DriverTaskType) => {
     switch (type) {
@@ -1483,8 +1446,9 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               </div>
             </div>
           </>
-        )}
-      </BottomSheetModal>
-    </div>
-  );
+        );
+      }}
+    </BottomSheetModal>
+  </div>
+);
 };

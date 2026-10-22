@@ -479,10 +479,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 'profiles_role_check' accepts: 'owner', 'branch_manager', 'admin_cabang', 'marketing', 'dropping', 'driver'
       // 'attendances_role_check' accepts: 'dropping', 'marketing', 'sales', 'driver', 'kurir'
       const dbRole: string =
-        normalizedTargetRole === 'logistik' || normalizedTargetRole === 'kurir'
+        normalizedTargetRole === 'logistik'
           ? 'driver'
-          : normalizedTargetRole === 'sales'
-          ? 'marketing'
           : normalizedTargetRole;
 
       // 1. Build payload

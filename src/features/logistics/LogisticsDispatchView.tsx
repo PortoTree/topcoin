@@ -18,9 +18,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
-  FileText,
 } from 'lucide-react';
-import type { UserProfile, Store, Machine, DriverTask, UserRole } from '../../types';
+import type { UserProfile, Store, Machine, DriverTask } from '../../types';
 
 interface RelocationItem {
   id: string;

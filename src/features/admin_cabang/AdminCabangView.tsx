@@ -7,7 +7,6 @@ import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
 import {
   DollarSign,
-  Truck,
   CheckCircle2,
   RefreshCw,
   PlusCircle,
@@ -21,30 +20,13 @@ import {
   Trash2,
   ChevronDown,
   Check,
-  Search,
-  ArrowRight,
-  Users,
-  MapPin,
-  Plus,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, DriverTask } from '../../types';
+import type { DroppingTransaction, Machine, UserProfile, UserRole } from '../../types';
 import { DriverView } from '../driver/DriverView';
 import { MarketingView } from '../marketing/MarketingView';
 import { DroppingView } from '../dropping/DroppingView';
 import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
-
-interface RelocationTaskItem {
-  id: string;
-  originStoreId: string;
-  originStoreName: string;
-  originStoreAddress: string;
-  machineId: string;
-  machineCode: string;
-  targetStoreId: string;
-  targetStoreName: string;
-  targetStoreAddress: string;
-}
 
 interface AdminCabangViewProps {
   activeTab: string;
@@ -61,9 +43,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [droppings, setDroppings] = useState<DroppingTransaction[]>([]);
   const [droppingUsers, setDroppingUsers] = useState<UserProfile[]>([]);
   const [branchStaff, setBranchStaff] = useState<UserProfile[]>([]);
-  const [stores, setStores] = useState<Store[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [driverTasks, setDriverTasks] = useState<DriverTask[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Reconciliation State
@@ -72,34 +52,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [reconciliationNotes, setReconciliationNotes] = useState<string>('');
   const [isReconciling, setIsReconciling] = useState(false);
   const [reconcileSuccess, setReconcileSuccess] = useState<string | null>(null);
-
-  // Driver & Logistik Dispatch State (Default: Relokasi Mesin)
-  const [selectedOfficerIds, setSelectedOfficerIds] = useState<string[]>([]);
-  const [relocationItems, setRelocationItems] = useState<RelocationTaskItem[]>([
-    {
-      id: 'reloc-init-1',
-      originStoreId: '',
-      originStoreName: '',
-      originStoreAddress: '',
-      machineId: '',
-      machineCode: '',
-      targetStoreId: '',
-      targetStoreName: '',
-      targetStoreAddress: '',
-    },
-  ]);
-  const [dispatchNotes, setDispatchNotes] = useState<string>('');
-  const [isDispatching, setIsDispatching] = useState(false);
-  const [dispatchSuccess, setDispatchSuccess] = useState<string | null>(null);
-
-  // Modals for Search Picker & Staff Multi-Picker
-  const [pickerModal, setPickerModal] = useState<{
-    type: 'origin' | 'target';
-    itemIndex: number;
-  } | null>(null);
-  const [pickerSearch, setPickerSearch] = useState('');
-  const [showStaffPickerModal, setShowStaffPickerModal] = useState(false);
-  const [staffPickerSearch, setStaffPickerSearch] = useState('');
 
   // Staff Management State
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
@@ -243,16 +195,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         setDroppingUsers(staffList.filter((u) => u.role === 'dropping'));
       }
 
-      // 3. Stores in this branch
-      const { data: sData } = await supabase
-        .from('stores')
-        .select(`*, machine:machines!stores_current_machine_id_fkey(machine_code, status)`)
-        .eq('branch_id', activeBranchId)
-        .order('name', { ascending: true });
-
-      if (sData) setStores(sData as Store[]);
-
-      // 4. Machines in this branch
+      // 3. Machines in this branch
       const { data: mData } = await supabase
         .from('machines')
         .select('*')
@@ -260,21 +203,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         .order('machine_code', { ascending: true });
 
       if (mData) setMachines(mData as Machine[]);
-
-      // 5. Driver Tasks in this branch
-      const { data: tData } = await supabase
-        .from('driver_tasks')
-        .select(`
-          *,
-          store:stores!store_id(name, address),
-          target_store:stores!target_store_id(name, address),
-          machine:machines(machine_code),
-          driver:profiles!driver_id(full_name, username)
-        `)
-        .eq('branch_id', activeBranchId)
-        .order('created_at', { ascending: false });
-
-      if (tData) setDriverTasks(tData as DriverTask[]);
     } catch (err) {
       console.error('Error fetching admin cabang data:', err);
     } finally {
@@ -302,54 +230,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const numPhysicalCash = parseFloat(physicalCash.replace(/[^0-9]/g, '')) || 0;
   const cashDifference = numPhysicalCash - userSystemTotalNet;
 
-  // Origin Candidates for "Pindah dari..." search modal
-  const originCandidates = React.useMemo(() => {
-    const list: {
-      storeId: string;
-      storeName: string;
-      storeAddress: string;
-      machineId: string;
-      machineCode: string;
-    }[] = [];
-    const addedStoreIds = new Set<string>();
 
-    stores.forEach((st) => {
-      const mach =
-        machines.find((m) => m.id === st.current_machine_id || m.current_store_id === st.id) ||
-        st.machine;
-      if (mach) {
-        addedStoreIds.add(st.id);
-        list.push({
-          storeId: st.id,
-          storeName: st.name,
-          storeAddress: st.address,
-          machineId: (mach as any).id || st.current_machine_id || '',
-          machineCode: (mach as any).machine_code || 'MSN-UNKNOWN',
-        });
-      }
-    });
-
-    stores.forEach((st) => {
-      if (!addedStoreIds.has(st.id)) {
-        list.push({
-          storeId: st.id,
-          storeName: st.name,
-          storeAddress: st.address,
-          machineId: '',
-          machineCode: '(Tanpa Unit Khusus)',
-        });
-      }
-    });
-
-    return list;
-  }, [stores, machines]);
-
-  // Operational staff list available for assignment to logistik
-  const assignableStaffList = React.useMemo(() => {
-    return branchStaff.filter(
-      (s) => s.role !== 'owner' && s.role !== 'branch_manager'
-    );
-  }, [branchStaff]);
 
   // Handle Save Reconciliation (Tutup Kas)
   const handleSaveReconciliation = async (e: React.FormEvent) => {
@@ -397,173 +278,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   };
 
-  // Relocation Task Helpers
-  const handleAddRelocationItem = () => {
-    setRelocationItems((prev) => [
-      ...prev,
-      {
-        id: 'reloc-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-        originStoreId: '',
-        originStoreName: '',
-        originStoreAddress: '',
-        machineId: '',
-        machineCode: '',
-        targetStoreId: '',
-        targetStoreName: '',
-        targetStoreAddress: '',
-      },
-    ]);
-  };
 
-  const handleRemoveRelocationItem = (index: number) => {
-    setRelocationItems((prev) => prev.filter((_, idx) => idx !== index));
-  };
-
-  const handleSelectOrigin = (
-    storeId: string,
-    storeName: string,
-    storeAddress: string,
-    machineId: string,
-    machineCode: string,
-    itemIndex: number
-  ) => {
-    setRelocationItems((prev) =>
-      prev.map((item, idx) =>
-        idx === itemIndex
-          ? {
-              ...item,
-              originStoreId: storeId,
-              originStoreName: storeName,
-              originStoreAddress: storeAddress,
-              machineId,
-              machineCode,
-            }
-          : item
-      )
-    );
-    setPickerModal(null);
-    setPickerSearch('');
-  };
-
-  const handleSelectTarget = (
-    storeId: string,
-    storeName: string,
-    storeAddress: string,
-    itemIndex: number
-  ) => {
-    setRelocationItems((prev) =>
-      prev.map((item, idx) =>
-        idx === itemIndex
-          ? {
-              ...item,
-              targetStoreId: storeId,
-              targetStoreName: storeName,
-              targetStoreAddress: storeAddress,
-            }
-          : item
-      )
-    );
-    setPickerModal(null);
-    setPickerSearch('');
-  };
-
-  const toggleOfficerSelection = (officerId: string) => {
-    setSelectedOfficerIds((prev) =>
-      prev.includes(officerId) ? prev.filter((id) => id !== officerId) : [...prev, officerId]
-    );
-  };
-
-  // Handle Dispatch Logistik Task
-  const handleDispatchTask = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!profile) return;
-
-    if (selectedOfficerIds.length === 0) {
-      toast.warning('Pilih minimal 1 petugas logistik yang akan ditugaskan.');
-      return;
-    }
-
-    const incomplete = relocationItems.some((item) => !item.originStoreId || !item.targetStoreId);
-    if (incomplete) {
-      toast.warning('Lengkapi lokasi asal (pindah dari) dan tujuan (dipindah ke) untuk semua unit relokasi.');
-      return;
-    }
-
-    setIsDispatching(true);
-    setDispatchSuccess(null);
-    try {
-      // 1. Assign role 'logistik' to all selected officers who don't have it yet
-      for (const officerId of selectedOfficerIds) {
-        const staff = branchStaff.find((s) => s.id === officerId);
-        if (staff) {
-          const isAlreadyLogistik =
-            staff.role === 'logistik' ||
-            staff.role === 'driver' ||
-            (staff.role === 'admin_cabang' && staff.assigned_task === 'logistik');
-          if (!isAlreadyLogistik) {
-            if (staff.role === 'admin_cabang' || staff.role === 'admin') {
-              await updateStaffRole(officerId, 'admin_cabang', 'logistik');
-            } else {
-              await updateStaffRole(officerId, 'logistik');
-            }
-          }
-        }
-      }
-
-      // Names of team members for logistik team tagging
-      const teamNames = branchStaff
-        .filter((s) => selectedOfficerIds.includes(s.id))
-        .map((s) => s.full_name);
-
-      const teamTag = `[Tim Logistik: ${teamNames.join(', ')}]`;
-
-      const payloads: any[] = [];
-      for (const item of relocationItems) {
-        for (const officerId of selectedOfficerIds) {
-          payloads.push({
-            branch_id: activeBranchId,
-            task_type: 'relokasi_mesin',
-            driver_id: officerId,
-            assigned_by: profile.id,
-            store_id: item.originStoreId,
-            target_store_id: item.targetStoreId,
-            machine_id: item.machineId || null,
-            coin_amount: 0,
-            status: 'assigned',
-            notes: dispatchNotes.trim() ? `${teamTag} ${dispatchNotes.trim()}` : teamTag,
-          });
-        }
-      }
-
-      const { error } = await supabase.from('driver_tasks').insert(payloads);
-      if (error) console.warn('DB dispatch task fallback:', error);
-
-      confetti({ particleCount: 50, spread: 60 });
-      const successMessage = `Tugas relokasi berhasil diterbitkan untuk ${selectedOfficerIds.length} petugas Logistik (${relocationItems.length} unit mesin)!`;
-      setDispatchSuccess(successMessage);
-      toast.success(successMessage);
-      setDispatchNotes('');
-      setRelocationItems([
-        {
-          id: 'reloc-' + Date.now(),
-          originStoreId: '',
-          originStoreName: '',
-          originStoreAddress: '',
-          machineId: '',
-          machineCode: '',
-          targetStoreId: '',
-          targetStoreName: '',
-          targetStoreAddress: '',
-        },
-      ]);
-      fetchBranchData();
-    } catch (err: any) {
-      console.error('Dispatch error:', err);
-      toast.error(err.message || 'Gagal membuat tugas logistik.');
-    } finally {
-      setIsDispatching(false);
-    }
-  };
 
   // Handle Request Delete Employee (Hierarchical Deletion - Step 1: Lock & Pending Deletion)
   const handleRequestDeleteStaff = (staff: UserProfile) => {
@@ -1474,369 +1189,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         )}
       </BottomSheetModal>
 
-      {/* Modal Pencarian / Picker: "Pindah dari..." & "Dipindah ke..." */}
-      <BottomSheetModal
-        item={pickerModal}
-        onClose={() => {
-          setPickerModal(null);
-          setPickerSearch('');
-        }}
-      >
-        {(picker, close) => {
-          const isOrigin = picker.type === 'origin';
-          const query = pickerSearch.toLowerCase().trim();
 
-          // Target candidates filter out the currently selected origin store
-          const currentOriginId = relocationItems[picker.itemIndex]?.originStoreId;
-
-          const filteredOriginList = originCandidates.filter((c) => {
-            if (!query) return true;
-            return (
-              c.machineCode.toLowerCase().includes(query) ||
-              c.storeName.toLowerCase().includes(query) ||
-              c.storeAddress.toLowerCase().includes(query)
-            );
-          });
-
-          const filteredTargetList = stores
-            .filter((s) => s.id !== currentOriginId)
-            .filter((s) => {
-              if (!query) return true;
-              return (
-                s.name.toLowerCase().includes(query) ||
-                s.address.toLowerCase().includes(query)
-              );
-            });
-
-          const currentItem = relocationItems[picker.itemIndex];
-
-          return (
-            <>
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                    {isOrigin ? 'Pencarian Asal Relokasi' : 'Pencarian Tujuan Relokasi'}
-                  </span>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                    {isOrigin ? 'Pindah dari...' : 'Dipindah ke...'}
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    {isOrigin
-                      ? 'Cari nomor kode mesin atau nama toko lokasi saat ini'
-                      : 'Cari nama toko mitra atau alamat tujuan unit mesin'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Searchbox Input (No autoFocus to prevent mobile keyboard auto popup) */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={pickerSearch}
-                  onChange={(e) => setPickerSearch(e.target.value)}
-                  placeholder={
-                    isOrigin
-                      ? 'Ketik nomor mesin (misal: MSN-01) atau nama toko...'
-                      : 'Ketik nama toko mitra tujuan atau alamat...'
-                  }
-                  className="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                {pickerSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setPickerSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Candidates List */}
-              <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1 -mr-1">
-                {isOrigin ? (
-                  filteredOriginList.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                      Tidak ditemukan toko atau nomor mesin dengan kata kunci &quot;{pickerSearch}&quot;.
-                    </div>
-                  ) : (
-                    filteredOriginList.map((item, i) => {
-                      const isSelected =
-                        currentItem?.originStoreId === item.storeId &&
-                        (item.machineId
-                          ? currentItem?.machineId === item.machineId
-                          : !currentItem?.machineId);
-
-                      return (
-                        <button
-                          key={`${item.storeId}-${item.machineId}-${i}`}
-                          type="button"
-                          onClick={() =>
-                            handleSelectOrigin(
-                              item.storeId,
-                              item.storeName,
-                              item.storeAddress,
-                              item.machineId,
-                              item.machineCode,
-                              picker.itemIndex
-                            )
-                          }
-                          className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between group active:scale-98 ${
-                            isSelected
-                              ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-xs'
-                              : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          <div className="min-w-0 pr-2">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' ? (
-                                <span
-                                  className={`text-[10px] font-mono font-extrabold px-2 py-0.5 rounded border ${
-                                    isSelected
-                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-900/60 dark:text-emerald-200 dark:border-emerald-700'
-                                      : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                                  }`}
-                                >
-                                  {item.machineCode}
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-slate-400 italic">
-                                  Belum ada mesin
-                                </span>
-                              )}
-                              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                                {item.storeName}
-                              </h4>
-                              {isSelected && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                  Terpilih
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                              {item.storeAddress || 'Alamat belum diinput'}
-                            </p>
-                          </div>
-                          <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition border ${
-                              isSelected
-                                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                                : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-slate-400'
-                            }`}
-                          >
-                            <Check className="w-4 h-4 stroke-[2.5]" />
-                          </div>
-                        </button>
-                      );
-                    })
-                  )
-                ) : filteredTargetList.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                    Tidak ditemukan toko mitra tujuan dengan kata kunci &quot;{pickerSearch}&quot;.
-                  </div>
-                ) : (
-                  filteredTargetList.map((st) => {
-                    const isSelected = currentItem?.targetStoreId === st.id;
-
-                    return (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() =>
-                          handleSelectTarget(st.id, st.name, st.address, picker.itemIndex)
-                        }
-                        className={`w-full p-3 rounded-xl border text-left transition cursor-pointer flex items-center justify-between group active:scale-98 ${
-                          isSelected
-                            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-600 shadow-xs'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <div className="min-w-0 pr-2">
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                              {st.name}
-                            </h4>
-                            {isSelected && (
-                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                Terpilih
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex items-center gap-1 mt-0.5">
-                            <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                            {st.address || 'Alamat belum diisi'}
-                          </p>
-                        </div>
-                        <div
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition border ${
-                            isSelected
-                              ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs'
-                              : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-slate-400'
-                          }`}
-                        >
-                          <Check className="w-4 h-4 stroke-[2.5]" />
-                        </div>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
-            </>
-          );
-        }}
-      </BottomSheetModal>
-
-      {/* Modal Multi-Select Staf Logistik */}
-      <BottomSheetModal
-        item={showStaffPickerModal ? true : null}
-        onClose={() => {
-          setShowStaffPickerModal(false);
-          setStaffPickerSearch('');
-        }}
-      >
-        {(_, close) => {
-          const query = staffPickerSearch.toLowerCase().trim();
-          const filteredStaff = assignableStaffList.filter((s) => {
-            if (!query) return true;
-            return (
-              s.full_name.toLowerCase().includes(query) ||
-              s.username.toLowerCase().includes(query)
-            );
-          });
-
-          return (
-            <>
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
-                    Penugasan Bersama
-                  </span>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
-                    Pilih Petugas Logistik
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                    Pilih 1 atau lebih staf yang akan mengemban tugas relokasi ini bersama
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Searchbox Staf */}
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={staffPickerSearch}
-                  onChange={(e) => setStaffPickerSearch(e.target.value)}
-                  placeholder="Cari nama staf atau username..."
-                  className="w-full pl-9 pr-8 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                {staffPickerSearch && (
-                  <button
-                    type="button"
-                    onClick={() => setStaffPickerSearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Staff List */}
-              <div className="max-h-[340px] overflow-y-auto space-y-2 pr-1 -mr-1">
-                {filteredStaff.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400">
-                    Tidak ditemukan staf dengan kata kunci &quot;{staffPickerSearch}&quot;.
-                  </div>
-                ) : (
-                  filteredStaff.map((staff) => {
-                    const isSelected = selectedOfficerIds.includes(staff.id);
-                    const badge = getStaffBadge(staff);
-
-                    return (
-                      <div
-                        key={staff.id}
-                        onClick={() => toggleOfficerSelection(staff.id)}
-                        className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition cursor-pointer active:scale-98 ${
-                          isSelected
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700 shadow-xs'
-                            : 'bg-white dark:bg-slate-900/80 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0 pr-2">
-                          <div
-                            className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs flex-shrink-0 ${
-                              isSelected
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
-                            }`}
-                          >
-                            {staff.full_name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
-                                {staff.full_name}
-                              </h4>
-                              <span
-                                className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${badge.className}`}
-                              >
-                                {badge.label}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                              @{staff.username} • Otomatis bertugas sebagai Logistik
-                            </p>
-                          </div>
-                        </div>
-
-                        <div
-                          className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 transition border ${
-                            isSelected
-                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs'
-                              : 'border-slate-300 dark:border-slate-600 bg-transparent text-transparent'
-                          }`}
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Footer Confirm */}
-              <button
-                type="button"
-                onClick={close}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 active:scale-95 transition cursor-pointer"
-              >
-                <Check className="w-4 h-4" />
-                <span>
-                  Simpan Pilihan ({selectedOfficerIds.length} Petugas Terpilih)
-                </span>
-              </button>
-            </>
-          );
-        }}
-      </BottomSheetModal>
 
       {/* Modal Aksi Custom (Pengganti window.prompt & window.confirm) */}
       <ActionPromptModal

@@ -17,3 +17,5 @@
 7. **Browser / Pengujian:** DILARANG membuka browser atau menjalankan subagent browser (`browser_subagent` / tools terkait browser) tanpa perintah eksplisit dari user.
 
 8. **Selesai Mengerjakan:** Setiap kali selesai menambah atau mengubah fitur, selalu arahkan user untuk melakukan pengujian terhadap seluruh alur fitur tersebut.
+
+9. **Tampilan visual** Utamakan urusan tampilan tetap ikut standart pada file `/.agents/rules/dual_theme_contrast.md` dan `/.agents/rules/mobile_first_priority.md`
