@@ -114,6 +114,7 @@ export interface DriverTask {
   branch_id: string;
   task_type: LogistikTaskType;
   driver_id: string;
+  officer_ids?: string[];
   assigned_by: string;
   store_id?: string | null;
   target_store_id?: string | null;

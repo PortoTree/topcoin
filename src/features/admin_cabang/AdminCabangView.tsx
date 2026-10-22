@@ -32,6 +32,7 @@ import type { DroppingTransaction, Store, Machine, UserProfile, UserRole, Driver
 import { DriverView } from '../driver/DriverView';
 import { MarketingView } from '../marketing/MarketingView';
 import { DroppingView } from '../dropping/DroppingView';
+import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 
 interface RelocationTaskItem {
   id: string;
@@ -265,7 +266,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         .from('driver_tasks')
         .select(`
           *,
-          store:stores(name, address),
+          store:stores!store_id(name, address),
           target_store:stores!target_store_id(name, address),
           machine:machines(machine_code),
           driver:profiles!driver_id(full_name, username)
@@ -699,6 +700,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   }
 
+  // Khusus Tab Tugas Logistik: Render langsung tanpa pembungkus p-4 max-w-lg agar halaman melebar penuh
+  if (activeTab === 'driver_dispatch') {
+    return (
+      <div className="pb-24 w-full">
+        <LogisticsDispatchView branchId={activeBranchId} branchName={currentBranch?.name} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 pb-24 max-w-lg mx-auto space-y-4">
       {/* Tab: Live Omset Monitoring */}
@@ -904,269 +914,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               <span>{isReconciling ? 'Menyimpan...' : 'Setujui Rekonsiliasi Kas (Tutup Kas)'}</span>
             </button>
           </form>
-        </div>
-      )}
-
-      {/* Tab: Logistik Task Dispatching */}
-      {activeTab === 'driver_dispatch' && (
-        <div className="space-y-5 animate-in fade-in duration-150">
-          <div className="space-y-1 pb-3.5 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <Truck className="w-5 h-5 text-amber-500" />
-              Relokasi Mesin
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-              Buat jadwal pemindahan/relokasi mesin ke petugas
-            </p>
-          </div>
-
-          {dispatchSuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>{dispatchSuccess}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleDispatchTask} className="space-y-5">
-            {/* 1. Pilih Petugas Logistik */}
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                Pilih Petugas Logistik *
-              </label>
-
-              {/* Selected Staff Tags */}
-              {selectedOfficerIds.length > 0 ? (
-                <div className="flex flex-wrap gap-2 pt-0.5">
-                  {selectedOfficerIds.map((id) => {
-                    const staff = branchStaff.find((s) => s.id === id);
-                    if (!staff) return null;
-                    return (
-                      <span
-                        key={id}
-                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 shadow-2xs animate-in zoom-in-95"
-                      >
-                        <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[10px] flex items-center justify-center font-black">
-                          {staff.full_name.charAt(0)}
-                        </span>
-                        <span>{staff.full_name}</span>
-                        <button
-                          type="button"
-                          onClick={() => toggleOfficerSelection(id)}
-                          className="hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </span>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/20 rounded-xl border border-dashed border-amber-300 dark:border-amber-700/80 text-xs text-amber-800 dark:text-amber-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                  <span>Belum ada staf logistik dipilih. Klik tombol di bawah untuk memilih tim.</span>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStaffPickerModal(true);
-                  setStaffPickerSearch('');
-                }}
-                className="w-full py-3 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 shadow-2xs"
-              >
-                <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>
-                  {selectedOfficerIds.length > 0
-                    ? `Ubah / Tambah Petugas (${selectedOfficerIds.length} Terpilih)`
-                    : 'Pilih Petugas'}
-                </span>
-              </button>
-            </div>
-
-            {/* Form Tugas Relokasi Mesin */}
-            <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                  <Truck className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                  Pilih Rute Relokasi
-                </span>
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  {relocationItems.length} Unit Mesin
-                </span>
-              </div>
-
-              {/* Daftar Kartu Rute Relokasi (Klik kotak asal/tujuan untuk trigger popup) */}
-              <div className="space-y-3">
-                {relocationItems.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs space-y-2 relative"
-                  >
-                    {relocationItems.length > 1 && (
-                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
-                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
-                          Unit #{idx + 1}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveRelocationItem(idx)}
-                          className="text-rose-500 hover:text-rose-600 text-[11px] font-bold flex items-center gap-1 p-0.5 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded transition cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Hapus</span>
-                        </button>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-2.5 sm:gap-3">
-                      {/* Left: PINDAH DARI (Klik untuk buka popup cari mesin/toko asal) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPickerModal({ type: 'origin', itemIndex: idx });
-                          setPickerSearch('');
-                        }}
-                        className={`flex-1 min-w-0 p-2.5 rounded-xl text-left transition cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 border ${
-                          item.originStoreId
-                            ? 'border-transparent'
-                            : 'border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
-                        }`}
-                      >
-                        <span className="text-[9px] uppercase font-black text-slate-400 dark:text-slate-500 block mb-0.5">
-                          Pindah Dari
-                        </span>
-                        {item.originStoreId ? (
-                          <>
-                            <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                              {item.originStoreName}
-                            </div>
-                            {item.machineCode && item.machineCode !== '(Tanpa Unit Khusus)' && (
-                              <span className="inline-block mt-1 text-[9px] font-mono font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-300 dark:border-amber-700/80">
-                                {item.machineCode}
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-slate-400 text-xs py-1">
-                            <Search className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">Pilih toko &amp; mesin...</span>
-                          </div>
-                        )}
-                      </button>
-
-                      {/* Center Arrow */}
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                        <ArrowRight className="w-4 h-4" />
-                      </div>
-
-                      {/* Right: DIPINDAH KE (Klik untuk buka popup cari toko tujuan) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPickerModal({ type: 'target', itemIndex: idx });
-                          setPickerSearch('');
-                        }}
-                        className={`flex-1 min-w-0 p-2.5 rounded-xl text-left transition cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60 border ${
-                          item.targetStoreId
-                            ? 'border-transparent'
-                            : 'border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30'
-                        }`}
-                      >
-                        <span className="text-[9px] uppercase font-black text-slate-400 dark:text-slate-500 block mb-0.5">
-                          Dipindah Ke
-                        </span>
-                        {item.targetStoreId ? (
-                          <>
-                            <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                              {item.targetStoreName}
-                            </div>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block mt-0.5">
-                              {item.targetStoreAddress || '-'}
-                            </span>
-                          </>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-slate-400 text-xs py-1">
-                            <Search className="w-3.5 h-3.5 flex-shrink-0" />
-                            <span className="truncate">Pilih toko tujuan...</span>
-                          </div>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Tombol Tambah Rute Lain */}
-              <button
-                type="button"
-                onClick={handleAddRelocationItem}
-                className="w-full py-2.5 px-4 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 text-indigo-700 dark:text-indigo-400 font-extrabold text-xs flex items-center justify-center gap-2 transition hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 cursor-pointer active:scale-98"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Tambah rute lain</span>
-              </button>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Catatan / Instruksi Relokasi (Opsional)
-              </label>
-              <textarea
-                rows={2}
-                value={dispatchNotes}
-                onChange={(e) => setDispatchNotes(e.target.value)}
-                placeholder="Misal: Konfirmasi ke kasir sebelum angkat mesin..."
-                className="w-full p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={isDispatching}
-              className="w-full py-3.5 bg-amber-600 hover:bg-amber-500 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 active:scale-95 transition cursor-pointer"
-            >
-              <Truck className="w-4 h-4" />
-              <span>{isDispatching ? 'Mengirim...' : 'Kirim ke petugas logistik'}</span>
-            </button>
-          </form>
-
-          {/* List of Recent Tasks */}
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Riwayat Tugas Logistik ({driverTasks.length})
-            </h3>
-            {driverTasks.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">Belum ada riwayat tugas logistik.</p>
-            ) : (
-              <div className="space-y-2">
-                {driverTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between text-xs shadow-2xs"
-                  >
-                    <div>
-                      <h4 className="font-extrabold text-slate-900 dark:text-white">
-                        {t.task_type.toUpperCase().replace('_', ' ')}: {t.store?.name}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                        Petugas: {t.driver?.full_name} • Status: {t.status}
-                      </p>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        t.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
       )}
 

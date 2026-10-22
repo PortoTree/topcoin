@@ -21,6 +21,9 @@ import {
   Navigation,
   Gauge,
   Clock,
+  Info,
+  Phone,
+  Users,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DriverTask, DriverTaskType } from '../../types';
@@ -142,10 +145,13 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
   // 3. Relocation Summary Modal State ("Berhasil dipindah")
   const [summaryTask, setSummaryTask] = useState<DriverTask | null>(null);
 
-  // Instruction & Notes Modal State
-  const [selectedInstruction, setSelectedInstruction] = useState<{ storeName: string; notes: string } | null>(null);
-  const [editingTaskNotes, setEditingTaskNotes] = useState<DriverTask | null>(null);
-  const [taskNoteInput, setTaskNoteInput] = useState('');
+  // 4. Task Information Detail Modal State
+  const [selectedTaskForDetail, setSelectedTaskForDetail] = useState<DriverTask | null>(null);
+
+  // Store Closed Modal State
+  const [reportingClosedTask, setReportingClosedTask] = useState<DriverTask | null>(null);
+  const [closedReasonInput, setClosedReasonInput] = useState('');
+  const [isSubmittingClosedReport, setIsSubmittingClosedReport] = useState(false);
 
   const activeBranchId = currentBranch?.id || profile?.branch_id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -157,19 +163,30 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
         .from('driver_tasks')
         .select(`
           *,
-          store:stores(*),
+          store:stores!store_id(*),
           target_store:stores!target_store_id(*),
           machine:machines(*)
         `)
         .eq('branch_id', activeBranchId)
         .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const allTasks = data as DriverTask[];
-        setTasks(allTasks.filter((t) => t.status !== 'completed' && t.status !== 'cancelled'));
-        setCompletedTasks(allTasks.filter((t) => t.status === 'completed'));
-      } else {
-        // Fallback demo tasks
+        // Filter to tasks assigned to this driver (either as primary driver or member of the assigned team officer_ids)
+        const myTasks =
+          profile.role === 'logistik' || profile.role === 'driver'
+            ? allTasks.filter(
+                (t) =>
+                  t.driver_id === profile.id ||
+                  (Array.isArray(t.officer_ids) && t.officer_ids.includes(profile.id))
+              )
+            : allTasks;
+        const displayTasks = myTasks.length > 0 ? myTasks : allTasks;
+
+        setTasks(displayTasks.filter((t) => t.status !== 'completed' && t.status !== 'cancelled'));
+        setCompletedTasks(displayTasks.filter((t) => t.status === 'completed'));
+      } else if (error) {
+        console.warn('Driver tasks fetch fallback:', error);
         setTasks(DEMO_DRIVER_TASKS.filter((t) => t.status !== 'completed'));
         setCompletedTasks([]);
       }
@@ -179,11 +196,26 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.id, activeBranchId]);
+  }, [profile?.id, profile?.role, activeBranchId]);
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks]);
+
+    const channel = supabase
+      .channel(`driver_tasks_realtime_view_${activeBranchId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'driver_tasks' },
+        () => {
+          fetchTasks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchTasks, activeBranchId]);
 
   // Complete Task Submission
   const handleCompleteTask = async () => {
@@ -269,7 +301,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
 
   // 1. Confirm Machine Pickup ("Diangkut" -> in_progress)
   const handleConfirmPickup = async () => {
-    if (!pickupTaskToExecute) return;
+    if (!pickupTaskToExecute || isSubmittingPickup) return;
     setIsSubmittingPickup(true);
     try {
       let photoUrl: string | null = null;
@@ -315,7 +347,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
 
   // 2. Confirm Machine Delivery ("Dikirim" -> completed)
   const handleConfirmDelivery = async () => {
-    if (!deliveryTaskToExecute) return;
+    if (!deliveryTaskToExecute || isSubmittingDelivery) return;
     setIsSubmittingDelivery(true);
     try {
       let photoUrl: string | null = null;
@@ -387,26 +419,36 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     }
   };
 
-  // Save Task Note from Pencil Icon
-  const handleSaveTaskNote = async () => {
-    if (!editingTaskNotes) return;
+  // Save Store Closed Report
+  const handleSaveClosedReport = async () => {
+    if (!reportingClosedTask || isSubmittingClosedReport) return;
+    setIsSubmittingClosedReport(true);
     try {
+      const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      const closedTag = `[TOKO TUTUP ${nowTime}]: ${closedReasonInput.trim()}`;
+      const updatedNotes = reportingClosedTask.notes
+        ? `${reportingClosedTask.notes}\n${closedTag}`
+        : closedTag;
+
       const { error } = await supabase
         .from('driver_tasks')
-        .update({ notes: taskNoteInput.trim() || null })
-        .eq('id', editingTaskNotes.id);
+        .update({ notes: updatedNotes })
+        .eq('id', reportingClosedTask.id);
 
-      if (error) console.warn('DB update task note fallback:', error);
+      if (error) console.warn('DB update store closed report fallback:', error);
 
       setTasks((prev) =>
         prev.map((t) =>
-          t.id === editingTaskNotes.id ? { ...t, notes: taskNoteInput.trim() || null } : t
+          t.id === reportingClosedTask.id ? { ...t, notes: updatedNotes } : t
         )
       );
-      toast.success('Catatan berhasil disimpan.');
-      setEditingTaskNotes(null);
+      toast.success('Laporan toko tutup berhasil dikirim ke Admin Cabang!');
+      setReportingClosedTask(null);
     } catch (err: any) {
-      toast.error('Gagal menyimpan catatan.');
+      console.error('Error reporting closed store:', err);
+      toast.error('Gagal mengirim laporan toko tutup.');
+    } finally {
+      setIsSubmittingClosedReport(false);
     }
   };
 
@@ -512,17 +554,6 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
                         {storeName}
                       </h3>
-                      {/* Icon instruksi dynamic, muncul hanya ketika ada instruksi (hanya icon, tanpa teks) */}
-                      {task.notes && (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedInstruction({ storeName, notes: task.notes! })}
-                          className="p-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 transition cursor-pointer flex-shrink-0 active:scale-95 shadow-2xs"
-                          title="Lihat Instruksi Admin"
-                        >
-                          <FileText className="w-3.5 h-3.5" />
-                        </button>
-                      )}
                     </div>
 
                     {/* Nomor mesin berada di kanan (tukar posisi dengan instruksi) */}
@@ -575,17 +606,14 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       <img src="/maps.png" alt="Google Maps" className="w-5 h-5 object-contain" />
                     </a>
 
-                    {/* Icon Pensil (Edit Catatan Petugas) */}
+                    {/* Icon Info (Modal Detail Lengkap Tugas & Rute) */}
                     <button
                       type="button"
-                      onClick={() => {
-                        setEditingTaskNotes(task);
-                        setTaskNoteInput(task.notes || '');
-                      }}
-                      className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center flex-shrink-0 transition cursor-pointer active:scale-95 shadow-2xs"
-                      title="Edit Catatan Lapangan"
+                      onClick={() => setSelectedTaskForDetail(task)}
+                      className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0 transition cursor-pointer active:scale-95 shadow-2xs group"
+                      title="Lihat Informasi Lengkap Tugas"
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Info className="w-5 h-5 transition-transform group-hover:scale-110" />
                     </button>
 
                     {/* Tombol dynamic: 1. Diangkut -> 2. Dikirim -> 3. Berhasil dipindah */}
@@ -1186,90 +1214,249 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
         </div>
       )}
 
-      {/* Instruction Viewing Modal */}
-      {selectedInstruction && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-3.5 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-amber-500" />
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Instruksi Tugas</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedInstruction(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
-                {selectedInstruction.storeName}
-              </span>
-              <div className="text-xs text-slate-700 dark:text-slate-300 bg-amber-50/70 dark:bg-amber-950/30 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/60 leading-relaxed font-medium">
-                {selectedInstruction.notes}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedInstruction(null)}
-              className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs cursor-pointer transition active:scale-98"
-            >
-              Tutup
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Editing Task Notes Modal */}
-      {editingTaskNotes && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-3.5 border border-slate-200 dark:border-slate-800 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-indigo-500" />
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Catatan Lapangan</h3>
+
+      {/* Modal Informasi Lengkap Tugas Logistik */}
+      {selectedTaskForDetail && (() => {
+        const t = selectedTaskForDetail;
+        const originStore = t.store;
+        const targetStore = t.target_store;
+        const machine = t.machine;
+
+        const teamInfo = t.notes?.match(/\[Tim Logistik: ([^\]]+)\]/);
+        const assignedStaffText = teamInfo ? teamInfo[1] : (t.driver?.full_name || 'Petugas Lapangan');
+
+        const cleanNotes = t.notes?.replace(/\[Tim Logistik: [^\]]+\]\s*/, '').trim();
+
+        // Origin Store Contact & Map
+        const originPhone = originStore?.phone;
+        const originWaUrl = originPhone ? `https://wa.me/${originPhone.replace(/[^0-9]/g, '')}` : undefined;
+        const originMapUrl =
+          originStore?.latitude && originStore?.longitude
+            ? `https://maps.google.com/?q=${originStore.latitude},${originStore.longitude}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(originStore?.address || originStore?.name || 'Toko Asal')}`;
+
+        // Target Store Contact & Map
+        const targetPhone = targetStore?.phone;
+        const targetWaUrl = targetPhone ? `https://wa.me/${targetPhone.replace(/[^0-9]/g, '')}` : undefined;
+        const targetMapUrl =
+          targetStore?.latitude && targetStore?.longitude
+            ? `https://maps.google.com/?q=${targetStore.latitude},${targetStore.longitude}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(targetStore?.address || targetStore?.name || 'Toko Tujuan')}`;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
+            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[92vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60">
+                    <Info className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                      Informasi Lengkap Tugas
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Rute relokasi & kontak PIC outlet
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTaskForDetail(null)}
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
+
+              {/* Status & Mesin Badge */}
+              <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                    Unit Mesin
+                  </span>
+                  <span className="font-mono font-black text-slate-900 dark:text-white text-sm">
+                    {machine?.machine_code || 'MSN-UNKNOWN'}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
+                    Status Tugas
+                  </span>
+                  <span
+                    className={`inline-block text-[10px] font-extrabold px-2.5 py-0.5 rounded-full capitalize ${
+                      t.status === 'completed'
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                        : t.status === 'in_progress'
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
+                    }`}
+                  >
+                    {t.status === 'in_progress' ? 'Diangkut / Jalan' : t.status === 'assigned' ? 'Ditugaskan' : 'Selesai'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Petugas Tim */}
+              <div className="p-3 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900/40 text-xs flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 block">
+                    Petugas Logistik
+                  </span>
+                  <span className="font-extrabold text-slate-900 dark:text-white truncate block">
+                    {assignedStaffText}
+                  </span>
+                </div>
+              </div>
+
+              {/* RUTE 1: Rute Awal (Asal Mesin) */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-amber-300 dark:border-amber-700/60 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-md bg-amber-500 text-white font-black text-[10px] flex items-center justify-center">
+                      A
+                    </span>
+                    <span className="text-[11px] font-black uppercase text-amber-700 dark:text-amber-300 tracking-wide">
+                      Rute Awal (Asal Mesin)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">Titik Ambil</span>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                    {originStore?.name || 'Toko Mitra Asal'}
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    {originStore?.address || 'Alamat toko asal belum terdata.'}
+                  </p>
+                </div>
+
+                {/* Action WA & Maps Toko Asal */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <a
+                    href={originWaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      if (!originWaUrl) {
+                        e.preventDefault();
+                        toast.info('Nomor WA toko asal belum terdaftar.');
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition ${
+                      originWaUrl
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
+                    <span>{originPhone ? `WA: ${originPhone}` : 'WA Toko Asal'}</span>
+                  </a>
+
+                  <a
+                    href={originMapUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 hover:bg-blue-100 flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer"
+                  >
+                    <img src="/maps.png" alt="Maps" className="w-4 h-4 object-contain" />
+                    <span>Lokasi Asal</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Rute Connector Panah */}
+              <div className="flex items-center justify-center -my-1 text-slate-400 dark:text-slate-500">
+                <ArrowRight className="w-4 h-4 rotate-90" />
+              </div>
+
+              {/* RUTE 2: Rute Antar (Tujuan Relokasi) */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-300 dark:border-indigo-700/60 shadow-xs space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-5 h-5 rounded-md bg-indigo-600 text-white font-black text-[10px] flex items-center justify-center">
+                      B
+                    </span>
+                    <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 tracking-wide">
+                      Rute Antar (Tujuan Relokasi)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-400">Titik Pasang</span>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                    {targetStore?.name || 'Toko Mitra Penerima'}
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                    {targetStore?.address || 'Alamat toko tujuan belum terdata.'}
+                  </p>
+                </div>
+
+                {/* Action WA & Maps Toko Tujuan */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <a
+                    href={targetWaUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      if (!targetWaUrl) {
+                        e.preventDefault();
+                        toast.info('Nomor WA toko tujuan belum terdaftar.');
+                      }
+                    }}
+                    className={`py-2 px-3 rounded-xl border flex items-center justify-center gap-1.5 text-xs font-bold transition ${
+                      targetWaUrl
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                    }`}
+                  >
+                    <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
+                    <span>{targetPhone ? `WA: ${targetPhone}` : 'WA Toko Tujuan'}</span>
+                  </a>
+
+                  <a
+                    href={targetMapUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 hover:bg-blue-100 flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer"
+                  >
+                    <img src="/maps.png" alt="Maps" className="w-4 h-4 object-contain" />
+                    <span>Lokasi Tujuan</span>
+                  </a>
+                </div>
+              </div>
+
+              {/* Catatan / Instruksi jika ada */}
+              {cleanNotes && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs">
+                  <span className="text-[10px] font-bold uppercase text-slate-400 block mb-1">
+                    Catatan Tambahan
+                  </span>
+                  <p className="text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                    {cleanNotes}
+                  </p>
+                </div>
+              )}
+
+              {/* Tombol Tutup */}
               <button
                 type="button"
-                onClick={() => setEditingTaskNotes(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                onClick={() => setSelectedTaskForDetail(null)}
+                className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-xs cursor-pointer active:scale-98 transition"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                Tulis / Edit Catatan untuk Tugas Ini:
-              </label>
-              <textarea
-                rows={3}
-                value={taskNoteInput}
-                onChange={(e) => setTaskNoteInput(e.target.value)}
-                placeholder="Misal: Sudah telepon kasir, parkiran belakang aman..."
-                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => setEditingTaskNotes(null)}
-                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer active:scale-98"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveTaskNote}
-                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-98 transition"
-              >
-                Simpan Catatan
+                Tutup Informasi
               </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

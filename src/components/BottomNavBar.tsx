@@ -36,6 +36,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
       case 'branch_manager':
         return [
           { id: 'bm_overview', label: 'Supervisi', icon: TrendingUp },
+          { id: 'driver_dispatch', label: 'Tugas Logistik', icon: Truck },
           { id: 'approvals', label: 'Approval Hapus', icon: ShieldCheck },
           { id: 'branch_staff', label: 'Karyawan', icon: Users },
         ];

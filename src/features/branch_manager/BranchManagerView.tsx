@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { UserProfile, UserRole, DroppingTransaction, Machine } from '../../types';
+import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 
 interface BranchManagerViewProps {
   activeTab: string;
@@ -328,6 +329,15 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
   const totalBranchGross = branchDroppings.reduce((acc, d) => acc + (d.gross_omset || 0), 0);
   const totalBranchNet = branchDroppings.reduce((acc, d) => acc + (d.net_deposit_amount || 0), 0);
   const installedMachines = branchMachines.filter((m) => m.status === 'terpasang').length;
+
+  // Khusus Tab Tugas Logistik: Render langsung tanpa pembungkus p-4 max-w-lg agar halaman melebar penuh
+  if (activeTab === 'driver_dispatch') {
+    return (
+      <div className="pb-24 w-full">
+        <LogisticsDispatchView branchId={activeBranchId} branchName={currentBranch?.name} />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 pb-24 max-w-lg mx-auto space-y-4">
