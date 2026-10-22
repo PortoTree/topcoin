@@ -5,6 +5,7 @@ import {
   Calendar,
   RefreshCw,
 } from 'lucide-react';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
 
 interface MyHistoryModalProps {
   userId: string;
@@ -81,27 +82,30 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
   }, [userId]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex flex-col justify-end">
-      <div className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 rounded-t-3xl max-h-[85vh] flex flex-col w-full max-w-[480px] mx-auto animate-in slide-in-from-bottom duration-200 shadow-2xl">
-        {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Riwayat Lengkap Saya</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">Seluruh tugas & log absensi Anda</p>
+    <BottomSheetModal isOpen={true} onClose={onClose} maxWidthClass="max-w-[480px]">
+      {(_, close) => (
+        <>
+          {/* Header */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+            <div>
+              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">Riwayat Lengkap Saya</h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 font-medium">Seluruh tugas & log absensi Anda</p>
+            </div>
+            <button
+              type="button"
+              onClick={close}
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center active:scale-95 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center active:scale-95"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
         {/* Sub Tabs */}
-        <div className="flex border-b border-slate-200 dark:border-slate-800 px-2 py-1.5 overflow-x-auto no-scrollbar gap-1 bg-slate-50 dark:bg-slate-950/40">
+        <div className="flex border border-slate-200 dark:border-slate-800 p-1.5 overflow-x-auto no-scrollbar gap-1 bg-slate-50 dark:bg-slate-950/40 rounded-2xl">
           <button
+            type="button"
             onClick={() => setActiveTab('attendance')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'attendance'
                 ? 'bg-indigo-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -110,8 +114,9 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
             Absensi ({attendances.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('dropping')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'dropping'
                 ? 'bg-emerald-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -120,8 +125,9 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
             Dropping ({droppings.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('marketing')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'marketing'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -130,8 +136,9 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
             Marketing ({stores.length})
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('driver')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
               activeTab === 'driver'
                 ? 'bg-amber-600 text-white shadow-xs'
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
@@ -142,7 +149,7 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
         </div>
 
         {/* Content List */}
-        <div className="p-4 overflow-y-auto space-y-2.5 flex-1 pb-8">
+        <div className="max-h-[58vh] overflow-y-auto space-y-2.5 pr-1 -mr-1">
           {isLoading ? (
             <div className="py-8 text-center text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-indigo-500" />
@@ -225,7 +232,8 @@ export const MyHistoryModal: React.FC<MyHistoryModalProps> = ({ userId, onClose 
             )
           )}
         </div>
-      </div>
-    </div>
+        </>
+      )}
+    </BottomSheetModal>
   );
 };

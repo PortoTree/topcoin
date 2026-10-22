@@ -18,6 +18,7 @@ import confetti from 'canvas-confetti';
 import type { Branch, UserProfile, UserRole, DroppingTransaction, Machine } from '../../types';
 import { toast } from '../../context/ToastContext';
 import { ActionPromptModal, type ActionPromptConfig } from '../../components/ActionPromptModal';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
 
 interface OwnerViewProps {
   activeTab: string;
@@ -492,16 +493,19 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
       )}
 
       {/* Add Branch Modal */}
-      {showAddBranchModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        isOpen={showAddBranchModal}
+        onClose={() => setShowAddBranchModal(false)}
+      >
+        {(_, close) => (
+          <>
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                 Buka Cabang Operasional Baru
               </h3>
               <button
                 type="button"
-                onClick={() => setShowAddBranchModal(false)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -567,7 +571,7 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddBranchModal(false)}
+                  onClick={close}
                   className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Batal
@@ -580,21 +584,24 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* Add User Modal */}
-      {showAddUserModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        isOpen={showAddUserModal}
+        onClose={() => setShowAddUserModal(false)}
+      >
+        {(_, close) => (
+          <>
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                 Buat Akun Karyawan Baru
               </h3>
               <button
                 type="button"
-                onClick={() => setShowAddUserModal(false)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -686,7 +693,7 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddUserModal(false)}
+                  onClick={close}
                   className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Batal
@@ -699,24 +706,27 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* JSON Snapshot Viewer Modal */}
-      {previewSnapshot && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-3 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
+      <BottomSheetModal
+        item={previewSnapshot}
+        onClose={() => setPreviewSnapshot(null)}
+      >
+        {(snapshot, close) => (
+          <>
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
                 <FileCode className="w-4 h-4 text-purple-500" />
                 <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                  Snapshot JSON: {previewSnapshot.branch.name}
+                  Snapshot JSON: {snapshot.branch.name}
                 </h3>
               </div>
               <button
                 type="button"
-                onClick={() => setPreviewSnapshot(null)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -727,20 +737,20 @@ export const OwnerView: React.FC<OwnerViewProps> = ({ activeTab }) => {
               File berhasil diunduh ke komputer/HP Anda! Format data terstruktur siap untuk arsip dan audit:
             </p>
 
-            <pre className="flex-1 overflow-y-auto p-3 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[10px] leading-relaxed border border-slate-800">
-              {JSON.stringify(previewSnapshot, null, 2)}
+            <pre className="max-h-[50vh] overflow-y-auto p-3 rounded-xl bg-slate-950 text-emerald-400 font-mono text-[10px] leading-relaxed border border-slate-800">
+              {JSON.stringify(snapshot, null, 2)}
             </pre>
 
             <button
               type="button"
-              onClick={() => setPreviewSnapshot(null)}
+              onClick={close}
               className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs cursor-pointer"
             >
               Tutup Preview
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* Modal Aksi Custom (Pengganti window.confirm) */}
       <ActionPromptModal config={actionPrompt} onClose={() => setActionPrompt(null)} />

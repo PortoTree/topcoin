@@ -4,6 +4,7 @@ import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
 import { CameraCapture } from '../../components/CameraCapture';
 import { uploadToCloudinary } from '../../lib/cloudinary';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
 import {
   Truck,
   MapPin,
@@ -766,9 +767,12 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
       )}
 
       {/* Execution Modal */}
-      {activeTaskToExecute && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        item={activeTaskToExecute}
+        onClose={() => setActiveTaskToExecute(null)}
+      >
+        {(task, close) => (
+          <>
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -779,7 +783,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               </div>
               <button
                 type="button"
-                onClick={() => setActiveTaskToExecute(null)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -789,14 +793,14 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             {/* Task Info Summary */}
             <div className="bg-slate-50 dark:bg-slate-950/70 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
               <div className="font-extrabold text-slate-900 dark:text-white">
-                {activeTaskToExecute.store?.name}
+                {task.store?.name}
               </div>
               <div className="text-slate-500 dark:text-slate-400">
-                {activeTaskToExecute.store?.address}
+                {task.store?.address}
               </div>
-              {activeTaskToExecute.machine && (
+              {task.machine && (
                 <div className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">
-                  Unit: {activeTaskToExecute.machine.machine_code}
+                  Unit: {task.machine.machine_code}
                 </div>
               )}
             </div>
@@ -827,7 +831,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setActiveTaskToExecute(null)}
+                onClick={close}
                 className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
               >
                 Batal
@@ -848,14 +852,17 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* 1. Modal Pengangkutan Mesin ("Diangkut" -> in_progress) */}
-      {pickupTaskToExecute && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        item={pickupTaskToExecute}
+        onClose={() => setPickupTaskToExecute(null)}
+      >
+        {(task, close) => (
+          <>
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -866,7 +873,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               </div>
               <button
                 type="button"
-                onClick={() => setPickupTaskToExecute(null)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -877,16 +884,16 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div className="bg-slate-50 dark:bg-slate-950/70 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-extrabold text-slate-900 dark:text-white">
-                  {pickupTaskToExecute.store?.name}
+                  {task.store?.name}
                 </span>
-                {pickupTaskToExecute.machine && (
+                {task.machine && (
                   <span className="text-[10px] font-black bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white px-2 py-0.5 rounded border border-slate-300 dark:border-slate-700">
-                    {pickupTaskToExecute.machine.machine_code}
+                    {task.machine.machine_code}
                   </span>
                 )}
               </div>
               <div className="text-slate-500 dark:text-slate-400">
-                {pickupTaskToExecute.store?.address}
+                {task.store?.address}
               </div>
             </div>
 
@@ -916,7 +923,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setPickupTaskToExecute(null)}
+                onClick={close}
                 className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
               >
                 Batal
@@ -937,14 +944,17 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* 2. Modal Pengiriman Mesin ("Dikirim" -> completed) */}
-      {deliveryTaskToExecute && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        item={deliveryTaskToExecute}
+        onClose={() => setDeliveryTaskToExecute(null)}
+      >
+        {(task, close) => (
+          <>
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -955,7 +965,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               </div>
               <button
                 type="button"
-                onClick={() => setDeliveryTaskToExecute(null)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -966,16 +976,16 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div className="bg-blue-50/60 dark:bg-blue-950/40 p-3 rounded-2xl border border-blue-200 dark:border-blue-800 text-xs space-y-1">
               <div className="flex items-center justify-between">
                 <span className="font-extrabold text-blue-950 dark:text-blue-200">
-                  {deliveryTaskToExecute.target_store?.name || deliveryTaskToExecute.store?.name}
+                  {task.target_store?.name || task.store?.name}
                 </span>
-                {deliveryTaskToExecute.machine && (
+                {task.machine && (
                   <span className="text-[10px] font-black bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-100 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-700">
-                    {deliveryTaskToExecute.machine.machine_code}
+                    {task.machine.machine_code}
                   </span>
                 )}
               </div>
               <div className="text-blue-800/80 dark:text-blue-300">
-                {deliveryTaskToExecute.target_store?.address || deliveryTaskToExecute.store?.address}
+                {task.target_store?.address || task.store?.address}
               </div>
             </div>
 
@@ -1025,7 +1035,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <div className="flex items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setDeliveryTaskToExecute(null)}
+                onClick={close}
                 className="flex-1 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
               >
                 Batal
@@ -1046,14 +1056,17 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* 3. Modal Ringkasan Relokasi ("Berhasil dipindah" -> Summary) */}
-      {summaryTask && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 space-y-4 max-h-[90vh] overflow-y-auto border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        item={summaryTask}
+        onClose={() => setSummaryTask(null)}
+      >
+        {(task, close) => (
+          <>
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -1071,7 +1084,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               </div>
               <button
                 type="button"
-                onClick={() => setSummaryTask(null)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1079,11 +1092,11 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             </div>
 
             {/* Machine Badge */}
-            {summaryTask.machine && (
+            {task.machine && (
               <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs">
                 <span className="text-slate-500 font-bold">Unit Mesin:</span>
                 <span className="font-black text-slate-900 dark:text-white bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600">
-                  {summaryTask.machine.machine_code}
+                  {task.machine.machine_code}
                 </span>
               </div>
             )}
@@ -1099,10 +1112,10 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                   <span className="text-xs font-black text-slate-900 dark:text-white">
                     Tahap 1: Diangkut
                   </span>
-                  {summaryTask.pickup_at && (
+                  {task.pickup_at && (
                     <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
                       <Clock className="w-3 h-3" />
-                      {new Date(summaryTask.pickup_at).toLocaleString('id-ID', {
+                      {new Date(task.pickup_at).toLocaleString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -1113,19 +1126,19 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 </div>
                 <div className="text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
                   <div className="font-extrabold text-slate-900 dark:text-white">
-                    {summaryTask.store?.name || 'Toko Asal'}
+                    {task.store?.name || 'Toko Asal'}
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    {summaryTask.store?.address}
+                    {task.store?.address}
                   </div>
-                  {summaryTask.pickup_notes && (
+                  {task.pickup_notes && (
                     <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <strong>Catatan:</strong> {summaryTask.pickup_notes}
+                      <strong>Catatan:</strong> {task.pickup_notes}
                     </div>
                   )}
-                  {summaryTask.pickup_photo_url ? (
+                  {task.pickup_photo_url ? (
                     <a
-                      href={summaryTask.pickup_photo_url}
+                      href={task.pickup_photo_url}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline pt-1"
@@ -1150,10 +1163,10 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                   <span className="text-xs font-black text-slate-900 dark:text-white">
                     Tahap 2: Selesai Dikirim & Ditempatkan
                   </span>
-                  {summaryTask.completed_at && (
+                  {task.completed_at && (
                     <span className="text-[10px] text-slate-400 flex items-center gap-1 font-medium">
                       <Clock className="w-3 h-3" />
-                      {new Date(summaryTask.completed_at).toLocaleString('id-ID', {
+                      {new Date(task.completed_at).toLocaleString('id-ID', {
                         day: 'numeric',
                         month: 'short',
                         hour: '2-digit',
@@ -1164,10 +1177,10 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 </div>
                 <div className="text-xs bg-emerald-50/50 dark:bg-emerald-950/20 p-3 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-1.5">
                   <div className="font-extrabold text-slate-900 dark:text-white">
-                    {summaryTask.target_store?.name || summaryTask.store?.name}
+                    {task.target_store?.name || task.store?.name}
                   </div>
                   <div className="text-[11px] text-slate-500">
-                    {summaryTask.target_store?.address || summaryTask.store?.address}
+                    {task.target_store?.address || task.store?.address}
                   </div>
                   {/* Meteran Koin Terakhir */}
                   <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-lg border border-emerald-200 dark:border-emerald-800">
@@ -1176,19 +1189,19 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       Meteran Koin Terakhir:
                     </span>
                     <span className="text-xs font-black text-slate-900 dark:text-white">
-                      {summaryTask.last_coin_meter != null
-                        ? `${summaryTask.last_coin_meter.toLocaleString('id-ID')} koin`
+                      {task.last_coin_meter != null
+                        ? `${task.last_coin_meter.toLocaleString('id-ID')} koin`
                         : 'Tidak dicatat'}
                     </span>
                   </div>
-                  {summaryTask.delivery_notes && (
+                  {task.delivery_notes && (
                     <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
-                      <strong>Catatan:</strong> {summaryTask.delivery_notes}
+                      <strong>Catatan:</strong> {task.delivery_notes}
                     </div>
                   )}
-                  {summaryTask.photo_evidence_url ? (
+                  {task.photo_evidence_url ? (
                     <a
-                      href={summaryTask.photo_evidence_url}
+                      href={task.photo_evidence_url}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline pt-1"
@@ -1208,47 +1221,51 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             {/* Close Button */}
             <button
               type="button"
-              onClick={() => setSummaryTask(null)}
+              onClick={close}
               className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs cursor-pointer transition active:scale-98"
             >
               Tutup Ringkasan
             </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
 
 
-      {/* Modal Informasi Lengkap Tugas Logistik */}
-      {selectedTaskForDetail && (() => {
-        const t = selectedTaskForDetail;
-        const originStore = t.store;
-        const targetStore = t.target_store;
-        const machine = t.machine;
+      {/* Modal Informasi Lengkap Tugas Logistik (Fullscreen dengan Slide-Up & Slide-Down) */}
+      <BottomSheetModal
+        item={selectedTaskForDetail}
+        onClose={() => setSelectedTaskForDetail(null)}
+        isFullscreen={true}
+      >
+        {(t, close) => {
+          const originStore = t.store;
+          const targetStore = t.target_store;
+          const machine = t.machine;
 
-        const teamInfo = t.notes?.match(/\[Tim Logistik: ([^\]]+)\]/);
-        const assignedStaffText = teamInfo ? teamInfo[1] : (t.driver?.full_name || 'Petugas Lapangan');
+          const teamInfo = t.notes?.match(/\[Tim Logistik: ([^\]]+)\]/);
+          const assignedStaffText = teamInfo ? teamInfo[1] : (t.driver?.full_name || 'Petugas Lapangan');
 
-        const cleanNotes = t.notes?.replace(/\[Tim Logistik: [^\]]+\]\s*/, '').trim();
+          const cleanNotes = t.notes?.replace(/\[Tim Logistik: [^\]]+\]\s*/, '').trim();
 
-        // Origin Store Contact & Map
-        const originPhone = originStore?.phone;
-        const originWaUrl = originPhone ? `https://wa.me/${originPhone.replace(/[^0-9]/g, '')}` : undefined;
-        const originMapUrl =
-          originStore?.latitude && originStore?.longitude
-            ? `https://maps.google.com/?q=${originStore.latitude},${originStore.longitude}`
-            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(originStore?.address || originStore?.name || 'Toko Asal')}`;
+          // Origin Store Contact & Map
+          const originPhone = originStore?.phone;
+          const originWaUrl = originPhone ? `https://wa.me/${originPhone.replace(/[^0-9]/g, '')}` : undefined;
+          const originMapUrl =
+            originStore?.latitude && originStore?.longitude
+              ? `https://maps.google.com/?q=${originStore.latitude},${originStore.longitude}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(originStore?.address || originStore?.name || 'Toko Asal')}`;
 
-        // Target Store Contact & Map
-        const targetPhone = targetStore?.phone;
-        const targetWaUrl = targetPhone ? `https://wa.me/${targetPhone.replace(/[^0-9]/g, '')}` : undefined;
-        const targetMapUrl =
-          targetStore?.latitude && targetStore?.longitude
-            ? `https://maps.google.com/?q=${targetStore.latitude},${targetStore.longitude}`
-            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(targetStore?.address || targetStore?.name || 'Toko Tujuan')}`;
+          // Target Store Contact & Map
+          const targetPhone = targetStore?.phone;
+          const targetWaUrl = targetPhone ? `https://wa.me/${targetPhone.replace(/[^0-9]/g, '')}` : undefined;
+          const targetMapUrl =
+            targetStore?.latitude && targetStore?.longitude
+              ? `https://maps.google.com/?q=${targetStore.latitude},${targetStore.longitude}`
+              : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(targetStore?.address || targetStore?.name || 'Toko Tujuan')}`;
 
-        return (
-          <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950 flex flex-col animate-in fade-in duration-200 overflow-hidden">
+          return (
+            <>
             {/* Fullscreen Sticky Header */}
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md sticky top-0 z-10">
               <div className="flex items-center gap-2.5">
@@ -1458,16 +1475,16 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
               <div className="max-w-2xl mx-auto w-full">
                 <button
                   type="button"
-                  onClick={() => setSelectedTaskForDetail(null)}
+                  onClick={close}
                   className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-extrabold text-xs cursor-pointer active:scale-98 transition shadow-md"
                 >
                   Tutup Informasi
                 </button>
               </div>
             </div>
-          </div>
-        );
-      })()}
+          </>
+        )}
+      </BottomSheetModal>
     </div>
   );
 };

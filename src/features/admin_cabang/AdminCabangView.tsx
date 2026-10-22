@@ -1068,16 +1068,19 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       )}
 
       {/* Add Staff Modal */}
-      {showAddStaffModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl">
+      <BottomSheetModal
+        isOpen={showAddStaffModal}
+        onClose={() => setShowAddStaffModal(false)}
+      >
+        {(_, close) => (
+          <>
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
                 Tambah Karyawan Cabang Baru
               </h3>
               <button
                 type="button"
-                onClick={() => setShowAddStaffModal(false)}
+                onClick={close}
                 className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="w-5 h-5" />
@@ -1147,7 +1150,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               <div className="flex gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddStaffModal(false)}
+                  onClick={close}
                   className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
                 >
                   Batal
@@ -1161,32 +1164,33 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </BottomSheetModal>
 
       {/* Photo Preview Modal */}
-      {previewPhotoUrl && (
-        <div
-          className="fixed inset-0 z-50 bg-black/85 flex items-center justify-center p-4 animate-in fade-in duration-150"
-          onClick={() => setPreviewPhotoUrl(null)}
-        >
-          <div className="relative max-w-sm w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl p-2 border border-slate-800">
+      <BottomSheetModal
+        item={previewPhotoUrl}
+        onClose={() => setPreviewPhotoUrl(null)}
+        contentClassName="relative max-w-sm w-full bg-slate-900 rounded-3xl overflow-hidden shadow-2xl p-2 border border-slate-800"
+      >
+        {(photoUrl, close) => (
+          <div className="relative">
             <button
               type="button"
-              onClick={() => setPreviewPhotoUrl(null)}
-              className="absolute top-4 right-4 p-2 bg-black/60 rounded-full text-white cursor-pointer z-10"
+              onClick={close}
+              className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white cursor-pointer z-10 hover:bg-black/80 transition"
             >
               <X className="w-5 h-5" />
             </button>
             <img
-              src={previewPhotoUrl}
+              src={photoUrl}
               alt="Foto Bukti Lapangan"
               className="w-full h-auto rounded-2xl object-cover max-h-[75vh]"
             />
           </div>
-        </div>
-      )}
+        )}
+      </BottomSheetModal>
 
       {/* Modal / Action Sheet: Pemilihan Role Staf (Diluar Kolom List agar Tidak Kepotong & Bebas dari Parent Layout) */}
       <BottomSheetModal

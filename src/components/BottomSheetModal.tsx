@@ -1,25 +1,33 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
-interface BottomSheetModalProps<T> {
-  item: T | null;
+interface BottomSheetModalProps<T = any> {
+  item?: T | null;
+  isOpen?: boolean;
   onClose: () => void;
-  children: (item: T, close: () => void) => React.ReactNode;
+  children: React.ReactNode | ((item: T, close: () => void) => React.ReactNode);
   maxWidthClass?: string;
+  contentClassName?: string;
+  isFullscreen?: boolean;
 }
 
-export function BottomSheetModal<T>({
+export function BottomSheetModal<T = any>({
   item,
+  isOpen,
   onClose,
   children,
   maxWidthClass = 'sm:max-w-md',
+  contentClassName,
+  isFullscreen = false,
 }: BottomSheetModalProps<T>) {
-  const [renderedItem, setRenderedItem] = useState<T | null>(item);
+  // Normalize active trigger whether passed as item or boolean isOpen
+  const activeTrigger = isOpen !== undefined ? (isOpen ? (true as unknown as T) : null) : item ?? null;
+  const [renderedItem, setRenderedItem] = useState<T | null>(activeTrigger);
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    if (item) {
-      setRenderedItem(item);
+    if (activeTrigger) {
+      setRenderedItem(activeTrigger);
       setIsClosing(false);
     } else if (renderedItem && !isClosing) {
       setIsClosing(true);
@@ -29,7 +37,7 @@ export function BottomSheetModal<T>({
       }, 220);
       return () => clearTimeout(timer);
     }
-  }, [item]);
+  }, [activeTrigger]);
 
   // Lock background scrolling when sheet is open
   useEffect(() => {
@@ -58,6 +66,24 @@ export function BottomSheetModal<T>({
 
   if (!renderedItem) return null;
 
+  const content =
+    typeof children === 'function'
+      ? (children as (item: T, close: () => void) => React.ReactNode)(renderedItem, handleClose)
+      : children;
+
+  if (isFullscreen) {
+    return createPortal(
+      <div
+        className={`fixed inset-0 !m-0 z-50 bg-white dark:bg-slate-950 flex flex-col overflow-hidden ${
+          isClosing ? 'animate-sheet-slide-down' : 'animate-sheet-slide-up'
+        }`}
+      >
+        {content}
+      </div>,
+      document.body
+    );
+  }
+
   return createPortal(
     <div
       className={`fixed inset-0 !m-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 ${
@@ -66,12 +92,12 @@ export function BottomSheetModal<T>({
       onClick={handleClose}
     >
       <div
-        className={`w-full ${maxWidthClass} bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 ${
-          isClosing ? 'animate-sheet-slide-down' : 'animate-sheet-slide-up'
-        }`}
+        className={`w-full ${maxWidthClass} bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4 max-h-[92vh] overflow-y-auto ${
+          contentClassName || ''
+        } ${isClosing ? 'animate-sheet-slide-down' : 'animate-sheet-slide-up'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {children(renderedItem, handleClose)}
+        {content}
       </div>
     </div>,
     document.body
