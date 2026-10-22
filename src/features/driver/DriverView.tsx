@@ -497,8 +497,8 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
     <div className="p-4 pb-24 max-w-lg mx-auto">
       {activeTab === 'driver_tasks' ? (
         <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Header Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors flex items-center justify-between">
+          {/* Header (Unboxed, clean divider) */}
+          <div className="pb-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Truck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -511,7 +511,8 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             <button
               type="button"
               onClick={fetchTasks}
-              className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+              className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-95 transition"
+              title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -519,9 +520,11 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
 
           {/* Task Cards List */}
           {tasks.length === 0 ? (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-8 text-center text-slate-500 dark:text-slate-400 shadow-xs">
-              <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-500 mb-2" />
-              <p className="text-xs font-semibold">Semua tugas lapangan telah selesai dikerjakan!</p>
+            <div className="py-14 text-center text-slate-500 dark:text-slate-400">
+              <CheckCircle2 className="w-12 h-12 mx-auto text-emerald-500 mb-2.5 opacity-90" />
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Semua tugas lapangan telah selesai dikerjakan!
+              </p>
               <p className="text-[11px] text-slate-400 mt-1">Admin Cabang belum menugaskan tiket baru.</p>
             </div>
           ) : (
@@ -1245,31 +1248,34 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(targetStore?.address || targetStore?.name || 'Toko Tujuan')}`;
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150">
-            <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-5 space-y-4 border border-slate-200 dark:border-slate-800 shadow-2xl max-h-[92vh] overflow-y-auto">
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60">
-                    <Info className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                      Informasi Lengkap Tugas
-                    </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Rute relokasi & kontak PIC outlet
-                    </p>
-                  </div>
+          <div className="fixed inset-0 z-50 bg-white dark:bg-slate-950 flex flex-col animate-in fade-in duration-200 overflow-hidden">
+            {/* Fullscreen Sticky Header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md sticky top-0 z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60">
+                  <Info className="w-5 h-5" />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTaskForDetail(null)}
-                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                    Informasi Lengkap Tugas
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Rute relokasi & kontak PIC outlet
+                  </p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setSelectedTaskForDetail(null)}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-90 transition"
+                title="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-2xl mx-auto w-full">
 
               {/* Status & Mesin Badge */}
               <div className="flex items-center justify-between gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-xs">
@@ -1322,7 +1328,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       A
                     </span>
                     <span className="text-[11px] font-black uppercase text-amber-700 dark:text-amber-300 tracking-wide">
-                      Rute Awal (Asal Mesin)
+                      Rute Awal
                     </span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">Titik Ambil</span>
@@ -1356,7 +1362,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     }`}
                   >
                     <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
-                    <span>{originPhone ? `WA: ${originPhone}` : 'WA Toko Asal'}</span>
+                    <span className="truncate">{originPhone || 'WhatsApp'}</span>
                   </a>
 
                   <a
@@ -1366,7 +1372,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 hover:bg-blue-100 flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer"
                   >
                     <img src="/maps.png" alt="Maps" className="w-4 h-4 object-contain" />
-                    <span>Lokasi Asal</span>
+                    <span>Rute Awal</span>
                   </a>
                 </div>
               </div>
@@ -1376,7 +1382,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 <ArrowRight className="w-4 h-4 rotate-90" />
               </div>
 
-              {/* RUTE 2: Rute Antar (Tujuan Relokasi) */}
+              {/* RUTE 2: Rute Antar */}
               <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/90 border border-indigo-300 dark:border-indigo-700/60 shadow-xs space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
@@ -1384,7 +1390,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                       B
                     </span>
                     <span className="text-[11px] font-black uppercase text-indigo-700 dark:text-indigo-300 tracking-wide">
-                      Rute Antar (Tujuan Relokasi)
+                      Rute Antar
                     </span>
                   </div>
                   <span className="text-[10px] font-bold text-slate-400">Titik Pasang</span>
@@ -1418,7 +1424,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     }`}
                   >
                     <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
-                    <span>{targetPhone ? `WA: ${targetPhone}` : 'WA Toko Tujuan'}</span>
+                    <span className="truncate">{targetPhone || 'WhatsApp'}</span>
                   </a>
 
                   <a
@@ -1428,7 +1434,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     className="py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 hover:bg-blue-100 flex items-center justify-center gap-1.5 text-xs font-bold transition cursor-pointer"
                   >
                     <img src="/maps.png" alt="Maps" className="w-4 h-4 object-contain" />
-                    <span>Lokasi Tujuan</span>
+                    <span>Rute Antar</span>
                   </a>
                 </div>
               </div>
@@ -1445,14 +1451,19 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 </div>
               )}
 
-              {/* Tombol Tutup */}
-              <button
-                type="button"
-                onClick={() => setSelectedTaskForDetail(null)}
-                className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-extrabold text-xs cursor-pointer active:scale-98 transition"
-              >
-                Tutup Informasi
-              </button>
+            </div>
+
+            {/* Fullscreen Sticky Footer */}
+            <div className="p-4 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 sticky bottom-0 z-10">
+              <div className="max-w-2xl mx-auto w-full">
+                <button
+                  type="button"
+                  onClick={() => setSelectedTaskForDetail(null)}
+                  className="w-full py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 font-extrabold text-xs cursor-pointer active:scale-98 transition shadow-md"
+                >
+                  Tutup Informasi
+                </button>
+              </div>
             </div>
           </div>
         );
