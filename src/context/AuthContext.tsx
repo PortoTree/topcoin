@@ -475,10 +475,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ? 'logistik'
           : assignedTask;
 
+      // Database constraints in Supabase:
+      // 'profiles_role_check' accepts: 'owner', 'branch_manager', 'admin_cabang', 'marketing', 'dropping', 'driver'
+      // 'attendances_role_check' accepts: 'dropping', 'marketing', 'sales', 'driver', 'kurir'
+      const dbRole: string =
+        normalizedTargetRole === 'logistik' || normalizedTargetRole === 'kurir'
+          ? 'driver'
+          : normalizedTargetRole === 'sales'
+          ? 'marketing'
+          : normalizedTargetRole;
+
       // 1. Build payload
-      const updatePayload: Record<string, any> = { role: normalizedTargetRole };
+      const updatePayload: Record<string, any> = { role: dbRole };
       if (assignedTask !== undefined) {
         updatePayload.assigned_task = normalizedAssignedTask;
+      } else if (normalizedTargetRole !== 'admin_cabang' && normalizedTargetRole !== 'admin') {
+        // Reset assigned_task untuk staf lapangan murni agar tidak bentrok
+        updatePayload.assigned_task = null;
       }
 
       // Update Supabase profiles table
@@ -498,6 +511,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: normalizedTargetRole,
           ...(assignedTask !== undefined
             ? { assigned_task: normalizedAssignedTask }
+            : normalizedTargetRole !== 'admin_cabang' && normalizedTargetRole !== 'admin'
+            ? { assigned_task: null }
             : {}),
         };
         setProfile(updated);
@@ -507,17 +522,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // 3. If there is an active attendance today for this staff, update attendance role as well
       // so the staff layout shifts immediately without needing to wait for reset
       const workDate = getCurrentWorkDate(new Date(), resetTimeConfig);
-      const normalizedRole: UserRole = normalizedTargetRole;
 
       await supabase
         .from('attendances')
-        .update({ role: normalizedRole })
+        .update({ role: dbRole })
         .eq('user_id', userId)
         .eq('work_date', workDate);
 
       // If current user is this staff and already checked in today, update attendance in memory
       if (profile && profile.id === userId && todayAttendance) {
-        const updatedAtt = { ...todayAttendance, role: normalizedRole };
+        const updatedAtt = { ...todayAttendance, role: normalizedTargetRole };
         setTodayAttendance(updatedAtt);
         localStorage.setItem(LOCAL_STORAGE_ATTENDANCE_KEY, JSON.stringify(updatedAtt));
       }

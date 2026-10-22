@@ -311,7 +311,8 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
     setIsDispatching(true);
     setDispatchSuccess(null);
     try {
-      // 1. Assign role 'logistik' to all selected officers who don't have it yet
+      // 1. Assign role 'logistik' to all selected officers who don't have it yet (e.g. from marketing/dropping)
+      const switchedStaffNames: { name: string; oldRole: string }[] = [];
       for (const officerId of selectedOfficerIds) {
         const staff = branchStaff.find((s) => s.id === officerId);
         if (staff) {
@@ -320,14 +321,29 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
             staff.role === 'driver' ||
             (staff.role === 'admin_cabang' && staff.assigned_task === 'logistik');
           if (!isAlreadyLogistik) {
+            switchedStaffNames.push({
+              name: staff.full_name,
+              oldRole: (staff.role === 'admin_cabang' ? staff.assigned_task : staff.role)?.toUpperCase() || 'MARKETING',
+            });
             if (staff.role === 'admin_cabang' || staff.role === 'admin') {
               await updateStaffRole(officerId, 'admin_cabang', 'logistik');
             } else {
-              await updateStaffRole(officerId, 'logistik');
+              await updateStaffRole(officerId, 'logistik', null);
             }
           }
         }
       }
+
+      // Update state branchStaff lokal agar badge role langsung ter-update di layar Admin/BM
+      setBranchStaff((prev) =>
+        prev.map((s) => {
+          if (!selectedOfficerIds.includes(s.id)) return s;
+          if (s.role === 'admin_cabang' || s.role === 'admin') {
+            return { ...s, assigned_task: 'logistik' };
+          }
+          return { ...s, role: 'logistik', assigned_task: null };
+        })
+      );
 
       // Names of team members for logistik team tagging
       const teamNames = branchStaff
@@ -368,6 +384,19 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
       const successMessage = `Tugas relokasi (${relocationItems.length} unit mesin) berhasil diterbitkan untuk tim (${selectedOfficerIds.length} petugas)!`;
       setDispatchSuccess(successMessage);
       toast.success(successMessage);
+
+      // Notifikasi feedback auto-switch role jika ada petugas yang berganti peran
+      if (switchedStaffNames.length > 0) {
+        switchedStaffNames.forEach((item) => {
+          toast.info(
+            `Peran "${item.name}" otomatis dialihkan dari ${item.oldRole} menjadi LOGISTIK.`
+          );
+        });
+      }
+
+      // Refresh data dari database
+      fetchData();
+
       setRelocationItems([
         {
           id: 'reloc-' + Date.now(),
@@ -1036,9 +1065,16 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
                                 {badge.label}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                              @{staff.username} • Ditugaskan sebagai Logistik
-                            </p>
+                            {isSelected && staff.role !== 'logistik' && staff.role !== 'driver' ? (
+                              <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold truncate flex items-center gap-1 mt-0.5">
+                                <ArrowRight className="w-3 h-3 flex-shrink-0" />
+                                <span>Role {staff.role.toUpperCase()} otomatis dialihkan ke Logistik</span>
+                              </p>
+                            ) : (
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                @{staff.username} • {staff.role === 'logistik' || staff.role === 'driver' ? 'Petugas Logistik Aktif' : `Peran: ${staff.role.toUpperCase()}`}
+                              </p>
+                            )}
                           </div>
                         </div>
 

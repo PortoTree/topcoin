@@ -608,16 +608,17 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     });
   };
 
-  // Reassign staff role / duty (Dropping, Marketing, Driver)
+  // Reassign staff role / duty (Dropping, Marketing, Driver/Logistik)
   const handleChangeStaffRole = async (staff: UserProfile, newRole: UserRole) => {
     if (staff.role === newRole) return;
+    const oldRoleName = staff.role.toUpperCase();
     try {
-      const res = await updateStaffRole(staff.id, newRole);
+      const res = await updateStaffRole(staff.id, newRole, null);
       if (res.success) {
         setBranchStaff((prev) =>
-          prev.map((s) => (s.id === staff.id ? { ...s, role: newRole } : s))
+          prev.map((s) => (s.id === staff.id ? { ...s, role: newRole, assigned_task: null } : s))
         );
-        toast.success(`Tugas ${staff.full_name} kini menjadi ${newRole.toUpperCase()}. Layout aplikasi staf otomatis disesuaikan.`);
+        toast.success(`Role ${staff.full_name} berhasil dialihkan dari ${oldRoleName} menjadi ${newRole.toUpperCase()}. Layout aplikasi staf otomatis berganti.`);
       } else {
         toast.error(res.message || 'Gagal mengubah tugas staf.');
       }
