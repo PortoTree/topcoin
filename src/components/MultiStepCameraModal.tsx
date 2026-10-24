@@ -9,6 +9,7 @@ import {
   Check,
   RotateCcw,
   ChevronUp,
+  Trash2,
 } from 'lucide-react';
 
 export interface PhotoStepItem {
@@ -307,6 +308,17 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Preview Tersimpan</span>
             </div>
+
+            {/* Icon Sampah di Kanan Bawah di Dalam Preview */}
+            <button
+              type="button"
+              onClick={handleRetake}
+              className="absolute bottom-14 right-3.5 p-2.5 rounded-full bg-rose-600/85 hover:bg-rose-600 text-white backdrop-blur-md shadow-xl transition active:scale-90 cursor-pointer border border-white/20 z-10"
+              title="Hapus foto ini"
+              aria-label="Hapus foto ini"
+            >
+              <Trash2 className="w-5 h-5 text-white" />
+            </button>
           </div>
         )}
 

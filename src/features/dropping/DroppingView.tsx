@@ -12,6 +12,7 @@ import {
   Store as StoreIcon,
   CheckCircle2,
   RefreshCw,
+  Trash2,
   CloudUpload,
   Calendar,
   Sparkles,
@@ -934,16 +935,26 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                   {photoMachine ? (
                     <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
                       <img src={photoMachine} alt="Foto Mesin" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMultiStepStartIndex(0);
-                          setIsMultiStepCameraOpen(true);
-                        }}
-                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" /> Foto Ulang
-                      </button>
+                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPhotoMachine('')}
+                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                          title="Hapus foto"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMultiStepStartIndex(0);
+                            setIsMultiStepCameraOpen(true);
+                          }}
+                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Foto Ulang
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -976,16 +987,26 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                   {photoMachineNumber ? (
                     <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
                       <img src={photoMachineNumber} alt="Foto Nomor Mesin" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMultiStepStartIndex(1);
-                          setIsMultiStepCameraOpen(true);
-                        }}
-                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" /> Foto Ulang
-                      </button>
+                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPhotoMachineNumber('')}
+                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                          title="Hapus foto"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMultiStepStartIndex(1);
+                            setIsMultiStepCameraOpen(true);
+                          }}
+                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Foto Ulang
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -1018,16 +1039,26 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                   {photoCoin ? (
                     <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
                       <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMultiStepStartIndex(2);
-                          setIsMultiStepCameraOpen(true);
-                        }}
-                        className="absolute bottom-1.5 right-1.5 px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" /> Foto Ulang
-                      </button>
+                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setPhotoCoin('')}
+                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                          title="Hapus foto"
+                        >
+                          <Trash2 className="w-3 h-3" /> Hapus
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMultiStepStartIndex(2);
+                            setIsMultiStepCameraOpen(true);
+                          }}
+                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                        >
+                          <RefreshCw className="w-3 h-3" /> Foto Ulang
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
