@@ -841,7 +841,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
           /* ======================================================== */
           /* 2. STATE INPUT DROPPING (Setelah Toko Dipilih Dari List)  */
           /* ======================================================== */
-          <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="space-y-4 animate-in fade-in duration-150 pb-16">
             {/* Top Navigation: Tombol Kembali ke Daftar Toko */}
             <div className="flex items-center justify-between pb-1">
               <button
@@ -906,31 +906,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
 
             {/* 2. Tiga Foto Wajib Terlebih Dahulu */}
             <div className="space-y-3 pt-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    3 Foto Wajib (Saling Terhubung)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Foto 1, 2, dan 3 dapat diambil berurutan tanpa keluar kamera, atau satu per satu.
-                  </p>
-                </div>
-
-                {/* Tombol Ambil Semua Sekaligus */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    // Cari step yang belum terisi, atau mulai dari 0
-                    const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
-                    setMultiStepStartIndex(firstUnfilled);
-                    setIsMultiStepCameraOpen(true);
-                  }}
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition active:scale-95 cursor-pointer"
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  <span>Mulai Foto</span>
-                </button>
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  3 Foto wajib
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Kirim foto secara jelas sesuai di bidang masing-masing
+                </p>
               </div>
 
               {/* Slot Kartu Foto (Bisa diklik untuk ambil/lihat masing-masing) */}
@@ -1369,6 +1352,22 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
               )}
             </button>
           </form>
+
+          {/* Bar Tombol "Buka kamera sekarang" - Full bar edge-to-edge ramping nempel presisi di atas Bottom Nav */}
+          <div className="fixed bottom-[65px] left-0 right-0 max-w-[480px] mx-auto z-20">
+            <button
+              type="button"
+              onClick={() => {
+                const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
+                setMultiStepStartIndex(firstUnfilled);
+                setIsMultiStepCameraOpen(true);
+              }}
+              className="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border-t border-indigo-500/40 cursor-pointer transition-colors"
+            >
+              <Camera className="w-4 h-4 text-white flex-shrink-0" />
+              <span className="leading-none">Buka kamera sekarang</span>
+            </button>
+          </div>
         </div>
       )
     ) : (
