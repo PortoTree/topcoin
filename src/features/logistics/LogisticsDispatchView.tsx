@@ -18,6 +18,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
+  Clock,
+  Sparkles,
+  ExternalLink,
+  Coins,
+  Gauge,
+  Zap,
 } from 'lucide-react';
 import type { UserProfile, Store, Machine, DriverTask } from '../../types';
 
@@ -83,6 +89,9 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
   // Staff Picker Modal State
   const [showStaffPickerModal, setShowStaffPickerModal] = useState(false);
   const [staffPickerSearch, setStaffPickerSearch] = useState('');
+
+  // Selected Task For Summary Modal
+  const [selectedTaskForSummary, setSelectedTaskForSummary] = useState<DriverTask | null>(null);
 
   // Fetch branch data
   const fetchData = useCallback(async () => {
@@ -685,20 +694,32 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
             <p className="text-xs font-medium">Belum ada riwayat tugas logistik di {activeBranchName}.</p>
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800/80">
+          <div className="space-y-2.5 pt-1">
             {driverTasks.map((t) => {
               const teamInfo = t.notes?.match(/\[Tim Logistik: ([^\]]+)\]/);
               const assignedText = teamInfo ? teamInfo[1] : (t.driver?.full_name || 'Petugas');
+              const isCompleted = t.status === 'completed';
+              const isKendala = t.status === 'kendala';
+              const isInProgress = t.status === 'in_progress';
 
               return (
                 <div
                   key={t.id}
-                  className="py-3.5 flex items-start justify-between gap-3 text-xs transition-colors"
+                  onClick={() => setSelectedTaskForSummary(t)}
+                  className={`p-3.5 rounded-2xl flex items-start justify-between gap-3 text-xs transition-all cursor-pointer active:scale-[0.99] group shadow-xs ${
+                    isCompleted
+                      ? 'border-2 border-emerald-400/90 dark:border-emerald-600/90 bg-emerald-50/20 dark:bg-emerald-950/25 hover:border-emerald-500'
+                      : isKendala
+                      ? 'border-2 border-rose-400/90 dark:border-rose-600/90 bg-rose-50/20 dark:bg-rose-950/25 hover:border-rose-500'
+                      : isInProgress
+                      ? 'border-2 border-blue-400/90 dark:border-blue-600/90 bg-blue-50/20 dark:bg-blue-950/25 hover:border-blue-500'
+                      : 'border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-500'
+                  }`}
                 >
-                  <div className="min-w-0 flex-1 space-y-1">
+                  <div className="min-w-0 flex-1 space-y-1.5">
                     {/* Toko Asal -> Toko Tujuan */}
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {t.store?.name || 'Toko Asal'}
                       </span>
                       {t.target_store && (
@@ -712,30 +733,43 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
                     {/* Nomor Mesin & Petugas */}
                     <div className="flex items-center gap-2 flex-wrap pt-0.5">
                       {t.machine?.machine_code && (
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-600">
                           {t.machine.machine_code}
                         </span>
                       )}
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Petugas: <strong className="text-slate-700 dark:text-slate-200 font-semibold">{assignedText}</strong>
+                      <span className="text-[11px] text-slate-600 dark:text-slate-300">
+                        Petugas: <strong className="text-slate-900 dark:text-white font-bold">{assignedText}</strong>
                       </span>
                     </div>
+
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 pt-0.5 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">
+                      <Sparkles className="w-3 h-3 text-amber-500" />
+                      <span>Klik untuk melihat summary detail</span>
+                    </p>
                   </div>
 
                   {/* Status & Jam */}
-                  <div className="flex flex-col items-end gap-1 flex-shrink-0 pt-0.5">
+                  <div className="flex flex-col items-end gap-1.5 flex-shrink-0 pt-0.5">
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
                         t.status === 'completed'
-                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60'
+                          : t.status === 'kendala'
+                          ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60'
                           : t.status === 'in_progress'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300'
-                          : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60'
                       }`}
                     >
-                      {t.status === 'in_progress' ? 'Diangkut / Kirim' : t.status === 'assigned' ? 'Ditugaskan' : 'Selesai'}
+                      {t.status === 'kendala'
+                        ? 'Kendala'
+                        : t.status === 'in_progress'
+                        ? 'Diangkut / Kirim'
+                        : t.status === 'assigned'
+                        ? 'Ditugaskan'
+                        : 'Selesai'}
                     </span>
-                    <span className="text-[10px] font-medium text-slate-400">
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                       {new Date(t.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -1102,6 +1136,341 @@ export const LogisticsDispatchView: React.FC<LogisticsDispatchViewProps> = ({
                 <span>
                   Simpan Pilihan ({selectedOfficerIds.length} Petugas Terpilih)
                 </span>
+              </button>
+            </>
+          );
+        }}
+      </BottomSheetModal>
+
+      {/* Modal Summary Lengkap Detail Tugas Logistik */}
+      <BottomSheetModal
+        item={selectedTaskForSummary}
+        onClose={() => setSelectedTaskForSummary(null)}
+      >
+        {(task, close) => {
+          const isReloc = task.task_type === 'relokasi_mesin';
+          const isCompleted = task.status === 'completed';
+          const isKendala = task.status === 'kendala';
+          const isInProgress = task.status === 'in_progress';
+
+          const teamInfo = task.notes?.match(/\[Tim Logistik: ([^\]]+)\]/);
+          const assignedText = teamInfo ? teamInfo[1] : (task.driver?.full_name || 'Petugas Lapangan');
+
+          return (
+            <>
+              {/* Header Modal */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                      isCompleted
+                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                        : isKendala
+                        ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
+                        : isInProgress
+                        ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+                        : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="w-4 h-4" />
+                    ) : isKendala ? (
+                      <AlertTriangle className="w-4 h-4" />
+                    ) : (
+                      <Truck className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                      {isReloc ? 'Summary Relokasi Mesin' : 'Summary Tugas Logistik'}
+                    </h3>
+                    <span
+                      className={`text-[11px] font-bold ${
+                        isCompleted
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : isKendala
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : isInProgress
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {isCompleted
+                        ? 'Status: Tugas Berhasil Selesai'
+                        : isKendala
+                        ? 'Status: Terdapat Kendala di Lapangan'
+                        : isInProgress
+                        ? 'Status: Sedang Diangkut / Dalam Pengiriman'
+                        : 'Status: Ditugaskan ke Petugas'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Status Change Timeline Banner */}
+              <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80 text-xs space-y-1.5">
+                <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-[11px]">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    Waktu Dibuat:
+                  </span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                    {new Date(task.created_at).toLocaleString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </span>
+                </div>
+
+                {task.pickup_at && (
+                  <div className="flex items-center justify-between text-blue-600 dark:text-blue-400 text-[11px] font-bold pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="flex items-center gap-1">
+                      <Truck className="w-3 h-3" />
+                      Waktu Diangkut:
+                    </span>
+                    <span>
+                      {new Date(task.pickup_at).toLocaleString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {task.completed_at && (
+                  <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-400 text-[11px] font-bold pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Waktu Diselesaikan:
+                    </span>
+                    <span>
+                      {new Date(task.completed_at).toLocaleString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Assigned Staff & Machine Row */}
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 font-bold block">Petugas Lapangan:</span>
+                  <span className="font-extrabold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {assignedText}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700/80">
+                  <span className="text-[10px] text-slate-400 font-bold block">Unit Mesin:</span>
+                  <span className="font-black text-slate-900 dark:text-white truncate block mt-0.5 font-mono">
+                    {task.machine?.machine_code || '-'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Banner Peringatan jika Status Kendala */}
+              {isKendala && (
+                <div className="flex items-start gap-2 text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 p-3 rounded-xl border border-rose-200 dark:border-rose-800/80">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-1 min-w-0">
+                    <span className="block font-black text-xs">Laporan Kendala Lapangan</span>
+                    <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400 leading-relaxed">
+                      {task.notes || task.delivery_notes || task.pickup_notes || 'Menunggu tindakan penanganan dari admin logistik.'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Detail Tahapan Relokasi */}
+              {isReloc ? (
+                <div className="space-y-3.5 pt-1">
+                  {/* Step 1: Toko Asal */}
+                  <div className="relative pl-6 border-l-2 border-slate-300 dark:border-slate-700 space-y-2">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-slate-900 dark:bg-white flex items-center justify-center text-white dark:text-slate-900 text-[9px] font-black">
+                      1
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white block">
+                        Tahap 1: Pengangkutan (Toko Asal)
+                      </span>
+                    </div>
+                    <div className="text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                      <div className="font-extrabold text-slate-900 dark:text-white">
+                        {task.store?.name || 'Toko Asal'}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {task.store?.address || 'Alamat toko asal belum diisi'}
+                      </div>
+
+                      {task.pickup_notes && (
+                        <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <strong>Catatan Pengangkutan:</strong> {task.pickup_notes}
+                        </div>
+                      )}
+
+                      {task.pickup_photo_url && (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            <img
+                              src={task.pickup_photo_url}
+                              alt="Foto Pengangkutan"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <a
+                            href={task.pickup_photo_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Buka Foto Pengangkutan Resolusi Penuh
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Toko Tujuan */}
+                  <div className="relative pl-6 border-l-2 border-emerald-500 space-y-2">
+                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[9px] font-black">
+                      2
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-slate-900 dark:text-white block">
+                        Tahap 2: Penempatan (Toko Tujuan)
+                      </span>
+                    </div>
+                    <div className="text-xs bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2.5">
+                      <div className="font-extrabold text-slate-900 dark:text-white">
+                        {task.target_store?.name || 'Toko Tujuan'}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        {task.target_store?.address || 'Alamat toko tujuan belum diisi'}
+                      </div>
+
+                      {/* Info Counter Meter, Koin, Listrik jika ada */}
+                      {(task.last_coin_meter != null || task.coin_amount != null || task.electricity_fee != null) && (
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Gauge className="w-3 h-3 text-slate-400" />
+                              Meteran Koin:
+                            </span>
+                            <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5 font-mono">
+                              {task.last_coin_meter != null ? task.last_coin_meter.toLocaleString('id-ID') : '-'}
+                            </p>
+                          </div>
+
+                          <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Coins className="w-3 h-3 text-amber-500" />
+                              Koin Titipan:
+                            </span>
+                            <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
+                              {task.coin_amount != null ? `${task.coin_amount.toLocaleString('id-ID')} koin` : '-'}
+                            </p>
+                          </div>
+
+                          <div className="bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700 col-span-2">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-amber-500" />
+                              Uang Listrik:
+                            </span>
+                            <p className="text-xs font-black text-slate-900 dark:text-white mt-0.5">
+                              Rp {Number(task.electricity_fee ?? 75000).toLocaleString('id-ID')}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {task.delivery_notes && (
+                        <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <strong>Catatan Penempatan:</strong> {task.delivery_notes}
+                        </div>
+                      )}
+
+                      {task.photo_evidence_url && (
+                        <div className="space-y-1.5 pt-1">
+                          <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            <img
+                              src={task.photo_evidence_url}
+                              alt="Foto Penempatan"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <a
+                            href={task.photo_evidence_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Buka Foto Penempatan Resolusi Penuh
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Non-relocation detail */
+                <div className="text-xs bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
+                  <div className="font-extrabold text-slate-900 dark:text-white text-sm">
+                    {task.store?.name || 'Toko Mitra'}
+                  </div>
+                  <div className="text-[11px] text-slate-500">{task.store?.address}</div>
+                  {task.notes && (
+                    <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <strong>Catatan:</strong> {task.notes}
+                    </div>
+                  )}
+                  {task.photo_evidence_url && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                        <img
+                          src={task.photo_evidence_url}
+                          alt="Foto Bukti"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <a
+                        href={task.photo_evidence_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Buka Foto Resolusi Penuh
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={close}
+                className="w-full py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs cursor-pointer transition active:scale-98"
+              >
+                Tutup Ringkasan
               </button>
             </>
           );

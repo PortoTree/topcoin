@@ -5,7 +5,6 @@ import { BranchProvider } from './context/BranchContext';
 import { LoginView } from './features/auth/LoginView';
 import { AttendanceHomeView } from './features/attendance/AttendanceHomeView';
 import { MobileHeader } from './components/MobileHeader';
-import { MobileSubHeader } from './components/MobileSubHeader';
 import { BottomNavBar } from './components/BottomNavBar';
 import { OwnerView } from './features/owner/OwnerView';
 import { BranchManagerView } from './features/branch_manager/BranchManagerView';
@@ -71,9 +70,6 @@ const MainAppContent: React.FC = () => {
     <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
       {/* Mobile Top Header */}
       <MobileHeader />
-
-      {/* Mobile SubHeader with Realtime Clock, Date, and Branch Selector */}
-      <MobileSubHeader />
 
       {/* Main Content View by Active Role */}
       <main className="w-full">

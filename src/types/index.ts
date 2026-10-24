@@ -107,7 +107,7 @@ export interface Store {
 
 export type LogistikTaskType = 'relokasi_mesin' | 'opsional' | 'pasang_baru' | 'tarik_rusak' | 'antar_koin';
 export type DriverTaskType = LogistikTaskType;
-export type DriverTaskStatus = 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+export type DriverTaskStatus = 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'kendala';
 
 export interface DriverTask {
   id: string;
@@ -130,6 +130,7 @@ export interface DriverTask {
   pickup_notes?: string | null;
   pickup_at?: string | null;
   last_coin_meter?: number | null;
+  electricity_fee?: number | null;
   delivery_notes?: string | null;
   // Joins
   branch?: Branch;
