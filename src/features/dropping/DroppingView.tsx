@@ -35,6 +35,7 @@ import {
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
 import { toast } from '../../context/ToastContext';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
 interface DroppingViewProps {
   activeTab: string;
@@ -238,6 +239,22 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const [activePreviewImage, setActivePreviewImage] = useState<{ url: string; title: string } | null>(null);
 
   const activeBranchId = currentBranch?.id || profile?.branch_id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+
+  // Navigasi Back bawaan HP: Jika Lightbox Foto terbuka, tutup lightbox
+  useMobileBackHandler({
+    enabled: Boolean(activePreviewImage),
+    onBack: () => {
+      setActivePreviewImage(null);
+    },
+  });
+
+  // Navigasi Back bawaan HP: Jika berada di Form Input Dropping, kembali ke Daftar Toko
+  useMobileBackHandler({
+    enabled: Boolean(selectedStoreId && !detailModalStore && !activePreviewImage && !isMultiStepCameraOpen),
+    onBack: () => {
+      setSelectedStoreId('');
+    },
+  });
 
   // Selected store and machine metrics
   const selectedStore = activeStores.find((s) => s.id === selectedStoreId);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 
 interface BottomSheetModalProps<T = any> {
   item?: T | null;
@@ -63,6 +64,12 @@ export function BottomSheetModal<T = any>({
       setIsClosing(false);
     }, 220);
   };
+
+  // Navigasi Back bawaan HP otomatis menutup modal
+  useMobileBackHandler({
+    enabled: Boolean(renderedItem && !isClosing),
+    onBack: handleClose,
+  });
 
   if (!renderedItem) return null;
 

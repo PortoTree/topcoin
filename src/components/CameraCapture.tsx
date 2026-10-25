@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Camera, RefreshCw, CheckCircle2, X, ShieldCheck, Lock, Trash2 } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
 import { toast } from '../context/ToastContext';
+import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 
 interface CameraCaptureProps {
   label: string;
@@ -36,6 +37,14 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     frameOrientation === 'landscape' ||
     (frameOrientation !== 'portrait' &&
       (label.toLowerCase().includes('nota') || label.toLowerCase().includes('kuitansi')));
+
+  // Navigasi Back bawaan HP: tutup modal kamera langsung
+  useMobileBackHandler({
+    enabled: isCameraModalOpen || isPermissionPromptOpen,
+    onBack: () => {
+      closeCamera();
+    },
+  });
 
   // Lock background scrolling completely when camera modal is active
   useEffect(() => {

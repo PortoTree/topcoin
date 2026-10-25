@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import {
   RefreshCw,
   CheckCircle2,
@@ -44,6 +45,18 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isDropupOpen, setIsDropupOpen] = useState(false);
+
+  // Navigasi Back bawaan HP: tutup menu preview dropup jika terbuka, atau tutup modal kamera
+  useMobileBackHandler({
+    enabled: isOpen,
+    onBack: () => {
+      if (isDropupOpen) {
+        setIsDropupOpen(false);
+      } else {
+        onClose();
+      }
+    },
+  });
 
   // Lock background scrolling completely when camera modal is active
   useEffect(() => {
