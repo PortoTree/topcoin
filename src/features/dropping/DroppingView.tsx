@@ -32,6 +32,7 @@ import { toast } from '../../context/ToastContext';
 
 interface DroppingViewProps {
   activeTab: string;
+  tabClickTick?: number;
 }
 
 // Fallback demo stores with machines for testing
@@ -134,7 +135,7 @@ const DEMO_DROPPING_STORES: Store[] = [
   },
 ];
 
-export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
+export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickTick = 0 }) => {
   const { profile } = useAuth();
   const { currentBranch } = useBranch();
 
@@ -417,6 +418,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     setPhotoOptional(null);
     setOptionalNotes('');
   };
+
+  // Jika tombol navigasi bottom "Tugas" diklik saat berada di halaman form dropping,
+  // otomatis reset form dan kembali ke halaman daftar tugas toko mitra
+  useEffect(() => {
+    if (tabClickTick > 0 && activeTab === 'store_visits') {
+      resetForm();
+    }
+  }, [tabClickTick]);
 
   // Handle Offline Synchronization
   const syncOfflineRecords = async () => {

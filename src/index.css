@@ -48,13 +48,43 @@
   min-width: 48px;
 }
 
-/* Hide scrollbar for mobile clean tab scrolling */
+/* Sembunyikan semua scrollbar di seluruh elemen aplikasi (Standar Mobile / PWA Tanpa Scrollbar) */
+*,
+*::before,
+*::after,
+html,
+body,
+#root {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox & Standar Modern */
+}
+
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  display: none !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  display: none !important;
+  background: transparent !important;
+}
+
 .no-scrollbar::-webkit-scrollbar {
-  display: none;
+  display: none !important;
 }
 .no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 /* Mobile frame container for large screens, centered */

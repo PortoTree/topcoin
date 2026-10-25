@@ -16,6 +16,12 @@ import { DroppingView } from './features/dropping/DroppingView';
 const MainAppContent: React.FC = () => {
   const { profile, role, activeRole, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('');
+  const [tabClickTick, setTabClickTick] = useState<number>(0);
+
+  const handleTabChange = (newTab: string) => {
+    setActiveTab(newTab);
+    setTabClickTick((prev) => prev + 1);
+  };
 
   // Set default tab according to active role:
   // For field workers, prioritize quick operational/camera action!
@@ -84,11 +90,13 @@ const MainAppContent: React.FC = () => {
         {(currentOperatingRole === 'logistik' || currentOperatingRole === 'driver' || currentOperatingRole === 'kurir') && (
           <DriverView activeTab={activeTab} />
         )}
-        {currentOperatingRole === 'dropping' && <DroppingView activeTab={activeTab} />}
+        {currentOperatingRole === 'dropping' && (
+          <DroppingView activeTab={activeTab} tabClickTick={tabClickTick} />
+        )}
       </main>
 
       {/* Mobile Ergonomic Bottom Navigation */}
-      <BottomNavBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 };
