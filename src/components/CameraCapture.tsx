@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, RefreshCw, CheckCircle2, X, SwitchCamera, ShieldCheck, Lock } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Camera, RefreshCw, CheckCircle2, X, ShieldCheck, Lock } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
 import { toast } from '../context/ToastContext';
 
@@ -8,6 +9,7 @@ interface CameraCaptureProps {
   subLabel?: string;
   onPhotoCaptured: (data: { base64: string; blob: Blob }) => void;
   required?: boolean;
+  frameOrientation?: 'portrait' | 'landscape' | 'auto';
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
@@ -15,6 +17,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   subLabel,
   onPhotoCaptured,
   required = true,
+  frameOrientation = 'auto',
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -26,7 +29,27 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const [isPermissionPromptOpen, setIsPermissionPromptOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const facingMode: 'environment' = 'environment';
+
+  const isLandscape =
+    frameOrientation === 'landscape' ||
+    (frameOrientation !== 'portrait' &&
+      (label.toLowerCase().includes('nota') || label.toLowerCase().includes('kuitansi')));
+
+  // Lock background scrolling completely when camera modal is active
+  useEffect(() => {
+    if (isCameraModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [isCameraModalOpen]);
 
   // Stop camera stream cleanly
   const stopStream = () => {
@@ -135,15 +158,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     } else {
       requestCameraAccess(facingMode);
     }
-  };
-
-  // Toggle front/back camera inside live stream
-  const handleToggleFacingMode = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const nextFacing = facingMode === 'environment' ? 'user' : 'environment';
-    setFacingMode(nextFacing);
-    await requestCameraAccess(nextFacing);
   };
 
   // Snap photo from the live video frame directly into WebP (zero gallery, zero reload)
@@ -300,122 +314,130 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         </div>
       )}
 
-      {/* In-App Live Camera Modal */}
-      {isCameraModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col justify-between p-4 animate-in fade-in duration-200">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between text-white pt-2 z-10">
-            <div>
-              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
-                <Camera className="w-4 h-4 text-emerald-400" />
-                {label}
-              </h4>
-              <p className="text-[11px] text-emerald-300 font-medium">Kamera Langsung Lapangan (Anti-Fraud)</p>
-            </div>
-            <button
-              type="button"
-              onClick={closeCamera}
-              className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition active:scale-95 cursor-pointer"
-              title="Tutup Kamera"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Live Viewfinder Feed */}
-          <div className="relative flex-1 my-3 rounded-2xl overflow-hidden bg-slate-950 border border-white/10 flex items-center justify-center">
-            {cameraError ? (
-              <div className="p-6 text-center max-w-xs space-y-3">
-                <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
-                  <Lock className="w-6 h-6" />
-                </div>
-                <h4 className="text-sm font-bold text-white">Akses Kamera Terblokir</h4>
-                <p className="text-xs text-rose-200 font-medium leading-relaxed">
-                  {cameraError}
+      {/* In-App Live Camera Modal via Portal */}
+      {isCameraModalOpen && typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[999999] w-screen h-screen min-h-screen bg-slate-50 dark:bg-black flex flex-col justify-between p-3 select-none animate-in fade-in duration-150 overflow-hidden touch-none transition-colors">
+            {/* Header Bar */}
+            <div className="flex items-center justify-between pt-2 px-1 z-30">
+              <div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse" />
+                  {label}
+                </h4>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">
+                  {subLabel || 'Kamera Langsung Lapangan'}
                 </p>
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => requestCameraAccess(facingMode)}
-                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
-                  >
-                    Minta Izin Ulang
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      closeCamera();
-                      hardwareInputRef.current?.click();
-                    }}
-                    className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
-                  >
-                    Gunakan Kamera Hardware Bawaan
-                  </button>
-                </div>
               </div>
-            ) : isStartingCamera ? (
-              <div className="text-center space-y-2">
-                <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
-                <p className="text-xs text-slate-300 font-medium">Mengaktifkan kamera...</p>
-              </div>
-            ) : null}
 
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className={`w-full h-full object-cover ${cameraError || isStartingCamera ? 'hidden' : 'block'}`}
-            />
-
-            {/* Viewfinder Target Guidelines */}
-            {!cameraError && !isStartingCamera && (
-              <>
-                <div className="absolute inset-8 border-2 border-dashed border-white/40 rounded-2xl pointer-events-none" />
-                <div className="absolute top-4 left-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  LIVE CAMERA
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Bottom Shutter Controls */}
-          {!cameraError && (
-            <div className="flex items-center justify-between px-6 pb-6 pt-2 z-10">
-              {/* Flip Camera Button */}
-              <button
-                type="button"
-                onClick={handleToggleFacingMode}
-                className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition active:scale-95 cursor-pointer"
-                title="Putar Kamera"
-              >
-                <SwitchCamera className="w-5 h-5" />
-              </button>
-
-              {/* Shutter Button (Snapshot live frame) */}
-              <button
-                type="button"
-                disabled={isStartingCamera}
-                onClick={handleSnapPhoto}
-                className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center p-1.5 active:scale-90 transition cursor-pointer shadow-2xl disabled:opacity-50"
-                title="Ambil Foto Sekarang"
-              >
-                <div className="w-full h-full rounded-full bg-white hover:bg-slate-100 transition shadow-inner" />
-              </button>
-
-              {/* Cancel Button */}
               <button
                 type="button"
                 onClick={closeCamera}
-                className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs font-bold transition active:scale-95 cursor-pointer"
+                className="p-2.5 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white border border-slate-300 dark:border-white/10 transition active:scale-95 cursor-pointer shadow-xs"
+                title="Tutup Kamera"
               >
-                Batal
+                <X className="w-5 h-5" />
               </button>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Live Viewfinder Feed */}
+            <div className="relative flex-1 my-2 rounded-2xl overflow-hidden bg-slate-900 dark:bg-slate-950 border border-slate-300 dark:border-white/10 flex items-center justify-center shadow-inner">
+              {cameraError ? (
+                <div className="p-6 text-center max-w-xs space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+                    <Lock className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-sm font-bold text-white">Akses Kamera Terblokir</h4>
+                  <p className="text-xs text-rose-200 font-medium leading-relaxed">
+                    {cameraError}
+                  </p>
+                  <div className="space-y-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => requestCameraAccess(facingMode)}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                    >
+                      Minta Izin Ulang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeCamera();
+                        hardwareInputRef.current?.click();
+                      }}
+                      className="w-full py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
+                    >
+                      Gunakan Kamera Hardware Bawaan
+                    </button>
+                  </div>
+                </div>
+              ) : isStartingCamera ? (
+                <div className="text-center space-y-2">
+                  <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin mx-auto" />
+                  <p className="text-xs text-slate-300 font-medium">Mengaktifkan kamera...</p>
+                </div>
+              ) : null}
+
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${cameraError || isStartingCamera ? 'hidden' : 'block'}`}
+              />
+
+              {/* Viewfinder Target Guidelines */}
+              {!cameraError && !isStartingCamera && (
+                <>
+                  {isLandscape ? (
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] max-w-[400px] aspect-[4/3] border-2 border-dashed border-emerald-400/80 rounded-2xl pointer-events-none flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-emerald-300 bg-black/60 px-2.5 py-1 rounded-full border border-emerald-500/30 backdrop-blur-xs">
+                        Posisikan Nota di Sini
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-8 border-2 border-dashed border-white/40 rounded-2xl pointer-events-none" />
+                  )}
+
+                  <div className="absolute top-4 left-4 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-[10px] font-bold text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    LIVE CAMERA
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Bottom Shutter Controls */}
+            <div className="pt-1 pb-1 px-2 z-30 space-y-2">
+              {!cameraError && (
+                <div className="flex items-center justify-center relative py-1">
+                  {/* Shutter Button (Snapshot live frame) */}
+                  <button
+                    type="button"
+                    disabled={isStartingCamera}
+                    onClick={handleSnapPhoto}
+                    className="w-19 h-19 rounded-full border-4 border-slate-900 dark:border-white flex items-center justify-center p-1.5 active:scale-90 transition cursor-pointer shadow-2xl disabled:opacity-50"
+                    title="Ambil Foto Sekarang"
+                  >
+                    <div className="w-full h-full rounded-full bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 transition shadow-inner" />
+                  </button>
+
+                  {/* Cancel Button */}
+                  <div className="absolute right-2">
+                    <button
+                      type="button"
+                      onClick={closeCamera}
+                      className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-transparent text-xs font-bold transition active:scale-95 cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

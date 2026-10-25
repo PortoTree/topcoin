@@ -856,10 +856,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 transition cursor-pointer active:scale-95"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Kembali ke Daftar Toko</span>
+                <span>Kembali</span>
               </button>
-              <span className="text-[10px] font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono">
-                Unit: {selectedStore?.machine?.machine_code}
+              <span className="text-[15px] font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono">
+                {selectedStore?.machine?.machine_code}
               </span>
             </div>
 
@@ -1329,6 +1329,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                         label="Foto Nota / Kuitansi Toko"
                         subLabel="Ambil foto nota tertulis."
                         required={false}
+                        frameOrientation="landscape"
                         onPhotoCaptured={({ base64 }) => setPhotoNota(base64)}
                       />
                     </div>
@@ -1338,11 +1339,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
 
               {/* Opsi Tambahan / Opsional (Default Tersembunyi dengan Checkbox) */}
               <div className="space-y-3 pt-1">
-                <label className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer select-none ${
-                  hasOptional
-                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/70 shadow-xs'
-                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                }`}>
+                <label className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer select-none ${hasOptional
+                  ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/70 shadow-xs'
+                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={hasOptional}
