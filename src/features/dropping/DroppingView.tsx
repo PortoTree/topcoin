@@ -1727,9 +1727,6 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         Outlet Mitra
                       </span>
                       <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
-                      <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        Pemilik: <strong className="text-slate-800 dark:text-slate-200">{store.owner_name || '-'}</strong>
-                      </p>
                     </div>
                     <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 flex-shrink-0">
                       {store.machine?.machine_code || 'Tanpa Mesin'}
