@@ -6,6 +6,7 @@ import { offlineDb } from '../../lib/db';
 import { CameraCapture } from '../../components/CameraCapture';
 import { MultiStepCameraModal } from '../../components/MultiStepCameraModal';
 import type { PhotoStepItem } from '../../components/MultiStepCameraModal';
+import { BottomSheetModal } from '../../components/BottomSheetModal';
 import { uploadToCloudinary } from '../../lib/cloudinary';
 import {
   Coins,
@@ -25,6 +26,8 @@ import {
   MapPin,
   Clock,
   Camera,
+  Info,
+  X,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
@@ -224,6 +227,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const [todayDroppings, setTodayDroppings] = useState<DroppingTransaction[]>([]);
   const [offlinePendingCount, setOfflinePendingCount] = useState<number>(0);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [detailModalStore, setDetailModalStore] = useState<Store | null>(null);
 
   const activeBranchId = currentBranch?.id || profile?.branch_id || 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
@@ -266,6 +270,34 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       currency: 'IDR',
       minimumFractionDigits: 0,
     }).format(val);
+  };
+
+  // Handler Buka Chat WhatsApp Toko
+  const handleOpenWhatsApp = (store: Store) => {
+    if (!store.phone) {
+      toast.error(`Nomor WhatsApp untuk toko "${store.name}" belum terdaftar.`);
+      return;
+    }
+    let cleaned = store.phone.replace(/[^0-9]/g, '');
+    if (cleaned.startsWith('0')) {
+      cleaned = '62' + cleaned.slice(1);
+    }
+    const message = `Halo ${store.owner_name ? store.owner_name + ' ' : ''}(${store.name}), saya teknisi dropping TopCoin ingin konfirmasi terkait kunjungan ke toko hari ini.`;
+    const waUrl = `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Handler Buka Google Maps Lokasi Toko
+  const handleOpenMaps = (store: Store) => {
+    let mapsUrl = '';
+    if (store.latitude && store.longitude) {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${store.latitude},${store.longitude}`;
+    } else if (store.address) {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${store.name}, ${store.address}`)}`;
+    } else {
+      mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(store.name)}`;
+    }
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Fetch active stores with machines
@@ -658,7 +690,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       setSubmitSuccess(
         hasOmset
           ? `Sukses!, "${store.name}" berhasil dicatat: ${coinsCollected} Koin (${formatIDR(grossOmset)}). Setoran bersih: ${formatIDR(netDepositAmount)}.`
-          : `Sukses! Kunjungan toko "${store.name}" (pencocokan meteran: ${finalMeterReading}) berhasil dicatat.`
+          : `Sukses! Kunjungan toko "${store.name}" berhasil dicatat.`
       );
       setActiveStores((prev) =>
         prev.map((s) =>
@@ -798,21 +830,57 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       </span>
                     </div>
 
-                    {/* [tombolstatus]: [icon] [status] [arrow right] */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedStoreId(store.id);
-                        setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
-                      }}
-                      className={`w-full py-2.5 px-3.5 rounded-xl text-xs font-bold flex items-center justify-between transition active:scale-[0.98] cursor-pointer shadow-xs ${buttonStyle}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <StatusIcon className="w-4 h-4 flex-shrink-0" />
-                        <span>{statusLabel}</span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 flex-shrink-0" />
-                    </button>
+                    {/* [tombol aksi]: [WA] + [Maps] + [Info] + [status flex-1 di kanan] */}
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                      {/* Tombol WhatsApp */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenWhatsApp(store)}
+                        title="Chat WhatsApp Toko"
+                        aria-label="Chat WhatsApp Toko"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
+                      >
+                        <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 object-contain" />
+                      </button>
+
+                      {/* Tombol Google Maps */}
+                      <button
+                        type="button"
+                        onClick={() => handleOpenMaps(store)}
+                        title="Petunjuk Arah Google Maps"
+                        aria-label="Petunjuk Arah Google Maps"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
+                      >
+                        <img src="/maps.png" alt="Google Maps" className="w-5 h-5 object-contain" />
+                      </button>
+
+                      {/* Tombol Info Toko */}
+                      <button
+                        type="button"
+                        onClick={() => setDetailModalStore(store)}
+                        title="Informasi Detail Toko"
+                        aria-label="Informasi Detail Toko"
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+
+                      {/* Tombol Action Status (Di Kanan) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedStoreId(store.id);
+                          setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
+                        }}
+                        className={`flex-1 py-2.5 px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-between transition active:scale-[0.98] cursor-pointer shadow-xs min-w-0 ${buttonStyle}`}
+                      >
+                        <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+                          <StatusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          <span className="truncate">{statusLabel}</span>
+                        </div>
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0 ml-1" />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1501,6 +1569,146 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           </div>
         </div>
       )}
+
+      {/* ======================================================== */}
+      {/* MODAL INFORMASI DETAIL TOKO MITRA (FULLSCREEN SLIDE-UP)   */}
+      {/* ======================================================== */}
+      <BottomSheetModal
+        item={detailModalStore}
+        onClose={() => setDetailModalStore(null)}
+        isFullscreen={true}
+      >
+        {(store, close) => (
+          <>
+            {/* Sticky Header */}
+            <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md sticky top-0 z-10 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60">
+                  <StoreIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                    Informasi Toko Mitra
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Data dropping, mesin & kontak.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={close}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-90 transition"
+                title="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
+              {/* Nama Toko & Pemilik */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  Outlet Mitra
+                </span>
+                <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  Pemilik: <strong className="text-slate-800 dark:text-slate-200">{store.owner_name || '-'}</strong>
+                </p>
+              </div>
+
+              {/* Grid Mesin & Meteran */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Kode Unit Mesin</span>
+                  <span className="font-mono font-black text-sm text-slate-900 dark:text-white">{store.machine?.machine_code || 'Tanpa Mesin'}</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block mb-1">Meter Terakhir Sistem</span>
+                  <span className="font-mono font-black text-sm text-indigo-600 dark:text-indigo-400">{store.machine?.last_counter_meter ?? 0}</span>
+                </div>
+              </div>
+
+              {/* Alamat Lengkap */}
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Alamat Toko</span>
+                <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">{store.address || 'Alamat belum diatur'}</p>
+              </div>
+
+              {/* Nomor Telepon & Chat WA */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider mb-0.5">Kontak WhatsApp</span>
+                  <span className="text-xs font-mono font-bold text-slate-900 dark:text-white">{store.phone || 'Belum ada nomor'}</span>
+                </div>
+                {store.phone && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenWhatsApp(store)}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 active:scale-95 transition cursor-pointer shadow-sm"
+                  >
+                    <img src="/whatsapp.png" alt="WhatsApp" className="w-4 h-4 object-contain" />
+                    Chat WA
+                  </button>
+                )}
+              </div>
+
+              {/* Status Transaksi Hari Ini */}
+              {(() => {
+                const modalTx = todayDroppings.find(t => t.store_id === store.id || (t.store && t.store.name === store.name));
+                return (
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Status Kunjungan Hari Ini</span>
+                    {modalTx ? (
+                      <div className="space-y-1.5">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+                          <CheckCircle2 className="w-4 h-4" />
+                          {modalTx.coins_collected ? 'Kunjungan & Omset Selesai' : 'Pencocokan Meteran Selesai'}
+                        </span>
+                        {modalTx.coins_collected ? (
+                          <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                            Koin: <strong className="text-slate-900 dark:text-white font-mono">{modalTx.coins_collected} koin</strong> | Setoran: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{formatIDR(modalTx.net_deposit_amount || 0)}</strong>
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        <Clock className="w-4 h-4" />
+                        Belum dikunjungi hari ini
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Tombol Aksi Modal */}
+              <div className="pt-2 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleOpenMaps(store)}
+                  className="flex-1 py-3 px-3 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200 dark:border-sky-800/60 text-sky-700 dark:text-sky-300 hover:bg-sky-100 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-xs"
+                >
+                  <img src="/maps.png" alt="Maps" className="w-4 h-4 object-contain" />
+                  Buka Maps
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    close();
+                    setSelectedStoreId(store.id);
+                    setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
+                  }}
+                  className="flex-1 py-3 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-sm"
+                >
+                  <StoreIcon className="w-4 h-4" />
+                  Mulai Kunjungan
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </BottomSheetModal>
     </div>
   );
 };
