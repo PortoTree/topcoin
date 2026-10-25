@@ -79,7 +79,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch(() => { });
         }
         setIsStartingCamera(false);
       } catch (err: any) {
@@ -250,9 +250,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
           </div>
           <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300">
             Buka Kamera Langsung
-          </span>
-          <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
-            Hanya kamera langsung (Anti-Fraud • Galeri dinonaktifkan)
           </span>
         </button>
       )}

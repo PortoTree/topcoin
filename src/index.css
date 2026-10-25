@@ -32,8 +32,13 @@
     color: #f8fafc;
   }
 
-  input, textarea, select {
+  input, select {
     user-select: text;
+  }
+
+  textarea {
+    user-select: text;
+    min-height: 4.5rem; /* Cegah resize drag ke atas memotong placeholder */
   }
 }
 

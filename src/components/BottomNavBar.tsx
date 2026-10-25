@@ -49,8 +49,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
             assignedTask === 'logistik' || assignedTask === 'driver'
               ? Truck
               : assignedTask === 'marketing'
-              ? StoreIcon
-              : ClipboardList;
+                ? StoreIcon
+                : ClipboardList;
           taskItems.push({ id: 'admin_task', label: 'Tugas', icon: taskIcon });
         }
 
@@ -77,8 +77,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         ];
       case 'dropping':
         return [
-          { id: 'store_visits', label: 'Kunjungan Toko', icon: StoreIcon },
-          { id: 'daily_summary', label: 'Rekap Hari Ini', icon: ClipboardList },
+          { id: 'store_visits', label: 'Tugas', icon: StoreIcon },
+          { id: 'daily_summary', label: 'Riwayat hari ini', icon: ClipboardList },
         ];
       default:
         return [];
@@ -99,18 +99,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
               type="button"
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                isActive
+              className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isActive
                   ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-              }`}
+                }`}
             >
               <div
-                className={`p-1 rounded-lg transition-colors ${
-                  isActive
+                className={`p-1 rounded-lg transition-colors ${isActive
                     ? 'bg-indigo-100 dark:bg-indigo-500/15'
                     : 'bg-transparent'
-                }`}
+                  }`}
               >
                 <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
               </div>

@@ -617,7 +617,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 value={reconciliationNotes}
                 onChange={(e) => setReconciliationNotes(e.target.value)}
                 placeholder="Catatan penerimaan uang fisik..."
-                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white min-h-[72px] resize-y"
               />
             </div>
 

@@ -192,12 +192,6 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       subLabel: 'Ambil foto fisik koin yang berada di mesin',
       required: true,
     },
-    {
-      key: 'photoOptional',
-      label: 'Foto Tambahan (Opsional)',
-      subLabel: 'Ambil foto kondisi khusus',
-      required: false,
-    },
   ];
 
   // 2. Checklist "Total Koin Terambil / Ambil Omset" Toggle (Default false: hanya pencocokan meteran)
@@ -215,7 +209,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
   // 4. Jatah Toko & Foto Nota
   const [storeShareStr, setStoreShareStr] = useState<string>('');
   const [photoNota, setPhotoNota] = useState<string | null>(null);                   // 4. Nota (di bagian omset)
+  const [hasOptional, setHasOptional] = useState<boolean>(false);                    // Toggle Opsional (Kamera & Catatan)
   const [photoOptional, setPhotoOptional] = useState<string | null>(null);           // 5. Tambahan
+  const [optionalNotes, setOptionalNotes] = useState<string>('');
 
   // GPS & Form Status
   const [latitude, setLatitude] = useState<number | null>(null);
@@ -350,6 +346,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                 photo_coin_url: off.photo_coin_blob || '',
                 photo_nota_url: off.photo_nota_blob || null,
                 photo_optional_url: off.photo_optional_blob || null,
+                optional_notes: off.optional_notes || null,
                 transaction_date: today,
                 created_at: off.created_at,
               } as any);
@@ -384,7 +381,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
           setLatitude(pos.coords.latitude);
           setLongitude(pos.coords.longitude);
         },
-        () => {},
+        () => { },
         { enableHighAccuracy: true }
       );
     }
@@ -416,7 +413,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
     setPhotoMachineNumber(null);
     setPhotoCoin(null);
     setPhotoNota(null);
+    setHasOptional(false);
     setPhotoOptional(null);
+    setOptionalNotes('');
   };
 
   // Handle Offline Synchronization
@@ -464,6 +463,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
             photo_coin_tray_url: urlCoin,
             photo_nota_url: urlNota,
             photo_optional_url: urlOptional,
+            optional_notes: rec.optional_notes || null,
             latitude: rec.latitude,
             longitude: rec.longitude,
             transaction_date: today,
@@ -562,7 +562,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
           photo_machine_number_blob: photoMachineNumber,
           photo_coin_blob: photoCoin,
           photo_nota_blob: photoNota,
-          photo_optional_blob: photoOptional,
+          photo_optional_blob: hasOptional ? photoOptional : null,
+          optional_notes: hasOptional && optionalNotes.trim() ? optionalNotes.trim() : null,
           latitude,
           longitude,
           created_at: new Date().toISOString(),
@@ -603,7 +604,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
       const urlMachineNumber = await uploadToCloudinary(photoMachineNumber, 'droppings/machine_number');
       const urlCoin = await uploadToCloudinary(photoCoin, 'droppings/coin');
       const urlNota = photoNota ? await uploadToCloudinary(photoNota, 'droppings/nota') : null;
-      const urlOptional = photoOptional ? await uploadToCloudinary(photoOptional, 'droppings/optional') : null;
+      const urlOptional = hasOptional && photoOptional ? await uploadToCloudinary(photoOptional, 'droppings/optional') : null;
 
       const today = new Date().toISOString().split('T')[0];
       const payload = {
@@ -626,6 +627,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
         photo_coin_tray_url: urlCoin,
         photo_nota_url: urlNota,
         photo_optional_url: urlOptional,
+        optional_notes: hasOptional && optionalNotes.trim() ? optionalNotes.trim() : null,
         latitude,
         longitude,
         transaction_date: today,
@@ -905,404 +907,387 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                 </div>
               </div>
 
-            {/* 2. Tiga Foto Wajib Terlebih Dahulu */}
-            <div className="space-y-3 pt-1">
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  3 Foto wajib
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Kirim foto secara jelas sesuai di bidang masing-masing
-                </p>
-              </div>
-
-              {/* Slot Kartu Foto (Bisa diklik untuk ambil/lihat masing-masing) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                {/* Foto Mesin / Boneka */}
-                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <img src="/boneka.png" alt="Boneka" className="w-4 h-4 object-contain inline-block" />
-                      Mesin / Boneka <span className="text-rose-500">*</span>
-                    </span>
-                    {photoMachine && (
-                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
-                      </span>
-                    )}
-                  </div>
-                  {photoMachine ? (
-                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
-                      <img src={photoMachine} alt="Foto Mesin" className="w-full h-full object-cover" />
-                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setPhotoMachine('')}
-                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
-                          title="Hapus foto"
-                        >
-                          <Trash2 className="w-3 h-3" /> Hapus
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMultiStepStartIndex(0);
-                            setIsMultiStepCameraOpen(true);
-                          }}
-                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
-                        >
-                          <RefreshCw className="w-3 h-3" /> Foto Ulang
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMultiStepStartIndex(0);
-                        setIsMultiStepCameraOpen(true);
-                      }}
-                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
-                    >
-                      <img src="/boneka.png" alt="Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Mesin</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Foto Nomor Mesin */}
-                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <img src="/nomor.png" alt="Nomor" className="w-4 h-4 object-contain inline-block" />
-                      Nomor Mesin <span className="text-rose-500">*</span>
-                    </span>
-                    {photoMachineNumber && (
-                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
-                      </span>
-                    )}
-                  </div>
-                  {photoMachineNumber ? (
-                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
-                      <img src={photoMachineNumber} alt="Foto Nomor Mesin" className="w-full h-full object-cover" />
-                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setPhotoMachineNumber('')}
-                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
-                          title="Hapus foto"
-                        >
-                          <Trash2 className="w-3 h-3" /> Hapus
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMultiStepStartIndex(1);
-                            setIsMultiStepCameraOpen(true);
-                          }}
-                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
-                        >
-                          <RefreshCw className="w-3 h-3" /> Foto Ulang
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMultiStepStartIndex(1);
-                        setIsMultiStepCameraOpen(true);
-                      }}
-                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
-                    >
-                      <img src="/nomor.png" alt="Nomor Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Nomor Mesin</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Foto Koin */}
-                <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <img src="/coin.png" alt="Koin" className="w-4 h-4 object-contain inline-block" />
-                      Foto Koin <span className="text-rose-500">*</span>
-                    </span>
-                    {photoCoin && (
-                      <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
-                      </span>
-                    )}
-                  </div>
-                  {photoCoin ? (
-                    <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
-                      <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
-                      <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setPhotoCoin('')}
-                          className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
-                          title="Hapus foto"
-                        >
-                          <Trash2 className="w-3 h-3" /> Hapus
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMultiStepStartIndex(2);
-                            setIsMultiStepCameraOpen(true);
-                          }}
-                          className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
-                        >
-                          <RefreshCw className="w-3 h-3" /> Foto Ulang
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMultiStepStartIndex(2);
-                        setIsMultiStepCameraOpen(true);
-                      }}
-                      className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
-                    >
-                      <img src="/coin.png" alt="Koin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                      <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Koin</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Connected Multi-Step In-App Camera Modal */}
-            <MultiStepCameraModal
-              isOpen={isMultiStepCameraOpen}
-              onClose={() => setIsMultiStepCameraOpen(false)}
-              steps={MANDATORY_PHOTO_STEPS}
-              initialStepIndex={multiStepStartIndex}
-              initialPhotos={{
-                photoMachine,
-                photoMachineNumber,
-                photoCoin,
-                photoOptional,
-              }}
-              onFinish={(results) => {
-                if (results.photoMachine !== undefined) setPhotoMachine(results.photoMachine);
-                if (results.photoMachineNumber !== undefined) setPhotoMachineNumber(results.photoMachineNumber);
-                if (results.photoCoin !== undefined) setPhotoCoin(results.photoCoin);
-                if (results.photoOptional !== undefined) setPhotoOptional(results.photoOptional);
-              }}
-            />
-
-            {/* 3. Section: Pencocokan Angka Meteran & Checklist Ambil Koin */}
-            <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs transition-colors">
-              {/* 1. Pencocokan Angka Meteran Mesin Saja (Diletakkan di atas) */}
-              {!hasOmset && (
-                <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-3 animate-in fade-in duration-200">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-bold text-xs">
-                      <Gauge className="w-4 h-4 text-indigo-500" />
-                      <span>Pencocokan Angka Meteran Mesin Saja</span>
-                    </div>
-                    <span className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800">
-                      Tanpa Tarik Koin
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Kunjungan tanpa penarikan koin omset. Petugas hanya mencocokkan dan memperbarui angka meteran fisik mesin saat ini.
+              {/* 2. Tiga Foto Wajib Terlebih Dahulu */}
+              <div className="space-y-3 pt-1">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    3 Foto wajib
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Kirim foto secara jelas sesuai di bidang masing-masing
                   </p>
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Angka Meteran Terbaca di Mesin Saat Ini *
-                    </label>
-                    <div className="relative">
-                      <Gauge className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        required={!hasOmset}
-                        value={noOmsetMeterStr}
-                        onChange={(e) => setNoOmsetMeterStr(e.target.value)}
-                        placeholder={prevMeter.toString()}
-                        className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
-                      <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter}</strong></span>
-                      {selectedStore && (
-                        <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{selectedStore.machine?.machine_code}</strong></span>
+                </div>
+
+                {/* Slot Kartu Foto (Bisa diklik untuk ambil/lihat masing-masing) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Foto Mesin / Boneka */}
+                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <img src="/boneka.png" alt="Boneka" className="w-4 h-4 object-contain inline-block" />
+                        Mesin / Boneka <span className="text-rose-500">*</span>
+                      </span>
+                      {photoMachine && (
+                        <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                        </span>
                       )}
                     </div>
+                    {photoMachine ? (
+                      <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                        <img src={photoMachine} alt="Foto Mesin" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPhotoMachine('')}
+                            className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                            title="Hapus foto"
+                          >
+                            <Trash2 className="w-3 h-3" /> Hapus
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMultiStepStartIndex(0);
+                              setIsMultiStepCameraOpen(true);
+                            }}
+                            className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Foto Ulang
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(0);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <img src="/boneka.png" alt="Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Mesin</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Foto Nomor Mesin */}
+                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <img src="/nomor.png" alt="Nomor" className="w-4 h-4 object-contain inline-block" />
+                        Nomor Mesin <span className="text-rose-500">*</span>
+                      </span>
+                      {photoMachineNumber && (
+                        <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                        </span>
+                      )}
+                    </div>
+                    {photoMachineNumber ? (
+                      <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                        <img src={photoMachineNumber} alt="Foto Nomor Mesin" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPhotoMachineNumber('')}
+                            className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                            title="Hapus foto"
+                          >
+                            <Trash2 className="w-3 h-3" /> Hapus
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMultiStepStartIndex(1);
+                              setIsMultiStepCameraOpen(true);
+                            }}
+                            className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Foto Ulang
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(1);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <img src="/nomor.png" alt="Nomor Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Nomor Mesin</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Foto Koin */}
+                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <img src="/coin.png" alt="Koin" className="w-4 h-4 object-contain inline-block" />
+                        Foto Koin <span className="text-rose-500">*</span>
+                      </span>
+                      {photoCoin && (
+                        <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                          <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                        </span>
+                      )}
+                    </div>
+                    {photoCoin ? (
+                      <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                        <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setPhotoCoin('')}
+                            className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                            title="Hapus foto"
+                          >
+                            <Trash2 className="w-3 h-3" /> Hapus
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMultiStepStartIndex(2);
+                              setIsMultiStepCameraOpen(true);
+                            }}
+                            className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Foto Ulang
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMultiStepStartIndex(2);
+                          setIsMultiStepCameraOpen(true);
+                        }}
+                        className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                      >
+                        <img src="/coin.png" alt="Koin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Koin</span>
+                      </button>
+                    )}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {/* 2. Checklist Toggle Card (Diletakkan di bawah) */}
-              <label className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition cursor-pointer select-none ${
-                hasOmset
+              {/* Connected Multi-Step In-App Camera Modal */}
+              <MultiStepCameraModal
+                isOpen={isMultiStepCameraOpen}
+                onClose={() => setIsMultiStepCameraOpen(false)}
+                steps={MANDATORY_PHOTO_STEPS}
+                initialStepIndex={multiStepStartIndex}
+                initialPhotos={{
+                  photoMachine,
+                  photoMachineNumber,
+                  photoCoin,
+                }}
+                onFinish={(results) => {
+                  if (results.photoMachine !== undefined) setPhotoMachine(results.photoMachine);
+                  if (results.photoMachineNumber !== undefined) setPhotoMachineNumber(results.photoMachineNumber);
+                  if (results.photoCoin !== undefined) setPhotoCoin(results.photoCoin);
+                }}
+              />
+
+              {/* 3. Section: Pencocokan Angka Meteran & Checklist Ambil Koin */}
+              <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-4 shadow-xs transition-colors">
+                {/* 1. Pencocokan Angka Meteran Mesin Saja (Diletakkan di atas) */}
+                {!hasOmset && (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-xl space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-slate-900 dark:text-white font-bold text-xs">
+                        <Gauge className="w-4 h-4 text-indigo-500" />
+                        <span>Pencocokan Angka Meteran Mesin</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="relative">
+                        <Gauge className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required={!hasOmset}
+                          value={noOmsetMeterStr}
+                          onChange={(e) => setNoOmsetMeterStr(e.target.value)}
+                          placeholder={prevMeter.toString()}
+                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
+                        <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter}</strong></span>
+                        {selectedStore && (
+                          <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{selectedStore.machine?.machine_code}</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Checklist Toggle Card (Diletakkan di bawah) */}
+                <label className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition cursor-pointer select-none ${hasOmset
                   ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/70 shadow-xs'
                   : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-              }`}>
-                <input
-                  type="checkbox"
-                  checked={hasOmset}
-                  onChange={(e) => setHasOmset(e.target.checked)}
-                  className="mt-0.5 w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 flex-shrink-0"
-                />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-900 dark:text-white">
-                      Ambil Koin di Laci (Tarik Omset)
-                    </span>
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
-                      hasOmset
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                        : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                    }`}>
-                      {hasOmset ? '✓ Dicentang' : 'Pencocokan Saja'}
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block mt-1 leading-relaxed">
-                    {hasOmset
-                      ? 'Dicentang: Kolom koin terambil, perhitungan omset, bagi hasil toko, dan foto nota aktif.'
-                      : 'Klik untuk mencentang jika ada koin yang ditarik dari laci. Jika tidak dicentang, petugas hanya mencocokkan angka meteran saja.'}
-                  </span>
-                </div>
-              </label>
-
-              {/* JIKA CENTANG: Muncul Kolom Koin, Kalkulasi Omset, Bagi Hasil Toko & Foto Nota */}
-              {hasOmset && (
-                <div className="space-y-4 animate-in fade-in duration-200 pt-1">
-                  {/* Input Total Koin Terambil */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                        Total Koin Terambil di Laci *
-                      </label>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
-                        1 Koin = Rp 1.000
+                  }`}>
+                  <input
+                    type="checkbox"
+                    checked={hasOmset}
+                    onChange={(e) => setHasOmset(e.target.checked)}
+                    className="mt-0.5 w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 flex-shrink-0"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-900 dark:text-white">
+                        Tarik omset
                       </span>
+
                     </div>
-                    <div className="relative">
-                      <Coins className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        required={hasOmset}
-                        placeholder="Contoh: 30"
-                        value={coinsCollectedStr}
-                        onChange={(e) => setCoinsCollectedStr(e.target.value)}
-                        className="w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
-                      />
-                    </div>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block mt-1 leading-relaxed">
+                      {hasOmset
+                        ? 'Lanjutkan dengan mengisi kolom koin yang sudah dihitung.'
+                        : 'Klik untuk tarik omset (Pastikan sudah menghitung koin).'}
+                    </span>
                   </div>
+                </label>
 
-                  {/* Auto Calculations Summary (Target Odometer & Gross Omset) */}
-                  {coinsCollected > 0 && (
-                    <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-600 dark:text-slate-400 font-medium">
-                          Target Meteran Baru ({prevMeter} + {coinsCollected} koin):
-                        </span>
-                        <span className="font-black font-mono text-slate-900 dark:text-white text-sm">
-                          {calculatedNewMeter}
+                {/* JIKA CENTANG: Muncul Kolom Koin, Kalkulasi Omset, Bagi Hasil Toko & Foto Nota */}
+                {hasOmset && (
+                  <div className="space-y-4 animate-in fade-in duration-200 pt-1">
+                    {/* Input Total Koin Terambil */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Total Koin Terambil di Laci *
+                        </label>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          1 Koin = Rp 1.000
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-700">
-                        <span className="text-slate-600 dark:text-slate-400 font-bold">
-                          Total Omset Kotor (100%):
-                        </span>
-                        <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
-                          {formatIDR(grossOmset)}
-                        </span>
+                      <div className="relative">
+                        <Coins className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3.5 top-3.5" />
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required={hasOmset}
+                          placeholder="Contoh: 30"
+                          value={coinsCollectedStr}
+                          onChange={(e) => setCoinsCollectedStr(e.target.value)}
+                          className="w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                        />
                       </div>
                     </div>
-                  )}
 
-                  {/* Pencocokan Meteran Fisik & Selisih Toleransi */}
-                  {coinsCollected > 0 && (
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Gauge className="w-4 h-4 text-indigo-500" />
-                          <span className="text-xs font-bold text-slate-900 dark:text-white">
-                            Kesesuaian Meteran Fisik Mesin
+                    {/* Auto Calculations Summary (Target Odometer & Gross Omset) */}
+                    {coinsCollected > 0 && (
+                      <div className="p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-600 dark:text-slate-400 font-medium">
+                            Angka Meteran Baru ({prevMeter} + {coinsCollected} koin):
+                          </span>
+                          <span className="font-black font-mono text-slate-900 dark:text-white text-sm">
+                            {calculatedNewMeter}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHasMismatch(!hasMismatch);
-                            if (!hasMismatch) setActualPhysicalMeterStr(calculatedNewMeter.toString());
-                          }}
-                          className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition cursor-pointer ${
-                            hasMismatch
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200 dark:border-slate-700">
+                          <span className="text-slate-600 dark:text-slate-400 font-bold">
+                            Total Omset Kotor (100%):
+                          </span>
+                          <span className="font-black text-emerald-600 dark:text-emerald-400 text-sm">
+                            {formatIDR(grossOmset)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Pencocokan Meteran Fisik & Selisih Toleransi */}
+                    {coinsCollected > 0 && (
+                      <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Gauge className="w-4 h-4 text-indigo-500" />
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              Kesesuaian Meteran
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHasMismatch(!hasMismatch);
+                              if (!hasMismatch) setActualPhysicalMeterStr(calculatedNewMeter.toString());
+                            }}
+                            className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border transition cursor-pointer ${hasMismatch
                               ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300'
                               : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300'
-                          }`}
-                        >
-                          {hasMismatch ? '⚠️ Ada Selisih' : '✓ Cocok Sempurna'}
-                        </button>
-                      </div>
+                              }`}
+                          >
+                            {hasMismatch ? '⚠️Selisih' : '✓Cocok'}
+                          </button>
+                        </div>
 
-                      {hasMismatch && (
-                        <div className="space-y-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                              Angka Meteran Fisik Aktual di Mesin *
-                            </label>
-                            <input
-                              type="text"
-                              inputMode="numeric"
-                              required
-                              value={actualPhysicalMeterStr}
-                              onChange={(e) => setActualPhysicalMeterStr(e.target.value)}
-                              placeholder={`Contoh: ${calculatedNewMeter + 5}`}
-                              className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white"
-                            />
-                          </div>
-
-                          {actualPhysicalMeter !== null && (
-                            <div className="text-xs font-bold flex items-center justify-between p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
-                              <span>Selisih Odometer:</span>
-                              <span className="font-mono">
-                                {meterDiscrepancy > 0 ? `+${meterDiscrepancy}` : meterDiscrepancy} Koin
-                              </span>
+                        {hasMismatch && (
+                          <div className="space-y-2.5 pt-2 border-t border-slate-200 dark:border-slate-700">
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Angka Meteran di Mesin *
+                              </label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                required
+                                value={actualPhysicalMeterStr}
+                                onChange={(e) => setActualPhysicalMeterStr(e.target.value)}
+                                placeholder={`Contoh: ${calculatedNewMeter + 5}`}
+                                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white"
+                              />
                             </div>
-                          )}
 
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                              Catatan Kendala / Alasan Selisih *
-                            </label>
-                            <textarea
-                              required
-                              rows={2}
-                              value={discrepancyReason}
-                              onChange={(e) => setDiscrepancyReason(e.target.value)}
-                              placeholder="Contoh: Koin nyangkut di coin mech atau koin tes teknisi..."
-                              className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400"
-                            />
+                            {actualPhysicalMeter !== null && (
+                              <div className="text-xs font-bold flex items-center justify-between p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                                <span>Selisih Odometer:</span>
+                                <span className="font-mono">
+                                  {meterDiscrepancy > 0 ? `+${meterDiscrepancy}` : meterDiscrepancy} Koin
+                                </span>
+                              </div>
+                            )}
+
+                            <div>
+                              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                                Catatan Kendala / Alasan Selisih *
+                              </label>
+                              <textarea
+                                required
+                                rows={2}
+                                value={discrepancyReason}
+                                onChange={(e) => setDiscrepancyReason(e.target.value)}
+                                placeholder="Contoh: Koin nyangkut di coin mech atau koin tes teknisi..."
+                                className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 min-h-[72px] resize-y"
+                              />
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
 
-                  {/* Bagi Hasil Jatah Toko */}
-                  {coinsCollected > 0 && (
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Wallet className="w-4 h-4 text-emerald-500" />
-                          <span className="text-xs font-bold text-slate-900 dark:text-white">
-                            Bagi Hasil Jatah Toko
-                          </span>
+                    {/* Bagi Hasil Jatah Toko */}
+                    {coinsCollected > 0 && (
+                      <div className="p-3.5 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/80 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <Wallet className="w-4 h-4 text-emerald-500" />
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                              Pembagian toko
+                            </span>
+                          </div>
+                          {/* Quick 10% Button */}
+
                         </div>
-                        {/* Quick 10% Button */}
                         <button
                           type="button"
                           onClick={handleQuick10Percent}
@@ -1311,97 +1296,136 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab }) => {
                           <Sparkles className="w-3 h-3 text-indigo-500" />
                           <span>Hitung Cepat 10% ({formatIDR(Math.round(grossOmset * 0.1))})</span>
                         </button>
-                      </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            Nominal yang diserahkan ke Toko *
+                          </label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            required={hasOmset}
+                            placeholder="Contoh: 3000"
+                            value={storeShareStr}
+                            onChange={(e) => setStoreShareStr(e.target.value)}
+                            className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white"
+                          />
+                        </div>
 
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                          Nominal Jatah Toko (Diserahkan ke Toko) *
-                        </label>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          required={hasOmset}
-                          placeholder="Contoh: 3000"
-                          value={storeShareStr}
-                          onChange={(e) => setStoreShareStr(e.target.value)}
-                          className="w-full px-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-900 dark:text-white"
-                        />
+                        {/* Net Deposit Takeaway Card */}
+                        <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white space-y-1 shadow-md">
+                          <span className="text-[10px] uppercase font-bold tracking-wider opacity-90 block">
+                            Omset yang dibawa:
+                          </span>
+                          <span className="text-xl font-black block tracking-tight">
+                            {formatIDR(netDepositAmount)}
+                          </span>
+                        </div>
                       </div>
+                    )}
 
-                      {/* Net Deposit Takeaway Card */}
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white space-y-1 shadow-md">
-                        <span className="text-[10px] uppercase font-bold tracking-wider opacity-90 block">
-                          Uang Setoran Dibawa Pulang (Disetor ke Admin Cabang):
-                        </span>
-                        <span className="text-xl font-black block tracking-tight">
-                          {formatIDR(netDepositAmount)}
-                        </span>
-                      </div>
+                    {/* Foto Nota / Kuitansi Toko (Hanya muncul ketika checklist koin aktif) */}
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
+                      <CameraCapture
+                        label="Foto Nota / Kuitansi Toko"
+                        subLabel="Ambil foto nota tertulis."
+                        required={false}
+                        onPhotoCaptured={({ base64 }) => setPhotoNota(base64)}
+                      />
                     </div>
-                  )}
-
-                  {/* Foto Nota / Kuitansi Toko (Hanya muncul ketika checklist koin aktif) */}
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <CameraCapture
-                      label="Foto Nota / Kuitansi Toko (Wajib dengan Omset)"
-                      subLabel="Ambil foto nota penyerahan bagi hasil yang ditandatangani pihak toko"
-                      required={false}
-                      onPhotoCaptured={({ base64 }) => setPhotoNota(base64)}
-                    />
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Foto Tambahan / Opsional */}
-            <div className="pt-1">
-              <CameraCapture
-                label="Foto Tambahan (Opsional)"
-                subLabel="Ambil foto kondisi khusus"
-                required={false}
-                onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition disabled:opacity-50 touch-target cursor-pointer"
-            >
-              {isSubmitting ? (
-                <span>Menyimpan Transaksi...</span>
-              ) : (
-                <>
-                  <span>
-                    {hasOmset
-                      ? `Simpan Dropping & Omset (${formatIDR(grossOmset)})`
-                      : 'Simpan Kunjungan & Verifikasi Meteran'}
+              {/* Opsi Tambahan / Opsional (Default Tersembunyi dengan Checkbox) */}
+              <div className="space-y-3 pt-1">
+                <label className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer select-none ${
+                  hasOptional
+                    ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/70 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={hasOptional}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setHasOptional(checked);
+                      if (!checked) {
+                        setPhotoOptional(null);
+                        setOptionalNotes('');
+                      }
+                    }}
+                    className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 flex-shrink-0"
+                  />
+                  <span className="text-xs font-black text-slate-900 dark:text-white flex-1">
+                    Foto & Catatan Tambahan (Opsional)
                   </span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </form>
+                </label>
 
-          {/* Bar Tombol "Buka kamera sekarang" - Full bar edge-to-edge ramping nempel presisi di atas Bottom Nav */}
-          <div className="fixed bottom-[65px] left-0 right-0 max-w-[480px] mx-auto z-20">
-            <button
-              type="button"
-              onClick={() => {
-                const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
-                setMultiStepStartIndex(firstUnfilled);
-                setIsMultiStepCameraOpen(true);
-              }}
-              className="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border-t border-indigo-500/40 cursor-pointer transition-colors"
-            >
-              <Camera className="w-4 h-4 text-white flex-shrink-0" />
-              <span className="leading-none">Buka kamera sekarang</span>
-            </button>
+                {/* Muncul jika dicentang */}
+                {hasOptional && (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl space-y-3 animate-in fade-in duration-200">
+                    <CameraCapture
+                      label="Foto Tambahan (Opsional)"
+                      subLabel="Ambil foto kondisi khusus"
+                      required={false}
+                      onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
+                    />
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        Catatan / Keterangan Tambahan (Opsional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={optionalNotes}
+                        onChange={(e) => setOptionalNotes(e.target.value)}
+                        placeholder="Contoh: Kunci mesin agak seret, toko sedang renovasi, penempatan unit digeser..."
+                        className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[72px] resize-y"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition disabled:opacity-50 touch-target cursor-pointer"
+              >
+                {isSubmitting ? (
+                  <span>Menyimpan Transaksi...</span>
+                ) : (
+                  <>
+                    <span>
+                      {hasOmset
+                        ? `Simpan Laporan`
+                        : 'Simpan Kunjungan'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Bar Tombol "Buka kamera sekarang" - Full bar edge-to-edge ramping nempel presisi di atas Bottom Nav */}
+            <div className="fixed bottom-[65px] left-0 right-0 max-w-[480px] mx-auto z-20">
+              <button
+                type="button"
+                onClick={() => {
+                  const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
+                  setMultiStepStartIndex(firstUnfilled);
+                  setIsMultiStepCameraOpen(true);
+                }}
+                className="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border-t border-indigo-500/40 cursor-pointer transition-colors"
+              >
+                <Camera className="w-4 h-4 text-white flex-shrink-0" />
+                <span className="leading-none">Buka kamera sekarang</span>
+              </button>
+            </div>
           </div>
-        </div>
-      )
-    ) : (
+        )
+      ) : (
         /* Rekap Hari Ini Tab */
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="flex items-center justify-between mb-2">

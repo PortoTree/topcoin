@@ -563,7 +563,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
                     placeholder="Contoh: Titipan bensin Rp 20.000, uang pas disetor..."
                     value={reconciliationNotes}
                     onChange={(e) => setReconciliationNotes(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs min-h-[72px] resize-y"
                   />
                 </div>
 

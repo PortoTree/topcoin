@@ -1100,7 +1100,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                 value={executionNotes}
                 onChange={(e) => setExecutionNotes(e.target.value)}
                 placeholder="Misal: Mesin sudah dicolokkan listrik dan uji coba normal..."
-                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[72px] resize-y"
               />
             </div>
 
@@ -1223,7 +1223,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     ? 'Jelaskan kendala di lokasi toko asal (misal: toko tutup, mesin rusak parah, akses terhalang)...'
                     : 'Misal: Mesin sudah dinaikkan ke armada pick-up, kondisi aman...'
                 }
-                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white"
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 dark:focus:ring-white min-h-[72px] resize-y"
               />
             </div>
 
@@ -1427,7 +1427,7 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
                     ? 'Jelaskan kendala di toko tujuan (misal: toko tutup, pemilik menolak, arus listrik bermasalah)...'
                     : 'Misal: Sudah ditest colok listrik & koin berjalan lancar...'
                 }
-                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[72px] resize-y"
               />
             </div>
 

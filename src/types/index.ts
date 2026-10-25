@@ -176,6 +176,7 @@ export interface DroppingTransaction {
   photo_coin_url?: string;
   photo_nota_url?: string | null;
   photo_optional_url?: string | null;
+  optional_notes?: string | null;
   photo_store_url?: string | null;
   has_omset?: boolean;
   
@@ -246,6 +247,7 @@ export interface OfflineDroppingRecord {
   photo_coin_blob?: Blob | string;
   photo_nota_blob?: Blob | string | null;
   photo_optional_blob?: Blob | string | null;
+  optional_notes?: string | null;
   latitude: number | null;
   longitude: number | null;
   created_at: string;

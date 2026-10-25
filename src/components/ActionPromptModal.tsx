@@ -111,7 +111,7 @@ export const ActionPromptModal: React.FC<ActionPromptModalProps> = ({ config, on
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={item.inputPlaceholder || 'Masukkan catatan di sini...'}
                   autoFocus
-                  className="w-full px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none transition"
+                  className="w-full px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 resize-none min-h-[80px] transition"
                 />
               </div>
             )}
