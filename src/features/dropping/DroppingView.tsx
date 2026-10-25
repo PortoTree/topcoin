@@ -474,11 +474,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         if (!rec.localId) continue;
 
         try {
-          const urlMachine = await uploadToCloudinary(rec.photo_machine_blob || '', 'droppings/machine');
-          const urlMachineNumber = await uploadToCloudinary(rec.photo_machine_number_blob || '', 'droppings/machine_number');
-          const urlCoin = await uploadToCloudinary(rec.photo_coin_blob || '', 'droppings/coin');
-          const urlNota = rec.photo_nota_blob ? await uploadToCloudinary(rec.photo_nota_blob, 'droppings/nota') : null;
-          const urlOptional = rec.photo_optional_blob ? await uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : null;
+          // Upload paralel ke Cloudinary menggunakan Promise.all (Jauh lebih cepat daripada sekuensial)
+          const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
+            uploadToCloudinary(rec.photo_machine_blob || '', 'droppings/machine'),
+            uploadToCloudinary(rec.photo_machine_number_blob || '', 'droppings/machine_number'),
+            uploadToCloudinary(rec.photo_coin_blob || '', 'droppings/coin'),
+            rec.photo_nota_blob ? uploadToCloudinary(rec.photo_nota_blob, 'droppings/nota') : Promise.resolve(null),
+            rec.photo_optional_blob ? uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : Promise.resolve(null),
+          ]);
 
           const today = new Date().toISOString().split('T')[0];
           const { error } = await supabase.from('droppings').insert({
@@ -508,7 +511,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           });
 
           if (!error) {
-            await offlineDb.offlineDroppings.update(rec.localId, { sync_status: 'synced' });
+            // Bersihkan blob foto dari IndexedDB lokal setelah sukses tersinkron agar memori HP teknisi tidak boros
+            await offlineDb.offlineDroppings.update(rec.localId, {
+              sync_status: 'synced',
+              photo_machine_blob: null,
+              photo_machine_number_blob: null,
+              photo_coin_blob: null,
+              photo_nota_blob: null,
+              photo_optional_blob: null,
+            });
           }
         } catch (syncErr) {
           console.error('Sync item error:', syncErr);
@@ -636,13 +647,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       return;
     }
 
-    // If online, upload sequentially to Cloudinary & insert to Supabase
+    // If online, upload in PARALLEL to Cloudinary via Promise.all (3-4x lebih cepat) & insert to Supabase
     try {
-      const urlMachine = await uploadToCloudinary(photoMachine, 'droppings/machine');
-      const urlMachineNumber = await uploadToCloudinary(photoMachineNumber, 'droppings/machine_number');
-      const urlCoin = await uploadToCloudinary(photoCoin, 'droppings/coin');
-      const urlNota = photoNota ? await uploadToCloudinary(photoNota, 'droppings/nota') : null;
-      const urlOptional = hasOptional && photoOptional ? await uploadToCloudinary(photoOptional, 'droppings/optional') : null;
+      const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
+        uploadToCloudinary(photoMachine, 'droppings/machine'),
+        uploadToCloudinary(photoMachineNumber, 'droppings/machine_number'),
+        uploadToCloudinary(photoCoin, 'droppings/coin'),
+        photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
+        hasOptional && photoOptional ? uploadToCloudinary(photoOptional, 'droppings/optional') : Promise.resolve(null),
+      ]);
 
       const today = new Date().toISOString().split('T')[0];
       const payload = {
