@@ -1771,9 +1771,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   </span>
                 </div>
 
-                {/* 3. Riwayat Tracking Kunjungan & Bukti Foto */}
-                <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                {/* 3. Riwayat Tracking Kunjungan & Bukti Foto (Langsung di Body Modal) */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
                         <History className="w-4 h-4" />
