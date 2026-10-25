@@ -258,9 +258,6 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     return nameMatch || codeMatch || addrMatch;
   });
 
-  const visitedStoreIds = new Set(todayDroppings.map((d) => d.store_id));
-  const visitedTodayCount = activeStores.filter((st) => visitedStoreIds.has(st.id)).length;
-  const unvisitedTodayCount = Math.max(0, activeStores.length - visitedTodayCount);
 
   // Format IDR Currency
   const formatIDR = (val: number) => {
@@ -660,7 +657,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
       setSubmitSuccess(
         hasOmset
-          ? `Sukses! Dropping "${store.name}" berhasil dicatat: ${coinsCollected} Koin (${formatIDR(grossOmset)}). Setoran bersih: ${formatIDR(netDepositAmount)}.`
+          ? `Sukses!, "${store.name}" berhasil dicatat: ${coinsCollected} Koin (${formatIDR(grossOmset)}). Setoran bersih: ${formatIDR(netDepositAmount)}.`
           : `Sukses! Kunjungan toko "${store.name}" (pencocokan meteran: ${finalMeterReading}) berhasil dicatat.`
       );
       setActiveStores((prev) =>
@@ -715,33 +712,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           /* 1. HALAMAN LIST KUNJUNGAN TOKO MITRA                     */
           /* ======================================================== */
           <div className="space-y-4 animate-in fade-in duration-150">
-            {/* Header Card */}
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors">
-              <div className="flex items-center justify-between">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                  <span>Daftar dropping {profile?.full_name || 'Budi'}</span>
-                </h2>
-              </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 font-medium">
-                Pilih toko mitra untuk mencatat pencocokan meteran mesin dan penarikan koin omset hari ini.
-              </p>
-
-              {/* Metric Pills */}
-              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
-                <div className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">Total Toko</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white font-mono">{activeStores.length}</span>
-                </div>
-                <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
-                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-bold block">Dikunjungi</span>
-                  <span className="text-sm font-black text-emerald-700 dark:text-emerald-300 font-mono">{visitedTodayCount}</span>
-                </div>
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60">
-                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold block">Belum</span>
-                  <span className="text-sm font-black text-amber-700 dark:text-amber-300 font-mono">{unvisitedTodayCount}</span>
-                </div>
-              </div>
+            {/* Page Title (Nempel ke body) */}
+            <div className="pt-1">
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                <span>Daftar dropping {profile?.full_name || 'Budi'}</span>
+              </h2>
             </div>
 
             {submitSuccess && (
@@ -1340,6 +1316,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         required={false}
                         frameOrientation="landscape"
                         onPhotoCaptured={({ base64 }) => setPhotoNota(base64)}
+                        onPhotoRemoved={() => setPhotoNota(null)}
                       />
                     </div>
                   </div>
@@ -1378,6 +1355,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       subLabel="Ambil foto kondisi khusus"
                       required={false}
                       onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
+                      onPhotoRemoved={() => setPhotoOptional(null)}
                     />
 
                     <div>

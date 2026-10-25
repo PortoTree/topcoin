@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Camera, RefreshCw, CheckCircle2, X, ShieldCheck, Lock } from 'lucide-react';
+import { Camera, RefreshCw, CheckCircle2, X, ShieldCheck, Lock, Trash2 } from 'lucide-react';
 import { compressImage } from '../lib/imageCompression';
 import { toast } from '../context/ToastContext';
 
@@ -8,6 +8,7 @@ interface CameraCaptureProps {
   label: string;
   subLabel?: string;
   onPhotoCaptured: (data: { base64: string; blob: Blob }) => void;
+  onPhotoRemoved?: () => void;
   required?: boolean;
   frameOrientation?: 'portrait' | 'landscape' | 'auto';
 }
@@ -16,6 +17,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   label,
   subLabel,
   onPhotoCaptured,
+  onPhotoRemoved,
   required = true,
   frameOrientation = 'auto',
 }) => {
@@ -24,7 +26,6 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const hardwareInputRef = useRef<HTMLInputElement>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [photoSizeKb, setPhotoSizeKb] = useState<number | null>(null);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isPermissionPromptOpen, setIsPermissionPromptOpen] = useState(false);
   const [isStartingCamera, setIsStartingCamera] = useState(false);
@@ -182,9 +183,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
     canvas.toBlob((blob) => {
       if (blob) {
-        const sizeKb = Math.round(blob.size / 1024);
         setPreviewUrl(base64);
-        setPhotoSizeKb(sizeKb);
         onPhotoCaptured({ base64, blob });
       }
       closeCamera();
@@ -197,15 +196,25 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     if (!file) return;
 
     try {
-      const { base64, blob, sizeKb } = await compressImage(file, 1200, 1200, 0.75);
+      const { base64, blob } = await compressImage(file, 1200, 1200, 0.75);
       setPreviewUrl(base64);
-      setPhotoSizeKb(sizeKb);
       onPhotoCaptured({ base64, blob });
     } catch (err) {
       console.error('Error compressing image:', err);
       toast.error('Gagal memproses foto dari kamera. Coba ulangi.');
     } finally {
       if (hardwareInputRef.current) hardwareInputRef.current.value = '';
+    }
+  };
+
+  // Handler to remove captured photo
+  const handleRemovePhoto = () => {
+    setPreviewUrl(null);
+    if (hardwareInputRef.current) {
+      hardwareInputRef.current.value = '';
+    }
+    if (onPhotoRemoved) {
+      onPhotoRemoved();
     }
   };
 
@@ -222,7 +231,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         {previewUrl && (
           <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-500/20">
             <CheckCircle2 className="w-3 h-3" />
-            Tersimpan ({photoSizeKb} KB)
+            Tersimpan
           </span>
         )}
       </div>
@@ -244,14 +253,27 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
             alt={label}
             className="w-full h-full object-cover"
           />
-          <button
-            type="button"
-            onClick={handleClickCamera}
-            className="absolute bottom-2 right-2 px-3 py-1.5 bg-slate-900/80 backdrop-blur-md hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg active:scale-95 transition cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            Ambil Ulang Foto
-          </button>
+          <div className="absolute bottom-2 right-2 flex items-center gap-1.5">
+            {onPhotoRemoved && (
+              <button
+                type="button"
+                onClick={handleRemovePhoto}
+                title="Hapus Foto"
+                aria-label="Hapus Foto"
+                className="p-1.5 bg-rose-600/90 backdrop-blur-md hover:bg-rose-600 text-white rounded-lg text-xs font-semibold flex items-center justify-center shadow-lg active:scale-90 transition cursor-pointer border border-white/20"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleClickCamera}
+              className="px-3 py-1.5 bg-slate-900/80 backdrop-blur-md hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-lg active:scale-95 transition cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Ambil Ulang Foto
+            </button>
+          </div>
         </div>
       ) : (
         <button
