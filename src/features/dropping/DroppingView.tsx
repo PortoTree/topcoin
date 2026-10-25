@@ -1749,11 +1749,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       type="button"
                       onClick={() => handleOpenWhatsApp(store)}
                       disabled={!store.phone}
-                      className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${
-                        store.phone
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
-                      }`}
+                      className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${store.phone
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                        }`}
                     >
                       <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
                       <span className="font-mono">{store.phone || 'Nomor Belum Ada'}</span>
@@ -1831,14 +1830,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
                               <div className="flex items-center justify-between gap-2">
                                 <span
-                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                                    tx.coins_collected
-                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                      : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                                  }`}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${tx.coins_collected
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                    }`}
                                 >
                                   <CheckCircle2 className="w-3 h-3" />
-                                  {tx.coins_collected ? 'Penarikan Omset' : 'Pencocokan Meteran'}
+                                  {tx.coins_collected ? 'Ambil omset' : 'Kunjungan'}
                                 </span>
                                 <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
                                   Meter: <strong className="text-slate-900 dark:text-white font-bold">{tx.actual_physical_meter ?? tx.previous_counter_meter ?? 0}</strong>
@@ -1933,11 +1931,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         setSelectedStoreId(store.id);
                         setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
                       }}
-                      className={`flex-1 py-3 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-sm ${
-                        hasPendingOmset
-                          ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold'
-                          : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900'
-                      }`}
+                      className={`flex-1 py-3 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition active:scale-95 cursor-pointer shadow-sm ${hasPendingOmset
+                        ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold'
+                        : 'bg-slate-900 hover:bg-slate-800 text-white dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900'
+                        }`}
                     >
                       {hasPendingOmset ? (
                         <>
