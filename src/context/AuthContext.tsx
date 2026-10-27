@@ -206,12 +206,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('work_date', workDate)
         .maybeSingle();
 
-      if (!error && data) {
-        setTodayAttendance(data as Attendance);
-        localStorage.setItem(LOCAL_STORAGE_ATTENDANCE_KEY, JSON.stringify(data));
+      if (!error) {
+        if (data) {
+          setTodayAttendance(data as Attendance);
+          localStorage.setItem(LOCAL_STORAGE_ATTENDANCE_KEY, JSON.stringify(data));
+        } else {
+          setTodayAttendance(null);
+          localStorage.removeItem(LOCAL_STORAGE_ATTENDANCE_KEY);
+        }
       } else {
-        setTodayAttendance(null);
-        localStorage.removeItem(LOCAL_STORAGE_ATTENDANCE_KEY);
+        console.warn('Gagal memverifikasi absensi dari database, mempertahankan sesi lokal:', error);
       }
     } catch (err) {
       console.error('Error fetching today attendance:', err);
@@ -287,21 +291,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .eq('id', profile.id)
           .maybeSingle();
 
-        if (
-          dbProfile &&
-          (dbProfile.role !== profile.role ||
-            dbProfile.assigned_task !== profile.assigned_task ||
-            !isManagementRole(dbProfile.role))
-        ) {
-          if (
-            dbProfile.role !== profile.role ||
-            dbProfile.assigned_task !== profile.assigned_task
-          ) {
+        if (dbProfile) {
+          const roleChanged = dbProfile.role !== profile.role;
+          const taskChanged = dbProfile.assigned_task !== profile.assigned_task;
+          if (roleChanged || taskChanged) {
             setProfile(dbProfile);
             localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(dbProfile));
-          }
-          if (!isManagementRole(dbProfile.role)) {
-            await fetchTodayAttendance(dbProfile.id, resetTimeConfig);
+            if (!isManagementRole(dbProfile.role)) {
+              await fetchTodayAttendance(dbProfile.id, resetTimeConfig);
+            }
           }
         }
       } catch (e) {

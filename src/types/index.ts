@@ -59,6 +59,7 @@ export interface Attendance {
   role: UserRole;
   check_in_time: string;
   created_at: string;
+  user?: Partial<UserProfile>;
 }
 
 export type MachineStatus = 'gudang' | 'dikirim' | 'terpasang' | 'maintenance';

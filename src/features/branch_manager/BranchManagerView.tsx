@@ -21,10 +21,12 @@ import {
   ChevronDown,
   Check,
   X,
+  UserCheck,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { UserProfile, UserRole, DroppingTransaction, Machine } from '../../types';
 import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
+import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
 
 interface BranchManagerViewProps {
   activeTab: string;
@@ -44,6 +46,7 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
   // Selected staff for Role Assignment Modal & Staff Option Modal (rendered outside list)
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
+  const [staffViewMode, setStaffViewMode] = useState<'accounts' | 'attendance'>('accounts');
   const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
 
   const getStaffBadge = (staff: UserProfile) => {
@@ -59,8 +62,8 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
           staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
             ? 'Logistik'
             : staff.assigned_task === 'marketing'
-            ? 'Marketing'
-            : 'Dropping';
+              ? 'Marketing'
+              : 'Dropping';
         return {
           label: `Admin • ${taskName}`,
           className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
@@ -380,11 +383,10 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                     key={b.id}
                     type="button"
                     onClick={() => setCurrentBranch(b)}
-                    className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
-                      isSelected
+                    className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${isSelected
                         ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
                         : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-1.5 font-extrabold text-xs">
                       <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
@@ -558,112 +560,141 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
       {/* Tab: Branch Staff (Supervisi Karyawan Cabang) */}
       {activeTab === 'branch_staff' && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Karyawan {currentBranch?.name} ({branchStaff.length})
-              </h3>
-              <p className="text-xs text-slate-500">Supervisi tim operasional lapangan</p>
-            </div>
+          {/* Sub-tab Switcher: Daftar Akun vs Rekap Absensi */}
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
             <button
               type="button"
-              onClick={fetchBMData}
-              className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 cursor-pointer"
+              onClick={() => setStaffViewMode('accounts')}
+              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition ${staffViewMode === 'accounts'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Akun Staf ({branchStaff.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStaffViewMode('attendance')}
+              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 ${staffViewMode === 'attendance'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Absensi Harian</span>
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
-            {[...branchStaff]
-              .sort((a, b) => {
-                if (a.role === 'branch_manager') return -1;
-                if (b.role === 'branch_manager') return 1;
-                if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
-                if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
-                return a.full_name.localeCompare(b.full_name);
-              })
-              .map((staff) => {
-                const isBM = staff.role === 'branch_manager';
-                return (
-                  <div
-                    key={staff.id}
-                    className={`p-3 sm:p-3.5 transition-colors ${
-                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
-                    }`}
-                  >
-                    {/* Baris 1: Full Name */}
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {staff.full_name}
-                    </h4>
+          {staffViewMode === 'attendance' ? (
+            <StaffAttendanceManager branchId={activeBranchId} />
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    Karyawan {currentBranch?.name} ({branchStaff.length})
+                  </h3>
+                  <p className="text-xs text-slate-500">Supervisi tim operasional lapangan</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={fetchBMData}
+                  className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
 
-                    {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
-                    <div className="flex items-center justify-between gap-2 mt-1.5">
-                      {/* Kiri: Badge Role (semua role ada badge) + Status */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(() => {
-                          const badge = getStaffBadge(staff);
-                          return (
-                            <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
-                            >
-                              {badge.label}
-                            </span>
-                          );
-                        })()}
-
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
-                            staff.is_active
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
-                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
+                {[...branchStaff]
+                  .sort((a, b) => {
+                    if (a.role === 'branch_manager') return -1;
+                    if (b.role === 'branch_manager') return 1;
+                    if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
+                    if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
+                    return a.full_name.localeCompare(b.full_name);
+                  })
+                  .map((staff) => {
+                    const isBM = staff.role === 'branch_manager';
+                    return (
+                      <div
+                        key={staff.id}
+                        className={`p-3 sm:p-3.5 transition-colors ${isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
                           }`}
-                        >
-                          {staff.is_active ? 'Aktif' : 'Terkunci'}
-                        </span>
-                      </div>
+                      >
+                        {/* Baris 1: Full Name */}
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {staff.full_name}
+                        </h4>
 
-                      {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {!isBM ? (
-                          <>
-                            {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedStaffForRole(staff);
-                                setSelectedStaffForOption(null);
-                              }}
-                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
-                              title="Ubah Penugasan Peran"
-                            >
-                              <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                            </button>
+                        {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
+                        <div className="flex items-center justify-between gap-2 mt-1.5">
+                          {/* Kiri: Badge Role (semua role ada badge) + Status */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {(() => {
+                              const badge = getStaffBadge(staff);
+                              return (
+                                <span
+                                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
 
-                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedStaffForOption(staff);
-                                setSelectedStaffForRole(null);
-                              }}
-                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
-                              title="Opsi Tindakan Karyawan"
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${staff.is_active
+                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                                  : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+                                }`}
                             >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
-                            Atasan Cabang
-                          </span>
-                        )}
+                              {staff.is_active ? 'Aktif' : 'Terkunci'}
+                            </span>
+                          </div>
+
+                          {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            {!isBM ? (
+                              <>
+                                {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedStaffForRole(staff);
+                                    setSelectedStaffForOption(null);
+                                  }}
+                                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                  title="Ubah Penugasan Peran"
+                                >
+                                  <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                                </button>
+
+                                {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedStaffForOption(staff);
+                                    setSelectedStaffForRole(null);
+                                  }}
+                                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                  title="Opsi Tindakan Karyawan"
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                                Atasan Cabang
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
+                    );
+                  })}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -704,11 +735,10 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                     close();
                     handleChangeStaffRole(staff, 'admin_cabang');
                   }}
-                  className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
-                    !staff.assigned_task || staff.assigned_task === 'admin_cabang'
+                  className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${!staff.assigned_task || staff.assigned_task === 'admin_cabang'
                       ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                       : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                    }`}
                 >
                   <div>
                     <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
@@ -732,13 +762,12 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                   close();
                   handleChangeStaffRole(staff, 'logistik');
                 }}
-                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
-                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
                     ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
                     : staff.role === 'logistik' || staff.role === 'driver')
                     ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                     : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 <div>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
@@ -751,10 +780,10 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                 {(staff.role === 'admin_cabang' || staff.role === 'admin'
                   ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
                   : staff.role === 'logistik' || staff.role === 'driver') && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                )}
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                  )}
               </button>
 
               <button
@@ -763,13 +792,12 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                   close();
                   handleChangeStaffRole(staff, 'dropping');
                 }}
-                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
-                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
                     ? staff.assigned_task === 'dropping'
                     : staff.role === 'dropping')
                     ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                     : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 <div>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
@@ -782,10 +810,10 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                 {(staff.role === 'admin_cabang' || staff.role === 'admin'
                   ? staff.assigned_task === 'dropping'
                   : staff.role === 'dropping') && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                )}
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                  )}
               </button>
 
               <button
@@ -794,13 +822,12 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                   close();
                   handleChangeStaffRole(staff, 'marketing');
                 }}
-                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
-                  (staff.role === 'admin_cabang' || staff.role === 'admin'
+                className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
                     ? staff.assigned_task === 'marketing'
                     : staff.role === 'marketing' || staff.role === 'sales')
                     ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
                     : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
-                }`}
+                  }`}
               >
                 <div>
                   <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
@@ -813,10 +840,10 @@ export const BranchManagerView: React.FC<BranchManagerViewProps> = ({ activeTab 
                 {(staff.role === 'admin_cabang' || staff.role === 'admin'
                   ? staff.assigned_task === 'marketing'
                   : staff.role === 'marketing' || staff.role === 'sales') && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                )}
+                    <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                      <Check className="w-3.5 h-3.5" />
+                    </div>
+                  )}
               </button>
             </div>
 

@@ -106,7 +106,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ activeTab }) => {
           if (s.key === 'privacy_show_peer_recap') setShowPeerRecap(s.value?.enabled ?? false);
           if (s.key === 'privacy_show_past_history') setShowPastHistory(s.value?.enabled ?? true);
           if (s.key === 'system_reset_time') {
-            setResetHour(s.value?.reset_hour ?? 7);
+            setResetHour(s.value?.reset_hour ?? 0);
             setResetMinute(s.value?.reset_minute ?? 0);
           }
         });

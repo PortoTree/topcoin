@@ -1,5 +1,5 @@
 /**
- * Helper to calculate active work cycle date based on the configured reset time (e.g. 07:00 AM)
+ * Helper to calculate active work cycle date based on the configured reset time (e.g. 00:00 midnight)
  */
 
 export interface ResetTimeConfig {
@@ -8,7 +8,7 @@ export interface ResetTimeConfig {
 }
 
 export const DEFAULT_RESET_TIME: ResetTimeConfig = {
-  reset_hour: 7,
+  reset_hour: 0,
   reset_minute: 0,
 };
 

@@ -10,7 +10,6 @@ import {
   Store as StoreIcon,
   Truck,
   ArrowRight,
-  Sparkles,
   ShieldAlert,
   Sun,
   Moon,
@@ -57,10 +56,6 @@ export const AttendanceHomeView: React.FC = () => {
       {/* Top Bar */}
       <div className="flex items-center justify-between pt-2">
         <div>
-          <span className="text-xs text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5" />
-            PCB TOP COIN OPERASIONAL
-          </span>
           <h1 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
             Halo, {profile.full_name || profile.username}
           </h1>
@@ -125,17 +120,17 @@ export const AttendanceHomeView: React.FC = () => {
 
             <div>
               <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700/60 inline-block mb-2">
-                Tugas dari Admin / BM Cabang
+                Tugas Hari Ini
               </span>
               <h2 className="text-xl font-black text-slate-900 dark:text-white capitalize">
-                {isDropping && 'Petugas Dropping'}
-                {isMarketing && 'Petugas Marketing'}
-                {isDriver && 'Logistik Lapangan'}
+                {isDropping && 'Dropping'}
+                {isMarketing && 'Marketing'}
+                {isDriver && 'Logistik'}
               </h2>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-[280px] mx-auto font-medium leading-relaxed">
-                {isDropping && 'Pencocokan angka meteran mesin, penarikan koin omset laci, dan input jatah toko mitra.'}
-                {isMarketing && 'Survei calon lokasi mitra, pendaftaran toko baru, dan pengajuan penempatan mesin.'}
-                {isDriver && 'Relokasi unit mesin ke toko mitra, monitoring armada, dan tugas operasional lapangan.'}
+                {isDropping && 'Pencocokan angka meteran mesin, penarikan omset toko.'}
+                {isMarketing && 'Survei lokasi, pendaftaran toko baru, dan pendataan mitra.'}
+                {isDriver && 'Relokasi mesin dan tugas operasional lapangan.'}
               </p>
             </div>
 
@@ -144,15 +139,14 @@ export const AttendanceHomeView: React.FC = () => {
               type="button"
               disabled={isSubmitting}
               onClick={handleCheckIn}
-              className={`w-full py-4 text-white font-extrabold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-xl active:scale-[0.98] transition touch-target cursor-pointer disabled:opacity-60 ${
-                isDropping
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30'
-                  : isMarketing
+              className={`w-full py-4 text-white font-extrabold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-xl active:scale-[0.98] transition touch-target cursor-pointer disabled:opacity-60 ${isDropping
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30'
+                : isMarketing
                   ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-600/30'
                   : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-600/30'
-              }`}
+                }`}
             >
-              <span>{isSubmitting ? 'Mencatat Absensi...' : 'Absen Masuk Sekarang'}</span>
+              <span>{isSubmitting ? 'Mencatat Absensi...' : 'Absen Sekarang'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -181,7 +175,7 @@ export const AttendanceHomeView: React.FC = () => {
       <div className="py-4 text-center">
         <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1 font-medium">
           <ShieldAlert className="w-3.5 h-3.5 text-slate-400" />
-          Sesi aktif terkunci otomatis sampai jam reset harian (07:00)
+          Aplikasi ini dalam tahap simulasi dan pengembangan.
         </p>
       </div>
 
@@ -198,18 +192,18 @@ export const AttendanceHomeView: React.FC = () => {
         config={
           showLogoutConfirm
             ? {
-                type: 'confirm',
-                variant: 'danger',
-                title: 'Konfirmasi Keluar',
-                subtitle: profile ? `${profile.full_name} (@${profile.username})` : undefined,
-                message: 'Apakah Anda yakin ingin keluar dari sesi akun ini?',
-                confirmLabel: 'Ya, Keluar',
-                cancelLabel: 'Batal',
-                onConfirm: async () => {
-                  setShowLogoutConfirm(false);
-                  await logout();
-                },
-              }
+              type: 'confirm',
+              variant: 'danger',
+              title: 'Konfirmasi Keluar',
+              subtitle: profile ? `${profile.full_name} (@${profile.username})` : undefined,
+              message: 'Apakah Anda yakin ingin keluar dari sesi akun ini?',
+              confirmLabel: 'Ya, Keluar',
+              cancelLabel: 'Batal',
+              onConfirm: async () => {
+                setShowLogoutConfirm(false);
+                await logout();
+              },
+            }
             : null
         }
         onClose={() => setShowLogoutConfirm(false)}
