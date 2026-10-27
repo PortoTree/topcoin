@@ -20,7 +20,10 @@ import {
   Trash2,
   ChevronDown,
   Check,
-  UserCheck,
+  TrendingUp,
+  Cpu,
+  ClipboardCheck,
+  Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole } from '../../types';
@@ -56,7 +59,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [reconcileSuccess, setReconcileSuccess] = useState<string | null>(null);
 
   // Staff Management State
-  const [staffViewMode, setStaffViewMode] = useState<'accounts' | 'attendance'>('accounts');
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
   const [newStaffUsername, setNewStaffUsername] = useState('');
   const [newStaffFullName, setNewStaffFullName] = useState('');
@@ -634,182 +636,288 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Karyawan Cabang & Pengajuan Hapus Akun */}
-      {activeTab === 'employees' && (
+      {/* Tab: Tugas Pengelola Cabang (Jika Admin tidak memiliki penugasan khusus lapangan) */}
+      {activeTab === 'admin_task' && !profile?.assigned_task && (
         <div className="space-y-4 animate-in fade-in duration-150">
-          {/* Sub-tab Switcher: Daftar Akun vs Rekap Absensi */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700/60 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setStaffViewMode('accounts')}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition ${staffViewMode === 'accounts'
-                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-            >
-              Akun Staf ({branchStaff.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setStaffViewMode('attendance')}
-              className={`flex-1 py-2 text-xs font-extrabold rounded-xl transition flex items-center justify-center gap-1.5 ${staffViewMode === 'attendance'
-                  ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Absensi Harian</span>
-            </button>
+          <div className="bg-gradient-to-br from-indigo-500/10 via-white to-purple-500/10 dark:from-indigo-950/40 dark:via-slate-900 dark:to-purple-950/30 border border-indigo-200/70 dark:border-indigo-800/60 rounded-3xl p-5 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-600/30">
+                <ClipboardCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+                  Peran Operasional
+                </span>
+                <h2 className="text-base font-black text-slate-900 dark:text-white">
+                  Pengelola Cabang
+                </h2>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">
+              Anda bertugas memonitor operasional harian cabang {currentBranch?.name || 'ini'}, mengelola jadwal staf, serta rekonsiliasi kas.
+            </p>
+
+            <div className="mt-4 pt-3 border-t border-slate-200/70 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+                <span className="text-slate-500 dark:text-slate-400 block text-[10px] font-bold">Total Karyawan</span>
+                <span className="font-extrabold text-slate-900 dark:text-white text-sm">{branchStaff.length} Orang</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-white/80 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60">
+                <span className="text-slate-500 dark:text-slate-400 block text-[10px] font-bold">Total Mesin</span>
+                <span className="font-extrabold text-slate-900 dark:text-white text-sm">{machines.length} Unit</span>
+              </div>
+            </div>
           </div>
-
-          {staffViewMode === 'attendance' ? (
-            <StaffAttendanceManager branchId={activeBranchId} />
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white">Karyawan Cabang</h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Total {branchStaff.length} akun staf di {currentBranch?.name}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAddStaffModal(true)}
-                  className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  <span>Tambah Karyawan</span>
-                </button>
-              </div>
-
-              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
-                {[...branchStaff]
-                  .sort((a, b) => {
-                    // 1. Branch Manager always on top
-                    if (a.role === 'branch_manager') return -1;
-                    if (b.role === 'branch_manager') return 1;
-                    // 2. Admin Cabang next
-                    if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
-                    if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
-                    // 3. Alphabetical
-                    return a.full_name.localeCompare(b.full_name);
-                  })
-                  .map((staff) => {
-                    const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
-                    const isBM = staff.role === 'branch_manager';
-
-                    return (
-                      <div
-                        key={staff.id}
-                        className={`p-3 sm:p-3.5 transition-colors ${isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
-                          }`}
-                      >
-                        {/* Baris 1: Full Name */}
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {staff.full_name}
-                        </h4>
-
-                        {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
-                        <div className="flex items-center justify-between gap-2 mt-1.5">
-                          {/* Kiri: Badge Role (semua role ada badge) + Status */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {(() => {
-                              const badge = getStaffBadge(staff);
-                              return (
-                                <span
-                                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
-                                >
-                                  {badge.label}
-                                </span>
-                              );
-                            })()}
-
-                            <span
-                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${staff.is_active
-                                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
-                                  : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
-                                }`}
-                            >
-                              {staff.is_active ? 'Aktif' : 'Terkunci'}
-                            </span>
-
-                            {isPendingDelete && (
-                              <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                                <ShieldAlert className="w-3 h-3 flex-shrink-0" />
-                                Pending Hapus
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            {isBM ? (
-                              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
-                                Atasan Cabang
-                              </span>
-                            ) : (
-                              <>
-                                {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedStaffForRole(staff);
-                                    setSelectedStaffForOption(null);
-                                  }}
-                                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
-                                  title="Ubah Penugasan Peran"
-                                >
-                                  <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-                                </button>
-
-                                {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedStaffForOption(staff);
-                                    setSelectedStaffForRole(null);
-                                  }}
-                                  className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
-                                  title="Opsi Tindakan Karyawan"
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </>
-          )}
         </div>
       )}
 
-      {/* Tab: Mesin & Toko Overview */}
+      {/* Tab: Omset (Placeholder Modern dengan Quick Metrics) */}
+      {activeTab === 'omset' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Analisis Omset</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Ringkasan performa omset cabang {currentBranch?.name}
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Omset Kotor
+              </span>
+              <span className="text-sm font-black text-slate-900 dark:text-white mt-0.5 block truncate">
+                {formatIDR(totalGrossToday)}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Jatah Toko
+              </span>
+              <span className="text-sm font-black text-amber-600 dark:text-amber-400 mt-0.5 block truncate">
+                {formatIDR(totalShareToday)}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Setoran Bersih
+              </span>
+              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                {formatIDR(totalNetToday)}
+              </span>
+            </div>
+          </div>
+
+          {/* Modern Placeholder Card */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center mb-3">
+              <TrendingUp className="w-7 h-7" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              Grafik & Visualisasi Omset
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+              Modul analitik grafik omset harian, tren perputaran koin, dan performa per toko sedang dalam tahap pengembangan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Jadwal (Karyawan Cabang & Pengajuan Hapus Akun) */}
+      {(activeTab === 'schedule' || activeTab === 'employees') && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Jadwal & Karyawan Cabang</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Total {branchStaff.length} akun staf di {currentBranch?.name}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddStaffModal(true)}
+              className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Tambah Karyawan</span>
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
+            {[...branchStaff]
+              .sort((a, b) => {
+                // 1. Branch Manager always on top
+                if (a.role === 'branch_manager') return -1;
+                if (b.role === 'branch_manager') return 1;
+                // 2. Admin Cabang next
+                if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
+                if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
+                // 3. Alphabetical
+                return a.full_name.localeCompare(b.full_name);
+              })
+              .map((staff) => {
+                const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
+                const isBM = staff.role === 'branch_manager';
+
+                return (
+                  <div
+                    key={staff.id}
+                    className={`p-3 sm:p-3.5 transition-colors ${isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
+                      }`}
+                  >
+                    {/* Baris 1: Full Name */}
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                      {staff.full_name}
+                    </h4>
+
+                    {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
+                    <div className="flex items-center justify-between gap-2 mt-1.5">
+                      {/* Kiri: Badge Role (semua role ada badge) + Status */}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(() => {
+                          const badge = getStaffBadge(staff);
+                          return (
+                            <span
+                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
+                            >
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
+
+                        <span
+                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${staff.is_active
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+                            }`}
+                        >
+                          {staff.is_active ? 'Aktif' : 'Terkunci'}
+                        </span>
+
+                        {isPendingDelete && (
+                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
+                            <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                            Pending Hapus
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {isBM ? (
+                          <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                            Atasan Cabang
+                          </span>
+                        ) : (
+                          <>
+                            {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStaffForRole(staff);
+                                setSelectedStaffForOption(null);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                              title="Ubah Penugasan Peran"
+                            >
+                              <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                            </button>
+
+                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStaffForOption(staff);
+                                setSelectedStaffForRole(null);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                              title="Opsi Tindakan Karyawan"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Mesin (Placeholder Modern dengan Status Unit) */}
       {activeTab === 'machines' && (
         <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Manajemen Mesin</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Inventaris & pemeliharaan unit mesin koin cabang
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mb-2">
-              Status Unit Mesin di Cabang ({machines.length})
+            <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
+              Status Unit Cabang ({machines.length} Total)
             </h3>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs">
-                <span className="text-slate-500 block">Unit di Gudang:</span>
-                <span className="font-extrabold text-slate-900 dark:text-white text-base">
-                  {warehouseMachines.length} Unit
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                <span className="text-slate-500 dark:text-slate-400 block font-semibold">Unit di Gudang:</span>
+                <span className="font-black text-slate-900 dark:text-white text-lg mt-0.5 block">
+                  {warehouseMachines.length} <span className="text-xs font-medium text-slate-500">Unit</span>
                 </span>
               </div>
-              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-xs">
-                <span className="text-emerald-700 dark:text-emerald-400 block">Unit Terpasang:</span>
-                <span className="font-extrabold text-emerald-900 dark:text-emerald-200 text-base">
-                  {machines.filter((m) => m.status === 'terpasang').length} Unit
+              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-xs">
+                <span className="text-emerald-700 dark:text-emerald-400 block font-semibold">Unit Terpasang:</span>
+                <span className="font-black text-emerald-900 dark:text-emerald-200 text-lg mt-0.5 block">
+                  {machines.filter((m) => m.status === 'terpasang').length} <span className="text-xs font-medium text-emerald-600">Unit</span>
                 </span>
               </div>
             </div>
           </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center shadow-xs">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
+              <Cpu className="w-7 h-7" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              Detail Registrasi & Riwayat Mesin
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+              Fitur input serial number, riwayat mutasi toko, dan log servis mesin sedang dipersiapkan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Laporan (Absensi Harian Seluruh Karyawan Cabang) */}
+      {activeTab === 'reports' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Laporan Absensi Karyawan</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Pencatatan kehadiran seluruh staf cabang hari ini
+              </p>
+            </div>
+          </div>
+          <StaffAttendanceManager branchId={activeBranchId} />
         </div>
       )}
 

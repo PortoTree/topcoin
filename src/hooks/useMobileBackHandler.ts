@@ -12,18 +12,45 @@ export interface UseMobileBackHandlerOptions {
   onBack: () => void;
 }
 
+interface HandlerItem {
+  id: number;
+  onBack: () => void;
+  isPushed: boolean;
+  closedByPopstate: boolean;
+}
+
 let globalBackId = 0;
+const activeHandlers: HandlerItem[] = [];
+let isInternalBack = false;
+let isGlobalListenerAttached = false;
+
+function ensureGlobalPopstateListener() {
+  if (isGlobalListenerAttached || typeof window === 'undefined') return;
+
+  window.addEventListener('popstate', () => {
+    // 1. Jika event popstate ini berasal dari window.history.back() internal (cleanup unmount modal UI),
+    // abaikan agar tidak menembak modal di bawahnya.
+    if (isInternalBack) {
+      isInternalBack = false;
+      return;
+    }
+
+    // 2. Jika user benar-benar menekan tombol Back HP (hardware button atau gesture swipe):
+    // Eksekusi HANYA handler teratas di stack (top of stack)
+    if (activeHandlers.length > 0) {
+      const topHandler = activeHandlers[activeHandlers.length - 1];
+      topHandler.closedByPopstate = true;
+      topHandler.isPushed = false;
+      topHandler.onBack();
+    }
+  });
+
+  isGlobalListenerAttached = true;
+}
 
 /**
  * Custom Hook untuk menangani navigasi tombol Back bawaan HP (hardware button atau gesture swipe)
  * agar modal/sub-view tertutup satu per satu secara native tanpa keluar dari aplikasi/PWA.
- *
- * Alur Kerja:
- * 1. Saat enabled = true, mencatat 1 titik history dummy di browser (`window.history.pushState`).
- * 2. Jika user tekan Back di HP, browser menembakkan event `popstate`. Hook menangkap event ini
- *    lalu menjalankan callback `onBack()`.
- * 3. Jika modal ditutup lewat UI (tombol X, tombol batal, atau backdrop), hook secara otomatis
- *    memanggil `window.history.back()` pada proses cleanup agar riwayat browser tetap bersih.
  */
 export function useMobileBackHandler({
   enabled = true,
@@ -32,43 +59,48 @@ export function useMobileBackHandler({
   const onBackRef = useRef(onBack);
   onBackRef.current = onBack;
 
-  const isPushedRef = useRef(false);
-  const closedByPopstateRef = useRef(false);
-
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') return;
 
-    const backKey = `topcoin_back_${++globalBackId}`;
+    ensureGlobalPopstateListener();
+
+    const id = ++globalBackId;
+    const backKey = `topcoin_back_${id}`;
+    let isPushed = false;
 
     try {
       window.history.pushState({ [backKey]: true }, '');
-      isPushedRef.current = true;
-      closedByPopstateRef.current = false;
+      isPushed = true;
     } catch {
       // Abaikan jika browser membatasi pushState
     }
 
-    const handlePopState = () => {
-      closedByPopstateRef.current = true;
-      isPushedRef.current = false;
-      onBackRef.current();
+    const handlerItem: HandlerItem = {
+      id,
+      onBack: () => onBackRef.current(),
+      isPushed,
+      closedByPopstate: false,
     };
 
-    window.addEventListener('popstate', handlePopState);
+    activeHandlers.push(handlerItem);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      // Keluarkan dari stack
+      const idx = activeHandlers.findIndex((h) => h.id === id);
+      const item = idx !== -1 ? activeHandlers.splice(idx, 1)[0] : handlerItem;
 
-      // Jika komponen ditutup bukan karena tombol Back HP (misal: tombol X atau backdrop),
-      // buang entri dummy tadi dari riwayat browser.
-      if (isPushedRef.current && !closedByPopstateRef.current) {
-        isPushedRef.current = false;
+      // Jika komponen ditutup bukan karena tombol Back HP (misal: tombol X, tombol batal, atau trigger state),
+      // buang entri dummy tadi dari riwayat browser dengan flag internal agar tidak memicu modal lain.
+      if (item && item.isPushed && !item.closedByPopstate) {
+        item.isPushed = false;
+        isInternalBack = true;
         try {
           window.history.back();
         } catch {
-          // ignore
+          isInternalBack = false;
         }
       }
     };
   }, [enabled]);
 }
+

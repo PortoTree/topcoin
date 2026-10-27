@@ -33,7 +33,7 @@ const MainAppContent: React.FC = () => {
       if (profile?.assigned_task && profile.assigned_task !== 'admin_cabang') {
         setActiveTab('admin_task');
       } else {
-        setActiveTab('monitoring');
+        setActiveTab('schedule');
       }
     }
     else if (current === 'marketing' || current === 'sales') setActiveTab('new_store');

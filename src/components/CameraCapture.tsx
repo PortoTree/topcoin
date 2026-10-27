@@ -99,14 +99,23 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
     if (isGetUserMediaSupported && (window.isSecureContext || window.location.hostname === 'localhost')) {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: targetFacing },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: targetFacing },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+        } catch {
+          // Fallback tanpa constraint width/height ideal jika device tidak mendukung
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: targetFacing } },
+            audio: false,
+          });
+        }
 
         streamRef.current = stream;
 
@@ -126,13 +135,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
           setCameraError('Perangkat kamera fisik tidak ditemukan pada perangkat ini.');
         } else {
-          // Fallback to hardware camera
-          closeCamera();
-          hardwareInputRef.current?.click();
+          setCameraError(
+            err.message || 'Kamera sedang digunakan aplikasi lain atau gagal terhubung. Silakan gunakan tombol kamera bawaan di bawah ini.'
+          );
         }
       }
     } else {
-      // Over plain HTTP IP (no WebRTC allowed by Chrome mobile), directly open physical camera sensor (Anti-Fraud: NO GALLERY)
       setIsStartingCamera(false);
       setIsCameraModalOpen(false);
       setIsPermissionPromptOpen(false);

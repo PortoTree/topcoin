@@ -143,7 +143,7 @@ const DEMO_DROPPING_STORES: Store[] = [
 ];
 
 export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickTick = 0 }) => {
-  const { profile } = useAuth();
+  const { profile, activeRole } = useAuth();
   const { currentBranch } = useBranch();
 
   // Active stores for selection
@@ -250,7 +250,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   // Navigasi Back bawaan HP: Jika berada di Form Input Dropping, kembali ke Daftar Toko
   useMobileBackHandler({
-    enabled: Boolean(selectedStoreId && !detailModalStore && !activePreviewImage && !isMultiStepCameraOpen),
+    enabled: Boolean(selectedStoreId),
     onBack: () => {
       setSelectedStoreId('');
     },
@@ -1076,7 +1076,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    3 Foto wajib
+                    Foto wajib
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Kirim foto secara jelas sesuai di bidang masing-masing
@@ -1574,19 +1574,32 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               </button>
             </form>
 
-            {/* Bar Tombol "Buka kamera sekarang" - Full bar edge-to-edge ramping nempel presisi di atas Bottom Nav */}
-            <div className="fixed bottom-[65px] left-0 right-0 max-w-[480px] mx-auto z-20">
+            {/* Floating Camera Button - Tombol icon kamera bulat di kanan bawah (Dinaikkan khusus akun Admin/BM agar tidak tertutup panel expand) */}
+            <div
+              className={`fixed ${profile?.role === 'admin' ||
+                  profile?.role === 'admin_cabang' ||
+                  activeRole === 'admin' ||
+                  activeRole === 'admin_cabang' ||
+                  profile?.role === 'branch_manager' ||
+                  activeRole === 'branch_manager'
+                  ? 'bottom-[98px]'
+                  : 'bottom-20'
+                } right-4 sm:right-[calc(50%-240px+16px)] z-20`}
+            >
               <button
                 type="button"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
                   setMultiStepStartIndex(firstUnfilled);
                   setIsMultiStepCameraOpen(true);
                 }}
-                className="w-full h-9 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-md border-t border-indigo-500/40 cursor-pointer transition-colors"
+                className="w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 active:scale-90 text-white shadow-xl shadow-indigo-600/40 border-2 border-white dark:border-slate-900 flex items-center justify-center cursor-pointer transition-all"
+                title="Buka Kamera Langsung"
+                aria-label="Buka Kamera Langsung"
               >
-                <Camera className="w-4 h-4 text-white flex-shrink-0" />
-                <span className="leading-none">Buka kamera sekarang</span>
+                <Camera className="w-6 h-6" />
               </button>
             </div>
           </div>

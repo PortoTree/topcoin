@@ -39,6 +39,7 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const mountTimeRef = useRef(0);
 
   const [currentIndex, setCurrentIndex] = useState(initialStepIndex);
   const [capturedPhotos, setCapturedPhotos] = useState<Record<string, string | null>>(initialPhotos);
@@ -58,9 +59,17 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
     },
   });
 
+  const handleSafeClose = () => {
+    // Abaikan jika modal baru terbuka kurang dari 350ms (mencegah ghost click passthrough saat user mengetuk tombol buka kamera di HP)
+    if (Date.now() - mountTimeRef.current < 350) return;
+    stopStream();
+    onClose();
+  };
+
   // Lock background scrolling completely when camera modal is active
   useEffect(() => {
     if (isOpen) {
+      mountTimeRef.current = Date.now();
       const originalOverflow = document.body.style.overflow;
       const originalTouchAction = document.body.style.touchAction;
       document.body.style.overflow = 'hidden';
@@ -98,14 +107,23 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
       try {
         stopStream();
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
+        let stream: MediaStream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+        } catch {
+          // Fallback tanpa constraint width/height jika gagal
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: 'environment' } },
+            audio: false,
+          });
+        }
 
         streamRef.current = stream;
         if (videoRef.current) {
@@ -252,10 +270,7 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
 
         <button
           type="button"
-          onClick={() => {
-            stopStream();
-            onClose();
-          }}
+          onClick={handleSafeClose}
           className="p-2.5 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-800 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white border border-slate-300 dark:border-white/10 transition active:scale-95 cursor-pointer shadow-xs"
           title="Tutup Kamera"
         >
@@ -469,9 +484,19 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
               <div className="w-full h-full rounded-full bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 transition shadow-inner" />
             </button>
 
-            {/* Tombol Selesai / Batal di Samping Kanan */}
-            <div className="absolute right-2">
-              {hasAnyPhoto ? (
+            {/* Tombol Batal di Samping Kiri (Aman dari benturan koordinat tombol buka kamera di kanan) */}
+            {!hasAnyPhoto ? (
+              <div className="absolute left-2">
+                <button
+                  type="button"
+                  onClick={handleSafeClose}
+                  className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-transparent text-xs font-bold transition active:scale-95 cursor-pointer"
+                >
+                  Batal
+                </button>
+              </div>
+            ) : (
+              <div className="absolute right-2">
                 <button
                   type="button"
                   onClick={handleFinish}
@@ -479,19 +504,8 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
                 >
                   Selesai
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    stopStream();
-                    onClose();
-                  }}
-                  className="px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white dark:border-transparent text-xs font-bold transition active:scale-95 cursor-pointer"
-                >
-                  Batal
-                </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
