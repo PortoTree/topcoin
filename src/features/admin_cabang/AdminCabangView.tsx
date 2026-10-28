@@ -24,6 +24,12 @@ import {
   Cpu,
   ClipboardCheck,
   Sparkles,
+  Store as StoreIcon,
+  Info,
+  Gauge,
+  Camera,
+  Clock,
+  History,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole } from '../../types';
@@ -68,6 +74,9 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   // Image Preview Modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
+  const [selectedDroppingDetail, setSelectedDroppingDetail] = useState<DroppingTransaction | null>(null);
+  const [storeHistoryDroppings, setStoreHistoryDroppings] = useState<DroppingTransaction[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Selected staff for Role Assignment Modal & Staff Option Modal (rendered outside list)
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
@@ -167,6 +176,58 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }).format(val);
   };
 
+  const getDroppingStatusBadge = (d: DroppingTransaction) => {
+    const isOmsetTaken = Boolean(
+      d.has_omset === true ||
+      (typeof d.has_omset === 'string' && d.has_omset === 'true') ||
+      (typeof d.coins_collected === 'number' && d.coins_collected > 0)
+    );
+
+    const notes = d.optional_notes || '';
+    const isStoreClosed = notes.includes('Toko Tutup');
+    const isMinimalCoin = notes.includes('Minimal Koin');
+    const hasCustomKendala = !isStoreClosed && !isMinimalCoin && Boolean(d.photo_optional_url || d.optional_notes);
+
+    if (isOmsetTaken) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300">
+          <CheckCircle2 className="w-3 h-3" />
+          Selesai
+        </span>
+      );
+    }
+    if (isStoreClosed) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent">
+          <X className="w-3 h-3" />
+          Toko Tutup
+        </span>
+      );
+    }
+    if (isMinimalCoin) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent">
+          <Coins className="w-3 h-3" />
+          Minimal Koin (MK)
+        </span>
+      );
+    }
+    if (hasCustomKendala) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent">
+          <AlertTriangle className="w-3 h-3" />
+          Kendala Khusus
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300">
+        <Clock className="w-3 h-3" />
+        Kunjungan
+      </span>
+    );
+  };
+
   const fetchBranchData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -218,6 +279,82 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   useEffect(() => {
     fetchBranchData();
   }, [fetchBranchData]);
+
+  // Format Tanggal & Jam (WIB) persis seperti dropping
+  const formatDateTime = (dateStr?: string | null) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const dateFormatted = d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    const timeFormatted = d.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return `${dateFormatted}, ${timeFormatted} WIB`;
+  };
+
+  const handleOpenWhatsApp = (store: any) => {
+    if (!store?.phone) return;
+    const cleanPhone = store.phone.replace(/[^0-9]/g, '');
+    const phoneWithCountry = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+    window.open(`https://wa.me/${phoneWithCountry}`, '_blank');
+  };
+
+  // Fetch riwayat transaksi dropping toko yang sedang dibuka di modal
+  useEffect(() => {
+    if (!selectedDroppingDetail) {
+      setStoreHistoryDroppings([]);
+      return;
+    }
+
+    const storeId = selectedDroppingDetail.store_id || selectedDroppingDetail.store?.id;
+    if (!storeId) {
+      setStoreHistoryDroppings([selectedDroppingDetail]);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchHistory = async () => {
+      setIsLoadingHistory(true);
+      try {
+        const { data, error } = await supabase
+          .from('droppings')
+          .select(`
+            *,
+            machine:machines(machine_code),
+            dropping_user:user_profiles(full_name),
+            store:stores(name, address, phone)
+          `)
+          .eq('store_id', storeId)
+          .order('created_at', { ascending: false })
+          .limit(5);
+
+        if (isMounted) {
+          if (!error && data && data.length > 0) {
+            setStoreHistoryDroppings(data as DroppingTransaction[]);
+          } else {
+            setStoreHistoryDroppings([selectedDroppingDetail]);
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching store history in admin cabang:', err);
+        if (isMounted) {
+          setStoreHistoryDroppings([selectedDroppingDetail]);
+        }
+      } finally {
+        if (isMounted) setIsLoadingHistory(false);
+      }
+    };
+
+    fetchHistory();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedDroppingDetail]);
 
   // Omset Totals Today
   const totalGrossToday = droppings.reduce((acc, d) => acc + (d.gross_omset || 0), 0);
@@ -464,61 +601,92 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </div>
           </div>
 
-          {/* Droppings List */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+          {/* Live Dropping List (Nempel ke body, tanpa kontainer card) */}
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs uppercase tracking-wider font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <Coins className="w-4 h-4 text-emerald-500" />
-                Live Transaksi Dropping Hari Ini ({droppings.length})
+                Laporan Dropping Hari Ini.
               </h3>
               <button
                 type="button"
                 onClick={fetchBranchData}
                 className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                title="Segarkan data"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
               </button>
             </div>
 
             {droppings.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">Belum ada transaksi dropping hari ini.</p>
+              <div className="text-center py-8 text-xs text-slate-500">
+                Belum ada laporan dropping hari ini.
+              </div>
             ) : (
-              <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                {droppings.map((d) => (
-                  <div key={d.id} className="py-2.5 flex items-center justify-between text-xs">
-                    <div>
-                      <h4 className="font-extrabold text-slate-900 dark:text-white">{d.store?.name}</h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Petugas: {d.dropping_user?.full_name} • Unit: {d.machine?.machine_code}
-                      </p>
-                      {d.discrepancy_reason && (
-                        <p className="text-[10px] text-rose-500 font-semibold mt-0.5">
-                          ⚠️ Selisih: {d.meter_discrepancy} koin ({d.discrepancy_reason})
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right flex items-center gap-2">
-                      <div>
-                        <span className="font-black text-slate-900 dark:text-white block font-mono">
-                          {formatIDR(d.net_deposit_amount)}
+              <div className="divide-y divide-slate-200 dark:divide-slate-800 -mx-4 border-y border-slate-200 dark:border-slate-800">
+                {droppings.map((d) => {
+                  const prevMeter = d.previous_counter_meter ?? 0;
+                  const lastMeter =
+                    d.actual_physical_meter ??
+                    d.calculated_new_meter ??
+                    (prevMeter + (d.coins_collected || 0));
+                  const meterDiff = lastMeter - prevMeter;
+                  const diffSign = meterDiff > 0 ? '+' : '';
+
+                  return (
+                    <div
+                      key={d.id}
+                      onClick={() => setSelectedDroppingDetail(d)}
+                      className="px-4 py-3 space-y-1.5 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 active:bg-slate-200/50 dark:active:bg-slate-800/80 transition cursor-pointer select-none"
+                    >
+                      {/* Baris 1: [nomor mesin] (kiri) & [status] (kanan) */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 tracking-wide">
+                          {d.machine?.machine_code || 'Tanpa Mesin'}
                         </span>
-                        <span className="text-[10px] text-slate-500">
-                          {d.coins_collected} Koin
+                        {getDroppingStatusBadge(d)}
+                      </div>
+
+                      {/* Baris 2: [nama toko] (kiri) & [meter sebelum - meter terakhir=selisih] (kanan) */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
+                            {d.store?.name || 'Toko Mitra'}
+                          </h4>
+                        </div>
+                        <div className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 flex items-center gap-1.5 flex-shrink-0">
+                          <Gauge className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                          <span>
+                            {prevMeter} - {lastMeter} ={' '}
+                            <strong
+                              className={
+                                meterDiff > 0
+                                  ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                  : 'text-slate-800 dark:text-slate-200 font-bold'
+                              }
+                            >
+                              {diffSign}
+                              {meterDiff}
+                            </strong>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Baris 3: [omset bersih] (rata kanan) */}
+                      <div className="flex items-center justify-end">
+                        <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                          {formatIDR(d.net_deposit_amount || 0)}
                         </span>
                       </div>
-                      {d.photo_machine_meter_url && (
-                        <button
-                          type="button"
-                          onClick={() => setPreviewPhotoUrl(d.photo_machine_meter_url || null)}
-                          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer"
-                          title="Lihat Foto Bukti"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
+
+                      {d.discrepancy_reason && (
+                        <div className="text-[10px] text-rose-500 font-semibold bg-rose-50 dark:bg-rose-950/30 px-2 py-1 rounded-md border border-rose-200 dark:border-rose-900/50 mt-1">
+                          ⚠️ Selisih: {d.meter_discrepancy} koin ({d.discrepancy_reason})
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -600,8 +768,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             {numPhysicalCash > 0 && selectedDroppingUserId && (
               <div
                 className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${cashDifference === 0
-                    ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300'
-                    : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-300'
                   }`}
               >
                 <span>Status Selisih Kas:</span>
@@ -797,8 +965,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
                         <span
                           className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${staff.is_active
-                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
-                              : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
+                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
                             }`}
                         >
                           {staff.is_active ? 'Aktif' : 'Terkunci'}
@@ -1084,8 +1252,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                     handleChangeAdminTask(staff, 'admin_cabang');
                   }}
                   className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${!staff.assigned_task || staff.assigned_task === 'admin_cabang'
-                      ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                      : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                     }`}
                 >
                   <div>
@@ -1115,10 +1283,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   }
                 }}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
-                    ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
-                    : staff.role === 'logistik' || staff.role === 'driver')
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  ? staff.assigned_task === 'logistik' || staff.assigned_task === 'driver'
+                  : staff.role === 'logistik' || staff.role === 'driver')
+                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                  : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
               >
                 <div>
@@ -1149,10 +1317,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   }
                 }}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
-                    ? staff.assigned_task === 'dropping'
-                    : staff.role === 'dropping')
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  ? staff.assigned_task === 'dropping'
+                  : staff.role === 'dropping')
+                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                  : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
               >
                 <div>
@@ -1183,10 +1351,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   }
                 }}
                 className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${(staff.role === 'admin_cabang' || staff.role === 'admin'
-                    ? staff.assigned_task === 'marketing'
-                    : staff.role === 'marketing' || staff.role === 'sales')
-                    ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                    : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  ? staff.assigned_task === 'marketing'
+                  : staff.role === 'marketing' || staff.role === 'sales')
+                  ? 'bg-indigo-50/70 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                  : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
               >
                 <div>
@@ -1323,7 +1491,307 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         )}
       </BottomSheetModal>
 
+      {/* Modal Detail Transaksi Dropping */}
+      <BottomSheetModal
+        item={selectedDroppingDetail}
+        onClose={() => setSelectedDroppingDetail(null)}
+        isFullscreen={true}
+      >
+        {(detail, close) => {
+          // Gabungkan riwayat: pastikan transaksi hari ini / transaksi aktif muncul di urutan paling atas jika belum ada di list
+          const combinedHistory: DroppingTransaction[] = [...storeHistoryDroppings];
+          if (!combinedHistory.some((h) => h.id === detail.id)) {
+            combinedHistory.unshift(detail);
+          }
 
+          const store = detail.store || {
+            name: 'Toko Mitra',
+            address: '',
+            phone: '',
+            machine: detail.machine,
+          };
+          const machineCode = detail.machine?.machine_code || store.machine?.machine_code || 'Tanpa Mesin';
+
+          return (
+            <>
+              {/* Sticky Header */}
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md sticky top-0 z-10 flex-shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-200 dark:border-indigo-800/60">
+                    <StoreIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white leading-tight">
+                      Informasi Toko Mitra
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Riwayat tracking & bukti foto kunjungan
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer active:scale-90 transition"
+                  title="Tutup"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
+                {/* 1. Profil Toko & Kontak */}
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                        Outlet Mitra
+                      </span>
+                      <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
+                    </div>
+                    <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 flex-shrink-0">
+                      {machineCode}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Alamat Toko</span>
+                    <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                      {store.address || 'Alamat belum diatur'}
+                    </p>
+                  </div>
+
+                  {/* Hubungi WA dengan Nomor Langsung */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenWhatsApp(store)}
+                      disabled={!store.phone}
+                      className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${
+                        store.phone
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
+                      <span className="font-mono">{store.phone || 'Nomor Belum Ada'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Meteran Terakhir Sistem */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block uppercase tracking-wider">Meter Terakhir Sistem</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Counter meter fisik mesin</span>
+                  </div>
+                  <span className="font-mono font-black text-base text-indigo-600 dark:text-indigo-400 px-3 py-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
+                    {detail.actual_physical_meter ?? detail.machine?.last_counter_meter ?? store.machine?.last_counter_meter ?? detail.previous_counter_meter ?? 0}
+                  </span>
+                </div>
+
+                {/* 3. Riwayat Tracking Kunjungan & Bukti Foto (SAMA PERSIS DENGAN MILIK DROPPING) */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <History className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h5 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                          Riwayat Tracking Kunjungan
+                        </h5>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                          Timeline kunjungan, pencatatan waktu & galeri foto
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {isLoadingHistory ? (
+                    <div className="py-8 text-center text-slate-400 space-y-2">
+                      <RefreshCw className="w-5 h-5 animate-spin mx-auto text-indigo-500" />
+                      <p className="text-xs font-medium">Memuat riwayat tracking...</p>
+                    </div>
+                  ) : combinedHistory.length > 0 ? (
+                    <div className="pt-2 space-y-4">
+                      {combinedHistory.map((tx, idx) => {
+                        const photos = [
+                          { url: tx.photo_machine_url || tx.photo_machine_meter_url, label: 'Mesin' },
+                          { url: tx.photo_machine_number_url, label: 'No Plat' },
+                          { url: tx.photo_coin_url || tx.photo_coin_tray_url, label: 'Koin' },
+                          { url: tx.photo_nota_url, label: 'Nota' },
+                          { url: tx.photo_optional_url, label: 'Opsional' },
+                        ].filter((p): p is { url: string; label: string } => Boolean(p.url));
+
+                        return (
+                          <div
+                            key={tx.id || idx}
+                            className="relative pl-6 pb-4 last:pb-1 border-l-2 border-indigo-200 dark:border-indigo-900/60 ml-2"
+                          >
+                            {/* Dot marker */}
+                            <div className="absolute -left-[9px] top-0.5 w-4 h-4 rounded-full bg-indigo-600 border-2 border-white dark:border-slate-900 flex items-center justify-center shadow-xs">
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            </div>
+
+                            {/* Waktu & Petugas */}
+                            <div className="flex items-center justify-between text-[11px] mb-1.5">
+                              <span className="font-extrabold text-indigo-700 dark:text-indigo-400 flex items-center gap-1 font-mono">
+                                <Clock className="w-3 h-3 flex-shrink-0" />
+                                {formatDateTime(tx.created_at)}
+                              </span>
+                              <span className="text-slate-500 dark:text-slate-400 text-[10px] font-medium">
+                                {idx === 0 ? 'Kunjungan Terakhir' : `Kunjungan ke-${combinedHistory.length - idx}`}
+                              </span>
+                            </div>
+
+                            {/* Kartu Ringkasan Kunjungan */}
+                            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                                    tx.coins_collected
+                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                      : tx.optional_notes?.includes('Toko Tutup')
+                                        ? 'border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent'
+                                        : tx.optional_notes?.includes('Minimal Koin')
+                                          ? 'border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent'
+                                          : (tx.photo_optional_url || tx.optional_notes)
+                                            ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
+                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {tx.coins_collected ? (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3" /> Ambil omset
+                                    </>
+                                  ) : tx.optional_notes?.includes('Toko Tutup') ? (
+                                    <>
+                                      <X className="w-3 h-3" /> Toko Tutup
+                                    </>
+                                  ) : tx.optional_notes?.includes('Minimal Koin') ? (
+                                    <>
+                                      <Coins className="w-3 h-3" /> Minimal Koin (MK)
+                                    </>
+                                  ) : (tx.photo_optional_url || tx.optional_notes) ? (
+                                    <>
+                                      <AlertTriangle className="w-3 h-3" /> Kendala Khusus
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3" /> Kunjungan
+                                    </>
+                                  )}
+                                </span>
+                                <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
+                                  Meter: <strong className="text-slate-900 dark:text-white font-bold">{tx.actual_physical_meter ?? tx.previous_counter_meter ?? 0}</strong>
+                                </span>
+                              </div>
+
+                              {tx.coins_collected ? (
+                                <div className="grid grid-cols-2 gap-2 text-xs pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                                  <div>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Koin Terambil:</span>
+                                    <strong className="text-slate-900 dark:text-white font-mono font-black">{tx.coins_collected} Koin</strong>
+                                  </div>
+                                  <div>
+                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Setoran Bersih:</span>
+                                    <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-black">{formatIDR(tx.net_deposit_amount || 0)}</strong>
+                                  </div>
+                                </div>
+                              ) : null}
+
+                              {tx.optional_notes && (
+                                <div className="text-[11px] text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900/80 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60 leading-relaxed">
+                                  <span className="font-bold text-slate-500 dark:text-slate-400 block text-[10px] uppercase">Catatan Petugas:</span>
+                                  {tx.optional_notes}
+                                </div>
+                              )}
+
+                              {/* Galeri Preview Gambar Bukti (Sama Persis Kategori Milik Dropping: Mesin, No Plat, Koin, Nota, Opsional) */}
+                              {photos.length > 0 && (
+                                <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 space-y-1.5">
+                                  <span className="text-[10px] uppercase font-bold text-slate-400 block flex items-center gap-1">
+                                    <Camera className="w-3 h-3 text-indigo-500" />
+                                    Preview Bukti Foto ({photos.length} Foto)
+                                  </span>
+                                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                                    {photos.map((photo, pIdx) => (
+                                      <button
+                                        key={pIdx}
+                                        type="button"
+                                        onClick={() => setPreviewPhotoUrl(photo.url)}
+                                        className="group relative aspect-square rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-indigo-500 transition cursor-pointer active:scale-95 shadow-xs"
+                                        title={`Klik untuk memperbesar Foto ${photo.label}`}
+                                      >
+                                        <img
+                                          src={photo.url}
+                                          alt={photo.label}
+                                          className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                          <Eye className="w-4 h-4 drop-shadow-sm" />
+                                        </div>
+                                        <span className="absolute bottom-1 inset-x-1 bg-black/75 backdrop-blur-xs text-white text-[9px] font-bold py-0.5 rounded text-center truncate">
+                                          {photo.label}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="pt-2">
+                      <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 text-center space-y-1">
+                        <Clock className="w-5 h-5 text-slate-400 mx-auto" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 block">Belum Ada Riwayat Kunjungan</span>
+                        <p className="text-[11px] text-slate-500">Mulai kunjungan pertama hari ini untuk mencatat meteran fisik dan bukti foto.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          );
+        }}
+      </BottomSheetModal>
+
+      {/* Modal Preview Foto */}
+      {previewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setPreviewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-w-lg w-full bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-900/90">
+              <span className="text-xs font-bold text-slate-200">Foto Bukti Lapangan</span>
+              <button
+                type="button"
+                onClick={() => setPreviewPhotoUrl(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-2 flex items-center justify-center bg-black/40 min-h-[250px] max-h-[75vh]">
+              <img
+                src={previewPhotoUrl}
+                alt="Bukti Foto"
+                className="max-h-[70vh] w-auto max-w-full object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Aksi Custom (Pengganti window.prompt & window.confirm) */}
       <ActionPromptModal
