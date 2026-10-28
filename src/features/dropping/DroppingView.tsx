@@ -33,6 +33,7 @@ import {
   History,
   Receipt,
   XCircle,
+  AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
@@ -1076,6 +1077,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   (todayTx.optional_notes.includes('Minimal Koin') || todayTx.optional_notes.includes('[Minimal Koin (MK)]'))
                 );
 
+                const isCustomKendalaTx = Boolean(
+                  todayTx &&
+                  !isStoreClosedTx &&
+                  !isMinimalCoinTx &&
+                  (Boolean(todayTx.photo_optional_url) || (todayTx.optional_notes && todayTx.optional_notes.trim().length > 0))
+                );
+
                 // Status dynamic configuration
                 let statusLabel = 'Belum Dikunjungi';
                 let StatusIcon = Clock;
@@ -1089,15 +1097,20 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                     StatusIcon = CheckCircle2;
                     buttonStyle = 'bg-emerald-600 text-white font-bold hover:bg-emerald-500 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500';
                   } else if (isStoreClosedTx) {
-                    // Kendala Toko Tutup: border line warna merah (background tombol transparan)
+                    // Kendala Toko Tutup: border hitam (background tombol transparan)
                     statusLabel = 'Toko Tutup';
                     StatusIcon = XCircle;
-                    buttonStyle = 'border-2 border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-bold';
+                    buttonStyle = 'border-2 border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60 font-bold';
                   } else if (isMinimalCoinTx) {
-                    // Kendala Minimal Koin (MK): border line warna orange (background tombol transparan)
+                    // Kendala Minimal Koin (MK): border orange (background tombol transparan)
                     statusLabel = 'Minimal Koin (MK)';
                     StatusIcon = Coins;
                     buttonStyle = 'border-2 border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent hover:bg-orange-50/60 dark:hover:bg-orange-950/30 font-bold';
+                  } else if (isCustomKendalaTx) {
+                    // Kendala khusus (foto / catatan): border merah (background tombol transparan)
+                    statusLabel = 'Memiliki kendala';
+                    StatusIcon = AlertCircle;
+                    buttonStyle = 'border-2 border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-bold';
                   } else {
                     // Kunjungan tercatat tetapi belum ambil omset
                     statusLabel = 'Belum Ambil Omset';
@@ -2003,22 +2016,25 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         {item.machine?.machine_code} • {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                       </p>
                     </div>
-                    <span className={`text-xs font-extrabold font-mono ${
-                      item.has_omset !== false
+                    <span className={`text-xs font-extrabold font-mono ${item.has_omset !== false
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : item.optional_notes?.includes('Toko Tutup')
-                          ? 'text-rose-600 dark:text-rose-400'
+                          ? 'text-slate-900 dark:text-white'
                           : item.optional_notes?.includes('Minimal Koin')
                             ? 'text-orange-600 dark:text-orange-400'
-                            : 'text-amber-600 dark:text-amber-400'
-                    }`}>
+                            : (item.photo_optional_url || item.optional_notes)
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                      }`}>
                       {item.has_omset !== false
                         ? `+${item.coins_collected} Koin`
                         : item.optional_notes?.includes('Toko Tutup')
                           ? 'Toko Tutup'
                           : item.optional_notes?.includes('Minimal Koin')
                             ? 'Minimal Koin'
-                            : 'Tanpa Omset'}
+                            : (item.photo_optional_url || item.optional_notes)
+                              ? 'Kendala Khusus'
+                              : 'Tanpa Omset'}
                     </span>
                   </div>
 
@@ -2201,10 +2217,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${tx.coins_collected
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
                                     : tx.optional_notes?.includes('Toko Tutup')
-                                      ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
+                                      ? 'border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent'
                                       : tx.optional_notes?.includes('Minimal Koin')
                                         ? 'border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent'
-                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                        : (tx.photo_optional_url || tx.optional_notes)
+                                          ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
+                                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
                                     }`}
                                 >
                                   {tx.coins_collected ? (
@@ -2218,6 +2236,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                                   ) : tx.optional_notes?.includes('Minimal Koin') ? (
                                     <>
                                       <Coins className="w-3 h-3" /> Minimal Koin (MK)
+                                    </>
+                                  ) : (tx.photo_optional_url || tx.optional_notes) ? (
+                                    <>
+                                      <AlertCircle className="w-3 h-3" /> Kendala Khusus
                                     </>
                                   ) : (
                                     <>
