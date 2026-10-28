@@ -126,7 +126,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
       case 'dropping':
         return [
           { id: 'store_visits', label: 'Tugas', icon: StoreIcon },
-          { id: 'daily_summary', label: 'Riwayat hari ini', icon: ClipboardList },
+          { id: 'daily_summary', label: 'Riwayat', icon: ClipboardList },
         ];
       default:
         return [];
@@ -168,9 +168,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
       {/* Backdrop saat Drawer Ter-expand dengan Transisi Halus Fade */}
       {isAdmin && (
         <div
-          className={`fixed inset-0 z-30 bg-black/50 backdrop-blur-xs transition-opacity duration-200 ease-out ${
-            isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
+          className={`fixed inset-0 z-30 bg-black/50 backdrop-blur-xs transition-opacity duration-200 ease-out ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
           onClick={() => setIsExpanded(false)}
         />
       )}
@@ -180,11 +179,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${
-          hasRoundedNav
+        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${hasRoundedNav
             ? 'rounded-t-3xl border-t border-x border-slate-200 dark:border-slate-800 shadow-2xl'
             : 'rounded-none border-t border-slate-200 dark:border-slate-800 shadow-lg'
-        }`}
+          }`}
       >
         {/* Drag Pill Handle Minimalis (Khusus Akun Admin - Tanpa Teks) */}
         {isAdmin && (
@@ -201,11 +199,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         {/* Drawer Menu Tambahan dengan Animasi Slide Up & Down yang Snappy & Smooth */}
         {isAdmin && (
           <div
-            className={`overflow-hidden transition-all duration-200 ease-out ${
-              isExpanded
+            className={`overflow-hidden transition-all duration-200 ease-out ${isExpanded
                 ? 'max-h-[380px] opacity-100 border-b border-slate-200 dark:border-slate-800 mb-2'
                 : 'max-h-0 opacity-0 pointer-events-none border-b-0 mb-0'
-            }`}
+              }`}
           >
             <div className="px-4 pt-1 pb-3 space-y-2">
               <div className="flex items-center gap-1.5 py-1">
@@ -215,50 +212,49 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
                 </span>
               </div>
 
-                {/* List Kartu Menu Tambahan */}
-                <div className="space-y-1.5">
-                  {adminExpandedMenus.map((menu) => {
-                    const Icon = menu.icon;
-                    const isCurrentActive = activeTab === menu.id;
+              {/* List Kartu Menu Tambahan */}
+              <div className="space-y-1.5">
+                {adminExpandedMenus.map((menu) => {
+                  const Icon = menu.icon;
+                  const isCurrentActive = activeTab === menu.id;
 
-                    return (
-                      <button
-                        key={menu.id}
-                        type="button"
-                        onClick={() => {
-                          onTabChange(menu.id);
-                          setIsExpanded(false);
-                        }}
-                        className={`w-full p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer ${
-                          isCurrentActive
-                            ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  return (
+                    <button
+                      key={menu.id}
+                      type="button"
+                      onClick={() => {
+                        onTabChange(menu.id);
+                        setIsExpanded(false);
+                      }}
+                      className={`w-full p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer ${isCurrentActive
+                          ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
                         }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${menu.bgClass}`}
-                          >
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div>
-                            <span className="text-xs font-black text-slate-900 dark:text-white block">
-                              {menu.title}
-                            </span>
-                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
-                              {menu.subtitle}
-                            </span>
-                          </div>
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${menu.bgClass}`}
+                        >
+                          <Icon className="w-4 h-4" />
                         </div>
+                        <div>
+                          <span className="text-xs font-black text-slate-900 dark:text-white block">
+                            {menu.title}
+                          </span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
+                            {menu.subtitle}
+                          </span>
+                        </div>
+                      </div>
 
-                        <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
-                      </button>
-                    );
-                  })}
-                </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          )}
+          </div>
+        )}
 
         {/* Baris 5 Navigasi Default Utama */}
         <div className="flex items-center justify-around px-1 py-1">
@@ -276,16 +272,14 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
                   onTabChange(item.id);
                   if (isExpanded) setIsExpanded(false);
                 }}
-                className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                  isActive
+                className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isActive
                     ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-                }`}
+                  }`}
               >
                 <div
-                  className={`p-1 rounded-lg transition-colors ${
-                    isActive ? 'bg-indigo-100 dark:bg-indigo-500/15' : 'bg-transparent'
-                  }`}
+                  className={`p-1 rounded-lg transition-colors ${isActive ? 'bg-indigo-100 dark:bg-indigo-500/15' : 'bg-transparent'
+                    }`}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
                 </div>

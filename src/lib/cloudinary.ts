@@ -24,10 +24,15 @@ export function resolvePreset(folder: string): string {
 }
 
 export async function uploadToCloudinary(
-  blobOrBase64: Blob | string,
+  blobOrBase64: Blob | string | null | undefined,
   folder = 'topcoin_dropping',
   customPreset?: string
-): Promise<string> {
+): Promise<string | null> {
+  // If no photo data is provided, safely resolve null
+  if (!blobOrBase64) {
+    return null;
+  }
+
   // If Cloudinary preset is demo or not configured, return base64 data url directly as fallback
   if (!cloudName || cloudName === 'demo') {
     if (typeof blobOrBase64 === 'string') {

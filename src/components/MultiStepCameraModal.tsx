@@ -11,6 +11,7 @@ import {
   RotateCcw,
   ChevronUp,
   Trash2,
+  Receipt,
 } from 'lucide-react';
 
 export interface PhotoStepItem {
@@ -233,15 +234,21 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
     let src = '/boneka.png';
     let alt = 'Mesin Boneka';
 
-    if (key === 'photoMachine' || idx === 0) {
+    if (key === 'photoMachine' || (idx === 0 && key !== 'photoNota' && key !== 'photoCoin')) {
       src = '/boneka.png';
       alt = 'Mesin Boneka';
-    } else if (key === 'photoMachineNumber' || idx === 1) {
+    } else if (key === 'photoMachineNumber' || (idx === 1 && key !== 'photoNota' && key !== 'photoCoin')) {
       src = '/nomor.png';
       alt = 'Nomor Mesin';
-    } else if (key === 'photoCoin' || idx === 2) {
+    } else if (key === 'photoCoin') {
       src = '/coin.png';
       alt = 'Koin';
+    } else if (key === 'photoNota') {
+      return (
+        <div className={`${className} bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60 rounded-lg flex items-center justify-center flex-shrink-0 shadow-xs`}>
+          <Receipt className="w-3.5 h-3.5" />
+        </div>
+      );
     } else {
       src = '/optional.png';
       alt = 'Opsional';

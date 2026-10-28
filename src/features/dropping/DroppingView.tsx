@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { supabase } from '../../lib/supabase';
@@ -31,6 +31,8 @@ import {
   ExternalLink,
   Eye,
   History,
+  Receipt,
+  XCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
@@ -181,29 +183,44 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const [isMultiStepCameraOpen, setIsMultiStepCameraOpen] = useState(false);
   const [multiStepStartIndex, setMultiStepStartIndex] = useState(0);
 
-  const MANDATORY_PHOTO_STEPS: PhotoStepItem[] = [
-    {
-      key: 'photoMachine',
-      label: 'Foto Mesin / Boneka',
-      subLabel: 'Ambil foto unit mesin dan boneka tampak depan',
-      required: true,
-    },
-    {
-      key: 'photoMachineNumber',
-      label: 'Foto Nomor Mesin',
-      subLabel: 'Ambil foto plat kode / nomor unit mesin',
-      required: true,
-    },
-    {
-      key: 'photoCoin',
-      label: 'Foto Koin',
-      subLabel: 'Ambil foto fisik koin yang berada di mesin',
-      required: true,
-    },
-  ];
-
   // 2. Checklist "Total Koin Terambil / Ambil Omset" Toggle (Default false: hanya pencocokan meteran)
   const [hasOmset, setHasOmset] = useState<boolean>(false);
+
+  // Daftar langkah foto wajib dinamis: jika Tarik Omset DICENTANG, Foto Koin diganti dengan Foto Nota
+  const mandatoryPhotoSteps: PhotoStepItem[] = useMemo(() => {
+    const baseSteps: PhotoStepItem[] = [
+      {
+        key: 'photoMachine',
+        label: 'Foto Mesin / Boneka',
+        subLabel: 'Ambil foto unit mesin dan boneka tampak depan',
+        required: true,
+      },
+      {
+        key: 'photoMachineNumber',
+        label: 'Foto Nomor Mesin',
+        subLabel: 'Ambil foto plat kode / nomor unit mesin',
+        required: true,
+      },
+    ];
+
+    if (hasOmset) {
+      baseSteps.push({
+        key: 'photoNota',
+        label: 'Foto Nota / Kuitansi',
+        subLabel: 'Ambil foto nota tertulis yang ditandatangani toko',
+        required: true,
+      });
+    } else {
+      baseSteps.push({
+        key: 'photoCoin',
+        label: 'Foto Koin',
+        subLabel: 'Ambil foto fisik koin yang berada di mesin',
+        required: true,
+      });
+    }
+
+    return baseSteps;
+  }, [hasOmset]);
 
   // 3. Kolom Omset & Odometer
   const [coinsCollectedStr, setCoinsCollectedStr] = useState<string>('');
@@ -218,6 +235,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const [storeShareStr, setStoreShareStr] = useState<string>('');
   const [photoNota, setPhotoNota] = useState<string | null>(null);                   // 4. Nota (di bagian omset)
   const [hasOptional, setHasOptional] = useState<boolean>(false);                    // Toggle Opsional (Kamera & Catatan)
+  const [isStoreClosed, setIsStoreClosed] = useState<boolean>(false);                // Kendala Toko Tutup
+  const [isMinimalCoin, setIsMinimalCoin] = useState<boolean>(false);                // Kendala Minimal Koin (MK)
   const [photoOptional, setPhotoOptional] = useState<string | null>(null);           // 5. Tambahan
   const [optionalNotes, setOptionalNotes] = useState<string>('');
 
@@ -226,6 +245,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const [longitude, setLongitude] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [submitAttempted, setSubmitAttempted] = useState<boolean>(false);
 
   // Today's Droppings
   const [todayDroppings, setTodayDroppings] = useState<DroppingTransaction[]>([]);
@@ -274,6 +294,72 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   const storeShareAmount = hasOmset ? (parseInt(storeShareStr.replace(/[^0-9]/g, ''), 10) || 0) : 0;
   const netDepositAmount = Math.max(0, grossOmset - storeShareAmount);
+
+  // Menghitung daftar field yang belum diisi untuk feedback dinamis & validasi tombol Simpan
+  const missingFields = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. JALUR KENDALA / OPSIONAL (Bypass Foto Wajib)
+    if (hasOptional) {
+      const hasAnyOptionalContent = Boolean(
+        isStoreClosed ||
+        isMinimalCoin ||
+        photoOptional ||
+        optionalNotes.trim().length > 0
+      );
+
+      if (!hasAnyOptionalContent) {
+        list.push('Pilihan Kendala / Foto / Catatan');
+      }
+
+      if (hasOmset) {
+        if (coinsCollected <= 0) list.push('Total Koin');
+        if (!photoNota) list.push('Foto Nota');
+        if (hasMismatch) {
+          if (actualPhysicalMeter === null) list.push('Meteran Fisik');
+          if (!discrepancyReason.trim()) list.push('Alasan Selisih');
+        }
+      }
+
+      return list;
+    }
+
+    // 2. JALUR NORMAL (Foto Wajib harus lengkap)
+    if (!photoMachine) list.push('Foto Mesin');
+    if (!photoMachineNumber) list.push('Foto No. Mesin');
+    if (!hasOmset && !photoCoin) list.push('Foto Koin');
+
+    if (hasOmset) {
+      if (coinsCollected <= 0) list.push('Total Koin');
+      if (!photoNota) list.push('Foto Nota');
+      if (hasMismatch) {
+        if (actualPhysicalMeter === null) list.push('Meteran Fisik');
+        if (!discrepancyReason.trim()) list.push('Alasan Selisih');
+      }
+    } else {
+      if (!noOmsetMeterStr.trim()) list.push('Angka Meteran');
+    }
+
+    return list;
+  }, [
+    hasOptional,
+    isStoreClosed,
+    isMinimalCoin,
+    photoOptional,
+    optionalNotes,
+    photoMachine,
+    photoMachineNumber,
+    photoCoin,
+    hasOmset,
+    coinsCollected,
+    photoNota,
+    hasMismatch,
+    discrepancyReason,
+    actualPhysicalMeter,
+    noOmsetMeterStr,
+  ]);
+
+  const isFormValid = missingFields.length === 0;
 
   // Tab & Store Visit Filter Logic
   const isVisitTab = activeTab === 'store_visits' || activeTab === 'dropping_form';
@@ -526,6 +612,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   const resetForm = () => {
     setSelectedStoreId('');
+    setSubmitAttempted(false);
     setHasOmset(false);
     setCoinsCollectedStr('');
     setHasMismatch(false);
@@ -538,6 +625,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     setPhotoCoin(null);
     setPhotoNota(null);
     setHasOptional(false);
+    setIsStoreClosed(false);
+    setIsMinimalCoin(false);
     setPhotoOptional(null);
     setOptionalNotes('');
   };
@@ -551,13 +640,16 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   }, [tabClickTick]);
 
   // Handle Offline Synchronization
-  const syncOfflineRecords = async () => {
+  const syncOfflineRecords = useCallback(async () => {
     if (!navigator.onLine) {
       toast.warning('Perangkat Anda masih dalam keadaan offline. Cari sinyal terlebih dahulu.');
       return;
     }
 
     setIsSyncing(true);
+    let successCount = 0;
+    let failCount = 0;
+
     try {
       const pendingRecords = await offlineDb.offlineDroppings
         .where('sync_status')
@@ -568,11 +660,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         if (!rec.localId) continue;
 
         try {
-          // Upload paralel ke Cloudinary menggunakan Promise.all (Jauh lebih cepat daripada sekuensial)
+          // Upload paralel ke Cloudinary hanya untuk foto yang tersedia
           const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
-            uploadToCloudinary(rec.photo_machine_blob || '', 'droppings/machine'),
-            uploadToCloudinary(rec.photo_machine_number_blob || '', 'droppings/machine_number'),
-            uploadToCloudinary(rec.photo_coin_blob || '', 'droppings/coin'),
+            rec.photo_machine_blob ? uploadToCloudinary(rec.photo_machine_blob, 'droppings/machine') : Promise.resolve(null),
+            rec.photo_machine_number_blob ? uploadToCloudinary(rec.photo_machine_number_blob, 'droppings/machine_number') : Promise.resolve(null),
+            rec.photo_coin_blob ? uploadToCloudinary(rec.photo_coin_blob, 'droppings/coin') : Promise.resolve(null),
             rec.photo_nota_blob ? uploadToCloudinary(rec.photo_nota_blob, 'droppings/nota') : Promise.resolve(null),
             rec.photo_optional_blob ? uploadToCloudinary(rec.photo_optional_blob, 'droppings/optional') : Promise.resolve(null),
           ]);
@@ -605,6 +697,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           });
 
           if (!error) {
+            successCount++;
             // Bersihkan blob foto dari IndexedDB lokal setelah sukses tersinkron agar memori HP teknisi tidak boros
             await offlineDb.offlineDroppings.update(rec.localId, {
               sync_status: 'synced',
@@ -614,20 +707,33 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               photo_nota_blob: null,
               photo_optional_blob: null,
             });
+          } else {
+            failCount++;
+            console.error('Supabase sync error:', error);
           }
         } catch (syncErr) {
+          failCount++;
           console.error('Sync item error:', syncErr);
         }
       }
 
-      fetchTodayDroppings();
-      toast.success('Sinkronisasi data offline selesai!');
+      await fetchTodayDroppings();
+      if (successCount > 0 && failCount === 0) {
+        toast.success(`Berhasil mengunggah ${successCount} data offline ke server!`);
+      } else if (successCount > 0 && failCount > 0) {
+        toast.warning(`${successCount} data berhasil diunggah, ${failCount} data masih menunggu koneksi stabil.`);
+      } else if (failCount > 0) {
+        toast.error('Gagal mengunggah data offline. Periksa kembali sinyal internet Anda.');
+      } else {
+        toast.info('Semua data offline sudah tersinkron.');
+      }
     } catch (err) {
       console.error('Sync error:', err);
+      toast.error('Terjadi kesalahan saat memproses data offline.');
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [activeBranchId, fetchTodayDroppings]);
 
   // Submit Dropping Form
   const handleSubmitDropping = async (e: React.FormEvent) => {
@@ -639,18 +745,39 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       return;
     }
 
-    // 1. Validasi 3 Foto Wajib Terlebih Dahulu
-    if (!photoMachine) {
-      toast.warning('Wajib melampirkan Foto 1: Foto Mesin / Boneka.');
+    // Jika form belum valid, aktifkan penanda error warna merah pada kolom yang belum diisi
+    if (!isFormValid) {
+      setSubmitAttempted(true);
+      toast.warning('Silakan lengkapi kolom yang berwarna merah.');
       return;
     }
-    if (!photoMachineNumber) {
-      toast.warning('Wajib melampirkan Foto 2: Foto Nomor Mesin.');
-      return;
-    }
-    if (!photoCoin) {
-      toast.warning('Wajib melampirkan Foto 3: Foto Koin.');
-      return;
+
+    // 1. Validasi Foto Wajib (Hanya jika TIDAK memilih jalur kendala / opsional)
+    if (!hasOptional) {
+      if (!photoMachine) {
+        toast.warning('Wajib melampirkan Foto 1: Foto Mesin / Boneka.');
+        return;
+      }
+      if (!photoMachineNumber) {
+        toast.warning('Wajib melampirkan Foto 2: Foto Nomor Mesin.');
+        return;
+      }
+      // Jika tidak tarik omset, Foto Koin wajib diisi
+      if (!hasOmset && !photoCoin) {
+        toast.warning('Wajib melampirkan Foto 3: Foto Koin.');
+        return;
+      }
+    } else {
+      const hasAnyOptionalContent = Boolean(
+        isStoreClosed ||
+        isMinimalCoin ||
+        photoOptional ||
+        optionalNotes.trim().length > 0
+      );
+      if (!hasAnyOptionalContent) {
+        toast.warning('Silakan pilih salah satu kendala (Toko Tutup / Minimal Koin), lampirkan foto, atau isi catatan.');
+        return;
+      }
     }
 
     // 2. Validasi Omset jika checklist dicentang, atau validasi meteran jika tidak dicentang
@@ -660,12 +787,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         return;
       }
 
+      // Poin 1: Foto Nota wajib saat Tarik Omset dicentang
+      if (!photoNota) {
+        toast.warning('Wajib melampirkan Foto Nota / Kuitansi Toko saat penarikan omset.');
+        return;
+      }
+
       if (hasMismatch && !discrepancyReason.trim()) {
         toast.warning('Ada selisih meteran fisik! Wajib mengisi kolom Catatan Kendala Selisih.');
         return;
       }
     } else {
-      if (!noOmsetMeterStr.trim()) {
+      if (!hasOptional && !noOmsetMeterStr.trim()) {
         toast.warning('Silakan masukkan angka meteran yang terbaca di mesin saat ini.');
         return;
       }
@@ -684,6 +817,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       ? (actualPhysicalMeter ?? calculatedNewMeter)
       : (parseInt(noOmsetMeterStr, 10) || prevMeter);
 
+    // Format catatan kendala opsional dengan prefix tag
+    const kendalaTags: string[] = [];
+    if (isStoreClosed) kendalaTags.push('Toko Tutup');
+    if (isMinimalCoin) kendalaTags.push('Minimal Koin (MK)');
+    const kendalaPrefix = kendalaTags.length > 0 ? `[${kendalaTags.join(', ')}] ` : '';
+    const finalOptionalNotes = hasOptional
+      ? ((kendalaPrefix + (optionalNotes ? optionalNotes.trim() : '')).trim() || null)
+      : null;
+
     const saveOfflineFallback = async (reasonMsg?: string) => {
       try {
         await offlineDb.offlineDroppings.add({
@@ -701,12 +843,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           has_mismatch: hasOmset ? hasMismatch : false,
           discrepancy_reason: hasOmset && hasMismatch ? discrepancyReason.trim() : null,
           store_share_amount: hasOmset ? storeShareAmount : 0,
-          photo_machine_blob: photoMachine,
-          photo_machine_number_blob: photoMachineNumber,
-          photo_coin_blob: photoCoin,
-          photo_nota_blob: photoNota,
+          photo_machine_blob: photoMachine || null,
+          photo_machine_number_blob: photoMachineNumber || null,
+          photo_coin_blob: !hasOmset ? photoCoin : null,
+          photo_nota_blob: hasOmset ? photoNota : null,
           photo_optional_blob: hasOptional ? photoOptional : null,
-          optional_notes: hasOptional && optionalNotes.trim() ? optionalNotes.trim() : null,
+          optional_notes: finalOptionalNotes,
           latitude,
           longitude,
           created_at: new Date().toISOString(),
@@ -716,7 +858,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         confetti({ particleCount: 50, spread: 60 });
         setSubmitSuccess(
           reasonMsg
-            ? `Tersimpan secara OFFLINE di HP (${reasonMsg})! Data & foto kunjungan aman dan akan tersinkron otomatis begitu sinyal kembali stabil.`
+            ? `Tersimpan secara OFFLINE di HP, Data & foto kunjungan aman dan akan tersinkron otomatis begitu sinyal kembali stabil.`
             : 'Tersimpan secara OFFLINE di HP! Data akan terunggah otomatis saat Anda terhubung ke internet.'
         );
         setActiveStores((prev) =>
@@ -744,10 +886,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     // If online, upload in PARALLEL to Cloudinary via Promise.all (3-4x lebih cepat) & insert to Supabase
     try {
       const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
-        uploadToCloudinary(photoMachine, 'droppings/machine'),
-        uploadToCloudinary(photoMachineNumber, 'droppings/machine_number'),
-        uploadToCloudinary(photoCoin, 'droppings/coin'),
-        photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
+        photoMachine ? uploadToCloudinary(photoMachine, 'droppings/machine') : Promise.resolve(null),
+        photoMachineNumber ? uploadToCloudinary(photoMachineNumber, 'droppings/machine_number') : Promise.resolve(null),
+        !hasOmset && photoCoin ? uploadToCloudinary(photoCoin, 'droppings/coin') : Promise.resolve(null),
+        hasOmset && photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
         hasOptional && photoOptional ? uploadToCloudinary(photoOptional, 'droppings/optional') : Promise.resolve(null),
       ]);
 
@@ -772,7 +914,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         photo_coin_tray_url: urlCoin,
         photo_nota_url: urlNota,
         photo_optional_url: urlOptional,
-        optional_notes: hasOptional && optionalNotes.trim() ? optionalNotes.trim() : null,
+        optional_notes: finalOptionalNotes,
         latitude,
         longitude,
         transaction_date: today,
@@ -818,6 +960,17 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     }
   };
 
+  // Auto-sync when internet comes back online
+  useEffect(() => {
+    const handleOnline = () => {
+      syncOfflineRecords();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [syncOfflineRecords]);
+
   // Calculations for today's summary tab
   const totalTodayCoins = todayDroppings.reduce((acc, curr) => acc + (curr.coins_collected || 0), 0);
   const totalTodayGross = todayDroppings.reduce((acc, curr) => acc + (curr.gross_omset || 0), 0);
@@ -826,21 +979,30 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   return (
     <div className="p-4 pb-24 max-w-lg mx-auto">
-      {/* Offline Pending Badge */}
+      {/* Offline Pending Badge - Typography & Visual Layout Optimized */}
       {offlinePendingCount > 0 && (
-        <div className="mb-4 p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-200 shadow-sm animate-pulse">
-          <div className="flex items-center gap-2">
-            <CloudUpload className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-            <span>Ada {offlinePendingCount} data tersimpan offline di HP Anda</span>
+        <div className="mb-4 p-3.5 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/70 rounded-2xl flex items-center justify-between gap-3 text-amber-950 dark:text-amber-200 shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center flex-shrink-0 text-amber-600 dark:text-amber-400">
+              <CloudUpload className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-tight">
+                Data Offline Tersedia
+              </p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300/80 font-medium truncate mt-0.5">
+                Ada <strong className="font-bold">{offlinePendingCount}</strong> data tersimpan.
+              </p>
+            </div>
           </div>
           <button
             type="button"
             disabled={isSyncing}
             onClick={syncOfflineRecords}
-            className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[11px] font-extrabold flex items-center gap-1 active:scale-95 transition cursor-pointer"
+            className="px-3 py-2 bg-amber-600 hover:bg-amber-500 active:bg-amber-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition cursor-pointer flex-shrink-0 disabled:opacity-50"
           >
-            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-            {isSyncing ? 'Mengunggah...' : 'Unggah Sekarang'}
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSyncing ? '' : 'Kirim'}</span>
           </button>
         </div>
       )}
@@ -860,15 +1022,17 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
             </div>
 
             {submitSuccess && (
-              <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-300 dark:border-emerald-500/30 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center justify-between gap-2 shadow-xs">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                  <span>{submitSuccess}</span>
+              <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200 text-xs shadow-xs flex items-start gap-3 animate-in fade-in duration-200">
+                <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0 text-xs font-medium leading-relaxed">
+                  {submitSuccess}
                 </div>
                 <button
                   type="button"
                   onClick={() => setSubmitSuccess(null)}
-                  className="text-[11px] font-bold underline cursor-pointer"
+                  className="px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg transition cursor-pointer flex-shrink-0"
                 >
                   Tutup
                 </button>
@@ -902,6 +1066,16 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   )
                 );
 
+                const isStoreClosedTx = Boolean(
+                  todayTx?.optional_notes &&
+                  (todayTx.optional_notes.includes('Toko Tutup') || todayTx.optional_notes.includes('[Toko Tutup]'))
+                );
+
+                const isMinimalCoinTx = Boolean(
+                  todayTx?.optional_notes &&
+                  (todayTx.optional_notes.includes('Minimal Koin') || todayTx.optional_notes.includes('[Minimal Koin (MK)]'))
+                );
+
                 // Status dynamic configuration
                 let statusLabel = 'Belum Dikunjungi';
                 let StatusIcon = Clock;
@@ -914,6 +1088,16 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                     statusLabel = 'Kunjungan Selesai';
                     StatusIcon = CheckCircle2;
                     buttonStyle = 'bg-emerald-600 text-white font-bold hover:bg-emerald-500 dark:bg-emerald-600 dark:text-white dark:hover:bg-emerald-500';
+                  } else if (isStoreClosedTx) {
+                    // Kendala Toko Tutup: border line warna merah (background tombol transparan)
+                    statusLabel = 'Toko Tutup';
+                    StatusIcon = XCircle;
+                    buttonStyle = 'border-2 border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent hover:bg-rose-50/60 dark:hover:bg-rose-950/30 font-bold';
+                  } else if (isMinimalCoinTx) {
+                    // Kendala Minimal Koin (MK): border line warna orange (background tombol transparan)
+                    statusLabel = 'Minimal Koin (MK)';
+                    StatusIcon = Coins;
+                    buttonStyle = 'border-2 border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent hover:bg-orange-50/60 dark:hover:bg-orange-950/30 font-bold';
                   } else {
                     // Kunjungan tercatat tetapi belum ambil omset
                     statusLabel = 'Belum Ambil Omset';
@@ -1076,7 +1260,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 <div>
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    Foto wajib
+                    Foto wajib {hasOmset ? '(2 Foto)' : '(3 Foto)'}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Kirim foto secara jelas sesuai di bidang masing-masing
@@ -1084,9 +1268,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 </div>
 
                 {/* Slot Kartu Foto (Bisa diklik untuk ambil/lihat masing-masing) */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className={`grid grid-cols-1 ${hasOmset ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-2.5`}>
                   {/* Foto Mesin / Boneka */}
-                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                  <div className={`p-3 rounded-2xl transition-all duration-200 flex flex-col justify-between space-y-2 bg-white dark:bg-slate-900 ${submitAttempted && !hasOptional && !photoMachine
+                    ? 'border border-rose-400 dark:border-rose-500/80 shadow-xs'
+                    : 'border border-slate-200 dark:border-slate-800'
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <img src="/boneka.png" alt="Boneka" className="w-4 h-4 object-contain inline-block" />
@@ -1132,13 +1319,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
                       >
                         <img src="/boneka.png" alt="Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Mesin</span>
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                          Ambil Foto Mesin
+                        </span>
                       </button>
                     )}
                   </div>
 
                   {/* Foto Nomor Mesin */}
-                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
+                  <div className={`p-3 rounded-2xl transition-all duration-200 flex flex-col justify-between space-y-2 bg-white dark:bg-slate-900 ${submitAttempted && !hasOptional && !photoMachineNumber
+                    ? 'border border-rose-400 dark:border-rose-500/80 shadow-xs'
+                    : 'border border-slate-200 dark:border-slate-800'
+                    }`}>
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                         <img src="/nomor.png" alt="Nomor" className="w-4 h-4 object-contain inline-block" />
@@ -1184,62 +1376,71 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
                       >
                         <img src="/nomor.png" alt="Nomor Mesin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Nomor Mesin</span>
+                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                          Ambil Nomor Mesin
+                        </span>
                       </button>
                     )}
                   </div>
 
-                  {/* Foto Koin */}
-                  <div className="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                        <img src="/coin.png" alt="Koin" className="w-4 h-4 object-contain inline-block" />
-                        Foto Koin <span className="text-rose-500">*</span>
-                      </span>
-                      {photoCoin && (
-                        <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                          <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                  {/* Foto Koin (Otomatis disembunyikan jika Tarik Omset dicentang) */}
+                  {!hasOmset && (
+                    <div className={`p-3 rounded-2xl transition-all duration-200 flex flex-col justify-between space-y-2 bg-white dark:bg-slate-900 ${submitAttempted && !hasOptional && !photoCoin
+                      ? 'border border-rose-400 dark:border-rose-500/80 shadow-xs'
+                      : 'border border-slate-200 dark:border-slate-800'
+                      }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <img src="/coin.png" alt="Koin" className="w-4 h-4 object-contain inline-block" />
+                          Foto Koin <span className="text-rose-500">*</span>
                         </span>
+                        {photoCoin && (
+                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                          </span>
+                        )}
+                      </div>
+                      {photoCoin ? (
+                        <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
+                          <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
+                          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setPhotoCoin('')}
+                              className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                              title="Hapus foto"
+                            >
+                              <Trash2 className="w-3 h-3" /> Hapus
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMultiStepStartIndex(2);
+                                setIsMultiStepCameraOpen(true);
+                              }}
+                              className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                            >
+                              <RefreshCw className="w-3 h-3" /> Foto Ulang
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMultiStepStartIndex(2);
+                            setIsMultiStepCameraOpen(true);
+                          }}
+                          className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
+                        >
+                          <img src="/coin.png" alt="Koin" className="w-7 h-7 object-contain drop-shadow-xs" />
+                          <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">
+                            Ambil Foto Koin
+                          </span>
+                        </button>
                       )}
                     </div>
-                    {photoCoin ? (
-                      <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center">
-                        <img src={photoCoin} alt="Foto Koin" className="w-full h-full object-cover" />
-                        <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setPhotoCoin('')}
-                            className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
-                            title="Hapus foto"
-                          >
-                            <Trash2 className="w-3 h-3" /> Hapus
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setMultiStepStartIndex(2);
-                              setIsMultiStepCameraOpen(true);
-                            }}
-                            className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
-                          >
-                            <RefreshCw className="w-3 h-3" /> Foto Ulang
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMultiStepStartIndex(2);
-                          setIsMultiStepCameraOpen(true);
-                        }}
-                        className="w-full py-4 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/20 hover:bg-indigo-50 flex flex-col items-center justify-center gap-1.5 transition cursor-pointer"
-                      >
-                        <img src="/coin.png" alt="Koin" className="w-7 h-7 object-contain drop-shadow-xs" />
-                        <span className="text-[11px] font-bold text-indigo-700 dark:text-indigo-300">Ambil Foto Koin</span>
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -1247,17 +1448,19 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               <MultiStepCameraModal
                 isOpen={isMultiStepCameraOpen}
                 onClose={() => setIsMultiStepCameraOpen(false)}
-                steps={MANDATORY_PHOTO_STEPS}
+                steps={mandatoryPhotoSteps}
                 initialStepIndex={multiStepStartIndex}
                 initialPhotos={{
                   photoMachine,
                   photoMachineNumber,
                   photoCoin,
+                  photoNota,
                 }}
                 onFinish={(results) => {
                   if (results.photoMachine !== undefined) setPhotoMachine(results.photoMachine);
                   if (results.photoMachineNumber !== undefined) setPhotoMachineNumber(results.photoMachineNumber);
                   if (results.photoCoin !== undefined) setPhotoCoin(results.photoCoin);
+                  if (results.photoNota !== undefined) setPhotoNota(results.photoNota);
                 }}
               />
 
@@ -1282,7 +1485,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                           value={noOmsetMeterStr}
                           onChange={(e) => setNoOmsetMeterStr(e.target.value)}
                           placeholder={prevMeter.toString()}
-                          className="w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs"
+                          className={`w-full pl-10 pr-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 shadow-xs transition-all ${submitAttempted && !hasOptional && !noOmsetMeterStr.trim()
+                            ? 'border border-rose-400 dark:border-rose-500/80 focus:ring-rose-500'
+                            : 'border border-slate-300 dark:border-slate-700 focus:ring-indigo-500'
+                            }`}
                         />
                       </div>
                       <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
@@ -1343,7 +1549,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                           placeholder="Contoh: 30"
                           value={coinsCollectedStr}
                           onChange={(e) => setCoinsCollectedStr(e.target.value)}
-                          className="w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-xs"
+                          className={`w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 shadow-xs transition-all ${submitAttempted && hasOmset && coinsCollected <= 0
+                            ? 'border border-rose-400 dark:border-rose-500/80 focus:ring-rose-500'
+                            : 'border border-slate-300 dark:border-slate-700 focus:ring-emerald-500'
+                            }`}
                         />
                       </div>
                     </div>
@@ -1487,22 +1696,75 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       </div>
                     )}
 
-                    {/* Foto Nota / Kuitansi Toko (Hanya muncul ketika checklist koin aktif) */}
-                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                      <CameraCapture
-                        label="Foto Nota / Kuitansi Toko"
-                        subLabel="Ambil foto nota tertulis."
-                        required={false}
-                        frameOrientation="landscape"
-                        onPhotoCaptured={({ base64 }) => setPhotoNota(base64)}
-                        onPhotoRemoved={() => setPhotoNota(null)}
-                      />
+                    {/* Foto Nota / Kuitansi Toko (Wajib jika opsi Tarik Omset dicentang - Tanpa Container Ganda & Terhubung ke Kamera Multi-Step) */}
+                    <div className="pt-3 border-t border-slate-200 dark:border-slate-700/80 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                            <Receipt className="w-4 h-4 text-amber-500" />
+                            Foto Nota / Kuitansi Toko <span className="text-rose-500">*</span>
+                          </span>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                            Wajib foto nota tertulis yang ditandatangani toko.
+                          </p>
+                        </div>
+                        {photoNota && (
+                          <span className="text-[9px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Terisi
+                          </span>
+                        )}
+                      </div>
+
+                      {photoNota ? (
+                        <div className="relative rounded-xl overflow-hidden aspect-video bg-black flex items-center justify-center border border-slate-300 dark:border-slate-700">
+                          <img src={photoNota} alt="Foto Nota" className="w-full h-full object-cover" />
+                          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setPhotoNota(null)}
+                              className="px-2 py-1 bg-rose-600/80 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95 shadow-sm"
+                              title="Hapus foto"
+                            >
+                              <Trash2 className="w-3 h-3" /> Hapus
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMultiStepStartIndex(2);
+                                setIsMultiStepCameraOpen(true);
+                              }}
+                              className="px-2 py-1 bg-black/70 hover:bg-black text-white rounded-lg text-[10px] font-bold flex items-center gap-1 backdrop-blur-xs transition cursor-pointer active:scale-95"
+                            >
+                              <RefreshCw className="w-3 h-3" /> Foto Ulang
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMultiStepStartIndex(2);
+                            setIsMultiStepCameraOpen(true);
+                          }}
+                          className={`w-full py-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.99] ${submitAttempted && hasOmset && !photoNota
+                            ? 'border-rose-400 dark:border-rose-500/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/60'
+                            : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/40'
+                            }`}
+                        >
+                          <div className="w-9 h-9 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                            <Receipt className="w-5 h-5" />
+                          </div>
+                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                            Ambil Foto Nota / Kuitansi
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Opsi Tambahan / Opsional (Default Tersembunyi dengan Checkbox) */}
+              {/* Opsi Tambahan / Kendala Lapangan (Default Tersembunyi dengan Checkbox) */}
               <div className="space-y-3 pt-1">
                 <label className={`flex items-center gap-3 p-3 rounded-xl border transition cursor-pointer select-none ${hasOptional
                   ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/70 shadow-xs'
@@ -1515,28 +1777,85 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       const checked = e.target.checked;
                       setHasOptional(checked);
                       if (!checked) {
+                        setIsStoreClosed(false);
+                        setIsMinimalCoin(false);
                         setPhotoOptional(null);
                         setOptionalNotes('');
                       }
                     }}
                     className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600 flex-shrink-0"
                   />
-                  <span className="text-xs font-black text-slate-900 dark:text-white flex-1">
-                    Foto & Catatan Tambahan (Opsional)
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-xs font-black text-slate-900 dark:text-white block">
+                      Laporan Kondisi / Kendala Toko Jika Ada.
+                    </span>
+
+                  </div>
                 </label>
 
                 {/* Muncul jika dicentang */}
                 {hasOptional && (
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl space-y-3 animate-in fade-in duration-200">
-                    <CameraCapture
-                      label="Foto Tambahan (Opsional)"
-                      subLabel="Ambil foto kondisi khusus"
-                      required={false}
-                      onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
-                      onPhotoRemoved={() => setPhotoOptional(null)}
-                    />
+                  <div className={`p-3.5 rounded-2xl space-y-4 animate-in fade-in duration-200 transition-all ${submitAttempted && hasOptional && !isStoreClosed && !isMinimalCoin && !photoOptional && !optionalNotes.trim()
+                    ? 'bg-slate-50 dark:bg-slate-800/40 border border-rose-400 dark:border-rose-500/80 shadow-xs'
+                    : 'bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60'
+                    }`}>
+                    {/* Checkbox Pilihan Kondisi Kendala */}
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Kondisi / Status Kendala:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Checkbox Toko Tutup */}
+                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition cursor-pointer select-none ${isStoreClosed
+                          ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-700/70 text-rose-900 dark:text-rose-200'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={isStoreClosed}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setIsStoreClosed(checked);
+                              if (checked) setIsMinimalCoin(false);
+                            }}
+                            className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 accent-rose-600 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold">Toko Tutup</span>
+                        </label>
 
+                        {/* Checkbox Minimal Koin (MK) */}
+                        <label className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition cursor-pointer select-none ${isMinimalCoin
+                          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/70 text-amber-900 dark:text-amber-200'
+                          : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+                          }`}>
+                          <input
+                            type="checkbox"
+                            checked={isMinimalCoin}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setIsMinimalCoin(checked);
+                              if (checked) setIsStoreClosed(false);
+                            }}
+                            className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-600 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold">Minimal Koin (MK)</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Tombol Kamera Langsung & Preview tanpa Card Ganda */}
+                    <div className="pt-2 border-t border-slate-200 dark:border-slate-700/80">
+                      <CameraCapture
+                        label="Foto Kondisi Khusus / Kendala (Opsional)"
+                        subLabel="Ambil foto kondisi di lapangan jika diperlukan"
+                        required={false}
+                        embedded={true}
+                        onPhotoCaptured={({ base64 }) => setPhotoOptional(base64)}
+                        onPhotoRemoved={() => setPhotoOptional(null)}
+                      />
+                    </div>
+
+                    {/* Input Catatan Tambahan */}
                     <div>
                       <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Catatan / Keterangan Tambahan (Opsional)
@@ -1545,7 +1864,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         rows={2}
                         value={optionalNotes}
                         onChange={(e) => setOptionalNotes(e.target.value)}
-                        placeholder="Contoh: Kunci mesin agak seret, toko sedang renovasi, penempatan unit digeser..."
+                        placeholder="Contoh: Toko tutup rapat, kunci gembok rusak, koin minim belum perlu penarikan..."
                         className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none min-h-[72px] resize-y"
                       />
                     </div>
@@ -1553,37 +1872,39 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 )}
               </div>
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition disabled:opacity-50 touch-target cursor-pointer"
-              >
-                {isSubmitting ? (
-                  <span>Menyimpan Transaksi...</span>
-                ) : (
-                  <>
-                    <span>
-                      {hasOmset
-                        ? `Simpan Laporan`
-                        : 'Simpan Kunjungan'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              {/* Submit Button (Always Enabled, Hapus Error Text Bersih) */}
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 active:scale-[0.98] transition cursor-pointer disabled:opacity-50 touch-target"
+                >
+                  {isSubmitting ? (
+                    <span>Menyimpan Transaksi...</span>
+                  ) : (
+                    <>
+                      <span>
+                        {hasOmset
+                          ? `Simpan Laporan`
+                          : 'Simpan Kunjungan'}
+                      </span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
 
             {/* Floating Camera Button - Tombol icon kamera bulat di kanan bawah (Dinaikkan khusus akun Admin/BM agar tidak tertutup panel expand) */}
             <div
               className={`fixed ${profile?.role === 'admin' ||
-                  profile?.role === 'admin_cabang' ||
-                  activeRole === 'admin' ||
-                  activeRole === 'admin_cabang' ||
-                  profile?.role === 'branch_manager' ||
-                  activeRole === 'branch_manager'
-                  ? 'bottom-[98px]'
-                  : 'bottom-20'
+                profile?.role === 'admin_cabang' ||
+                activeRole === 'admin' ||
+                activeRole === 'admin_cabang' ||
+                profile?.role === 'branch_manager' ||
+                activeRole === 'branch_manager'
+                ? 'bottom-[98px]'
+                : 'bottom-20'
                 } right-4 sm:right-[calc(50%-240px+16px)] z-20`}
             >
               <button
@@ -1591,7 +1912,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  const firstUnfilled = !photoMachine ? 0 : !photoMachineNumber ? 1 : !photoCoin ? 2 : 0;
+                  const firstUnfilled = !photoMachine
+                    ? 0
+                    : !photoMachineNumber
+                      ? 1
+                      : hasOmset
+                        ? (!photoNota ? 2 : 0)
+                        : (!photoCoin ? 2 : 0);
                   setMultiStepStartIndex(firstUnfilled);
                   setIsMultiStepCameraOpen(true);
                 }}
@@ -1676,8 +2003,22 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         {item.machine?.machine_code} • {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                       </p>
                     </div>
-                    <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
-                      {item.has_omset !== false ? `+${item.coins_collected} Koin` : 'Tanpa Omset'}
+                    <span className={`text-xs font-extrabold font-mono ${
+                      item.has_omset !== false
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : item.optional_notes?.includes('Toko Tutup')
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : item.optional_notes?.includes('Minimal Koin')
+                            ? 'text-orange-600 dark:text-orange-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                    }`}>
+                      {item.has_omset !== false
+                        ? `+${item.coins_collected} Koin`
+                        : item.optional_notes?.includes('Toko Tutup')
+                          ? 'Toko Tutup'
+                          : item.optional_notes?.includes('Minimal Koin')
+                            ? 'Minimal Koin'
+                            : 'Tanpa Omset'}
                     </span>
                   </div>
 
@@ -1859,11 +2200,30 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${tx.coins_collected
                                     ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                    : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                    : tx.optional_notes?.includes('Toko Tutup')
+                                      ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
+                                      : tx.optional_notes?.includes('Minimal Koin')
+                                        ? 'border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent'
+                                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
                                     }`}
                                 >
-                                  <CheckCircle2 className="w-3 h-3" />
-                                  {tx.coins_collected ? 'Ambil omset' : 'Kunjungan'}
+                                  {tx.coins_collected ? (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3" /> Ambil omset
+                                    </>
+                                  ) : tx.optional_notes?.includes('Toko Tutup') ? (
+                                    <>
+                                      <XCircle className="w-3 h-3" /> Toko Tutup
+                                    </>
+                                  ) : tx.optional_notes?.includes('Minimal Koin') ? (
+                                    <>
+                                      <Coins className="w-3 h-3" /> Minimal Koin (MK)
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle2 className="w-3 h-3" /> Kunjungan
+                                    </>
+                                  )}
                                 </span>
                                 <span className="text-[11px] font-mono text-slate-600 dark:text-slate-400">
                                   Meter: <strong className="text-slate-900 dark:text-white font-bold">{tx.actual_physical_meter ?? tx.previous_counter_meter ?? 0}</strong>

@@ -12,6 +12,8 @@ interface CameraCaptureProps {
   onPhotoRemoved?: () => void;
   required?: boolean;
   frameOrientation?: 'portrait' | 'landscape' | 'auto';
+  embedded?: boolean;
+  hasError?: boolean;
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
@@ -21,6 +23,8 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   onPhotoRemoved,
   required = true,
   frameOrientation = 'auto',
+  embedded = false,
+  hasError = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -236,7 +240,17 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs transition-colors duration-200">
+    <div
+      className={
+        embedded
+          ? hasError && !previewUrl
+            ? 'space-y-2 p-2.5 rounded-2xl border border-rose-400 dark:border-rose-500/80'
+            : 'space-y-2'
+          : hasError && !previewUrl
+            ? 'bg-white dark:bg-slate-900/60 border border-rose-400 dark:border-rose-500/80 rounded-2xl p-3.5 shadow-xs transition-colors duration-200'
+            : 'bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs transition-colors duration-200'
+      }
+    >
       <div className="flex items-center justify-between mb-2">
         <div>
           <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
@@ -296,7 +310,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         <button
           type="button"
           onClick={handleClickCamera}
-          className="w-full py-4 border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 rounded-xl bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.99] cursor-pointer"
+          className="w-full py-4 border-2 border-dashed border-indigo-300 dark:border-indigo-700 hover:border-indigo-500 bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl flex flex-col items-center justify-center gap-1.5 transition active:scale-[0.99] cursor-pointer"
         >
           <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
             <Camera className="w-5 h-5" />
