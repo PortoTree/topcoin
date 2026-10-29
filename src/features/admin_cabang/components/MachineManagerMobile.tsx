@@ -4,7 +4,6 @@ import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
 import {
   Cpu,
-  Sparkles,
   ArrowRightLeft,
   Plus,
   Edit2,
@@ -37,6 +36,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   stores,
   onRefresh,
 }) => {
+  // Sub-Tab Switcher: 'dropping' (Petugas Dropping) vs 'all_machines' (Semua Mesin)
+  const [activeSubTab, setActiveSubTab] = useState<'dropping' | 'all_machines'>('dropping');
+
   // State Filter & Pencarian
   const [selectedDroppingFilter, setSelectedDroppingFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,9 +61,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   const [addMachineNumber, setAddMachineNumber] = useState<number>(1);
   const [addStoreId, setAddStoreId] = useState<string>('');
   const [isSavingAdd, setIsSavingAdd] = useState(false);
-
-  // State Batch Generate 20 Mesin
-  const [isGeneratingBatch, setIsGeneratingBatch] = useState(false);
 
   // Filter mesin berdasarkan dropping & pencarian
   const filteredMachines = useMemo(() => {
@@ -132,7 +131,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         }
       }
 
-      toast.success(`Prefix untuk ${selectedStaffForPrefix.full_name} berhasil diubah ke [${cleanPrefix}-01..20]!`);
+      toast.success(`Prefix untuk ${selectedStaffForPrefix.full_name} berhasil diubah ke ${cleanPrefix}-01..20!`);
       setIsPrefixModalOpen(false);
       await onRefresh();
     } catch (err: any) {
@@ -140,53 +139,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       toast.error('Gagal menyimpan prefix: ' + err.message);
     } finally {
       setIsSavingPrefix(false);
-    }
-  };
-
-  // Generate 20 Mesin Otomatis untuk Dropping Tertentu
-  const handleGenerateBatch20 = async (staff: UserProfile) => {
-    const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
-    const existingStaffMachines = machines.filter((m) => m.assigned_dropping_id === staff.id);
-    const existingNumbers = new Set(existingStaffMachines.map((m) => m.machine_number || 0));
-
-    // Hitung nomor-nomor mana yang belum ada dari 1 s/d 20
-    const missingNumbers: number[] = [];
-    for (let i = 1; i <= 20; i++) {
-      if (!existingNumbers.has(i)) {
-        missingNumbers.push(i);
-      }
-    }
-
-    if (missingNumbers.length === 0) {
-      toast.info(`Akun ${staff.full_name} sudah lengkap memiliki 20 unit mesin ([${prefix}-01] s/d [${prefix}-20]).`);
-      return;
-    }
-
-    const confirmMsg = `Buat ${missingNumbers.length} mesin baru untuk ${staff.full_name} dengan format [${prefix}-01..20]?`;
-    if (!window.confirm(confirmMsg)) return;
-
-    setIsGeneratingBatch(true);
-    try {
-      const payloads = missingNumbers.map((num) => ({
-        branch_id: branchId,
-        machine_code: formatMachineCode(prefix, num),
-        machine_number: num,
-        assigned_dropping_id: staff.id,
-        status: 'gudang',
-        last_counter_meter: 0,
-        notes: `Auto-generated set 1-20 untuk dropping ${staff.full_name}`,
-      }));
-
-      const { error } = await supabase.from('machines').insert(payloads);
-      if (error) throw error;
-
-      toast.success(`Berhasil membuat ${missingNumbers.length} mesin untuk ${staff.full_name}!`);
-      await onRefresh();
-    } catch (err: any) {
-      console.error('Error generating batch machines:', err);
-      toast.error('Gagal generate mesin: ' + err.message);
-    } finally {
-      setIsGeneratingBatch(false);
     }
   };
 
@@ -309,10 +261,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Cpu className="w-5 h-5 text-indigo-500" />
-            Kelola Mesin & Prefix Dropping
+            Kelola Mesin.
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Format kode mesin NAMA-01 s/d NAMA-20 per personil dropping
+            Format nomor mesin untuk setiap dropping.
           </p>
         </div>
         <button
@@ -353,220 +305,226 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         </div>
       </div>
 
-      {/* Section: Daftar Prefix Dropping & Tombol Set/Ubah */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs space-y-2">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            Prefix Akun Dropping ({droppingStaff.length} Personil)
-          </h3>
-        </div>
-
-        {droppingStaff.length === 0 ? (
-          <p className="text-xs text-slate-400 italic py-2">Belum ada staf dengan role Dropping di cabang ini.</p>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {droppingStaff.map((staff) => {
-              const currentPrefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
-              const staffMachines = machines.filter((m) => m.assigned_dropping_id === staff.id);
-
-              return (
-                <div key={staff.id} className="py-3 first:pt-1 last:pb-1 space-y-2">
-                  {/* Baris 1: Nama Lengkap Staf & Badge Prefix & Tombol Ubah */}
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="font-black text-sm text-slate-900 dark:text-white">
-                        {staff.full_name}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        {currentPrefix}-01..20
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPrefixModal(staff)}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-950/40 text-slate-700 hover:text-indigo-600 dark:text-slate-300 dark:hover:text-indigo-400 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
-                      title="Ubah Prefix Dropping"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span>Ubah</span>
-                    </button>
-                  </div>
-
-                  {/* Baris 2: Info Unit Terpasang & Tombol Aksi Genapkan 20 */}
-                  <div className="flex items-center justify-between gap-2 pt-0.5">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      Memegang <strong className="text-slate-800 dark:text-slate-200 font-bold">{staffMachines.length} unit</strong> ({staffMachines.filter((m) => m.status === 'terpasang').length} terpasang)
-                    </span>
-
-                    {staffMachines.length < 20 && (
-                      <button
-                        type="button"
-                        onClick={() => handleGenerateBatch20(staff)}
-                        disabled={isGeneratingBatch}
-                        className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-xs font-extrabold flex items-center gap-1 active:scale-95 transition cursor-pointer"
-                        title="Buatkan sisa mesin hingga genap 20 unit"
-                      >
-                        <span>+ Genap 20</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Navigasi Tab: Petugas Dropping vs Semua Mesin */}
+      <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('dropping')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeSubTab === 'dropping'
+            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+        >
+          Petugas Dropping ({droppingStaff.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('all_machines')}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeSubTab === 'all_machines'
+            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+        >
+          Semua Mesin ({machines.length})
+        </button>
       </div>
 
-      {/* Filter Horizontal Tab & Search Mesin */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Cari kode mesin atau toko..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
-          />
+      {/* KONTEN TAB 1: DAFTAR PETUGAS DROPPING */}
+      {activeSubTab === 'dropping' && (
+        <div className="space-y-1 pt-1">
+          {droppingStaff.length === 0 ? (
+            <p className="text-xs text-slate-400 italic py-4 text-center">
+              Belum ada staf dengan role Dropping di cabang ini.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+              {droppingStaff.map((staff) => {
+                const staffMachines = machines.filter((m) => m.assigned_dropping_id === staff.id);
+
+                return (
+                  <div key={staff.id} className="py-3 first:pt-1 space-y-1">
+                    {/* [nama petugas] */}
+                    <h4 className="font-black text-sm text-slate-900 dark:text-white">
+                      {staff.full_name}
+                    </h4>
+
+                    {/* [Unit: total yang di pegang]   [tombol edit] */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        Unit: <strong className="text-slate-800 dark:text-slate-200 font-bold">{staffMachines.length} yang di pegang</strong>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrefixModal(staff)}
+                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                        title="Edit Prefix Dropping"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
+      )}
 
-        {/* Filter Tab Chips per Dropping */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <button
-            type="button"
-            onClick={() => setSelectedDroppingFilter('all')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'all'
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
-          >
-            Semua Mesin ({machines.length})
-          </button>
-          {droppingStaff.map((staff) => {
-            const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
-            const count = machines.filter((m) => m.assigned_dropping_id === staff.id).length;
-            const isSelected = selectedDroppingFilter === staff.id;
+      {/* KONTEN TAB 2: SEMUA MESIN */}
+      {activeSubTab === 'all_machines' && (
+        <div className="space-y-3">
+          {/* Filter Horizontal Tab & Search Mesin */}
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cari kode mesin atau toko..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+              />
+            </div>
 
-            return (
+            {/* Filter Tab Chips per Dropping */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
               <button
-                key={staff.id}
                 type="button"
-                onClick={() => setSelectedDroppingFilter(staff.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isSelected
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                onClick={() => setSelectedDroppingFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
                   }`}
               >
-                <span>{staff.full_name}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${isSelected ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                  {prefix} ({count})
-                </span>
+                Semua Mesin ({machines.length})
               </button>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setSelectedDroppingFilter('unassigned')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'unassigned'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
-          >
-            Gudang ({machines.filter((m) => !m.assigned_dropping_id).length})
-          </button>
-        </div>
-      </div>
+              {droppingStaff.map((staff) => {
+                const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
+                const count = machines.filter((m) => m.assigned_dropping_id === staff.id).length;
+                const isSelected = selectedDroppingFilter === staff.id;
 
-      {/* Daftar Kartu Mesin */}
-      <div className="space-y-2.5">
-        {filteredMachines.length === 0 ? (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 text-xs">
-            Tidak ada mesin yang cocok dengan kriteria filter.
-          </div>
-        ) : (
-          filteredMachines.map((m) => {
-            const assignedStaff = droppingStaff.find((s) => s.id === m.assigned_dropping_id);
-            const isInstalled = m.status === 'terpasang' && m.current_store_id;
-
-            return (
-              <div
-                key={m.id}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs space-y-2.5 transition"
-              >
-                {/* Baris 1: Kode Mesin [PAMPAM-01] & Status */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 tracking-wider">
-                      {displayMachineCode(m.machine_code)}
-                    </span>
-                    {typeof m.machine_number === 'number' && (
-                      <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                        No. #{String(m.machine_number).padStart(2, '0')}
-                      </span>
-                    )}
-                  </div>
-
-                  <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${isInstalled
-                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                return (
+                  <button
+                    key={staff.id}
+                    type="button"
+                    onClick={() => setSelectedDroppingFilter(staff.id)}
+                    className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isSelected
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
                       }`}
                   >
-                    {isInstalled ? (
-                      <>
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                        Terpasang
-                      </>
-                    ) : (
-                      <>
-                        <Warehouse className="w-3 h-3 text-slate-400" />
-                        Gudang
-                      </>
-                    )}
-                  </span>
-                </div>
-
-                {/* Baris 2: Toko Mitra & Odometer */}
-                <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold">Lokasi Toko:</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
-                      {m.store?.name || 'Di Gudang Cabang'}
+                    <span>{staff.full_name}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${isSelected ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                      {prefix} ({count})
                     </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 block font-semibold">Meter Fisik Terakhir:</span>
-                    <span className="font-mono font-black text-slate-900 dark:text-white block mt-0.5">
-                      {(m.last_counter_meter || 0).toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Baris 3: Pemegang Dropping & Tombol Pindah */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-slate-400 font-medium">Dropping:</span>
-                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                      {assignedStaff?.full_name || 'Belum Ditugaskan'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenTransferModal(m)}
-                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
-                  >
-                    <ArrowRightLeft className="w-3 h-3" />
-                    <span>Tukar / Pindah</span>
                   </button>
-                </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => setSelectedDroppingFilter('unassigned')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'unassigned'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  }`}
+              >
+                Gudang ({machines.filter((m) => !m.assigned_dropping_id).length})
+              </button>
+            </div>
+          </div>
+
+          {/* Daftar Kartu Mesin */}
+          <div className="space-y-2.5">
+            {filteredMachines.length === 0 ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center text-slate-400 text-xs">
+                Tidak ada mesin yang cocok dengan kriteria filter.
               </div>
-            );
-          })
-        )}
-      </div>
+            ) : (
+              filteredMachines.map((m) => {
+                const assignedStaff = droppingStaff.find((s) => s.id === m.assigned_dropping_id);
+                const isInstalled = m.status === 'terpasang' && m.current_store_id;
+
+                return (
+                  <div
+                    key={m.id}
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-xs space-y-2.5 transition"
+                  >
+                    {/* Baris 1: Kode Mesin [PAMPAM-01] & Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 tracking-wider">
+                          {displayMachineCode(m.machine_code)}
+                        </span>
+                        {typeof m.machine_number === 'number' && (
+                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                            No. #{String(m.machine_number).padStart(2, '0')}
+                          </span>
+                        )}
+                      </div>
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${isInstalled
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                          : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                      >
+                        {isInstalled ? (
+                          <>
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                            Terpasang
+                          </>
+                        ) : (
+                          <>
+                            <Warehouse className="w-3 h-3 text-slate-400" />
+                            Gudang
+                          </>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Baris 2: Toko Mitra & Odometer */}
+                    <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Lokasi Toko:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                          {m.store?.name || 'Di Gudang Cabang'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 block font-semibold">Meter Fisik Terakhir:</span>
+                        <span className="font-mono font-black text-slate-900 dark:text-white block mt-0.5">
+                          {(m.last_counter_meter || 0).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Baris 3: Pemegang Dropping & Tombol Pindah */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                      <div className="flex items-center gap-1.5 text-xs">
+                        <span className="text-slate-400 font-medium">Dropping:</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                          {assignedStaff?.full_name || 'Belum Ditugaskan'}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenTransferModal(m)}
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                      >
+                        <ArrowRightLeft className="w-3 h-3" />
+                        <span>Tukar / Pindah</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* MODAL 1: SETTING PREFIX KODE MESIN DROPPING                               */}
@@ -602,7 +560,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   placeholder="Masukkan prefix..."
                   value={inputPrefix}
                   onChange={(e) => setInputPrefix(e.target.value.toUpperCase())}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 />
               </div>
 
@@ -615,7 +573,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   {formatMachineCode(inputPrefix, 1)}
                 </span>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Mengubah prefix ini otomatis memperbarui seluruh kode mesin staf ini (contoh nomor 01 s/d 20).
+                  Mengubah prefix ini otomatis memperbarui seluruh kode mesin staf ini.
                 </p>
               </div>
             </div>
@@ -674,7 +632,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 <select
                   value={targetDroppingId}
                   onChange={(e) => setTargetDroppingId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Kembalikan ke Gudang (Tanpa Dropping) --</option>
                   {droppingStaff.map((staff) => (
@@ -775,7 +733,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                       setAddMachineNumber(getNextAvailableMachineNumber(existing.map((m) => m.machine_number || 0)));
                     }
                   }}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Simpan di Gudang (Tanpa Dropping) --</option>
                   {droppingStaff.map((staff) => (
@@ -796,7 +754,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   max={99}
                   value={addMachineNumber}
                   onChange={(e) => setAddMachineNumber(parseInt(e.target.value, 10) || 1)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 />
               </div>
 
@@ -827,7 +785,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 <select
                   value={addStoreId}
                   onChange={(e) => setAddStoreId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-white"
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Belum Dipasang (Simpan Gudang) --</option>
                   {stores.map((s) => (
