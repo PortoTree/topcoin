@@ -606,7 +606,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             <div className="flex items-center justify-between px-1">
               <h3 className="text-xs uppercase tracking-wider font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-2">
                 <Coins className="w-4 h-4 text-emerald-500" />
-                Laporan Dropping Hari Ini.
+                Laporan Dropping {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' })}.
               </h3>
               <button
                 type="button"
@@ -639,11 +639,18 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       onClick={() => setSelectedDroppingDetail(d)}
                       className="px-4 py-3 space-y-1.5 hover:bg-slate-100/60 dark:hover:bg-slate-800/50 active:bg-slate-200/50 dark:active:bg-slate-800/80 transition cursor-pointer select-none"
                     >
-                      {/* Baris 1: [nomor mesin] (kiri) & [status] (kanan) */}
+                      {/* Baris 1: [nomor mesin] + [waktu] (kiri) & [status] (kanan) */}
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 tracking-wide">
-                          {d.machine?.machine_code || 'Tanpa Mesin'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 tracking-wide">
+                            {d.machine?.machine_code || 'Tanpa Mesin'}
+                          </span>
+                          {d.created_at && (
+                            <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
+                              {new Date(d.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                            </span>
+                          )}
+                        </div>
                         {getDroppingStatusBadge(d)}
                       </div>
 
@@ -662,7 +669,9 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                               className={
                                 meterDiff > 0
                                   ? 'text-emerald-600 dark:text-emerald-400 font-bold'
-                                  : 'text-slate-800 dark:text-slate-200 font-bold'
+                                  : meterDiff === 0
+                                    ? 'text-black/40 dark:text-white/40 font-bold'
+                                    : 'text-rose-600 dark:text-rose-400 font-bold'
                               }
                             >
                               {diffSign}
@@ -674,7 +683,13 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
                       {/* Baris 3: [omset bersih] (rata kanan) */}
                       <div className="flex items-center justify-end">
-                        <span className="font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
+                        <span
+                          className={`font-mono font-black text-sm ${
+                            (d.net_deposit_amount || 0) > 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-black/40 dark:text-white/40'
+                          }`}
+                        >
                           {formatIDR(d.net_deposit_amount || 0)}
                         </span>
                       </div>
@@ -1568,11 +1583,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       type="button"
                       onClick={() => handleOpenWhatsApp(store)}
                       disabled={!store.phone}
-                      className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${
-                        store.phone
+                      className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${store.phone
                           ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
-                      }`}
+                        }`}
                     >
                       <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
                       <span className="font-mono">{store.phone || 'Nomor Belum Ada'}</span>
@@ -1650,8 +1664,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                             <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 space-y-2.5">
                               <div className="flex items-center justify-between gap-2">
                                 <span
-                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                                    tx.coins_collected
+                                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${tx.coins_collected
                                       ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
                                       : tx.optional_notes?.includes('Toko Tutup')
                                         ? 'border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent'
@@ -1660,7 +1673,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                                           : (tx.photo_optional_url || tx.optional_notes)
                                             ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
                                             : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                                  }`}
+                                    }`}
                                 >
                                   {tx.coins_collected ? (
                                     <>
