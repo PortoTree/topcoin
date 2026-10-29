@@ -27,3 +27,6 @@ dist-ssr
 .env
 planning
 supabase
+GEMINI*
+INFORMASI*
+.codegraph/
