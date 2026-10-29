@@ -21,7 +21,6 @@ import {
   ChevronDown,
   Check,
   TrendingUp,
-  Cpu,
   ClipboardCheck,
   Sparkles,
   Store as StoreIcon,
@@ -31,12 +30,14 @@ import {
   History,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { DroppingTransaction, Machine, UserProfile, UserRole } from '../../types';
+import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
 import { DriverView } from '../driver/DriverView';
 import { MarketingView } from '../marketing/MarketingView';
 import { DroppingView } from '../dropping/DroppingView';
 import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
+import { MachineManagerMobile } from './components/MachineManagerMobile';
+import { displayMachineCode } from '../../lib/machineCodeLogic';
 
 interface AdminCabangViewProps {
   activeTab: string;
@@ -54,6 +55,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [droppingUsers, setDroppingUsers] = useState<UserProfile[]>([]);
   const [branchStaff, setBranchStaff] = useState<UserProfile[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
+  const [branchStores, setBranchStores] = useState<Store[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Reconciliation State
@@ -263,11 +265,23 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       // 3. Machines in this branch
       const { data: mData } = await supabase
         .from('machines')
-        .select('*')
+        .select(`
+          *,
+          store:stores(name, address)
+        `)
         .eq('branch_id', activeBranchId)
         .order('machine_code', { ascending: true });
 
       if (mData) setMachines(mData as Machine[]);
+
+      // 4. Stores in this branch
+      const { data: sData } = await supabase
+        .from('stores')
+        .select('*')
+        .eq('branch_id', activeBranchId)
+        .order('name', { ascending: true });
+
+      if (sData) setBranchStores(sData as Store[]);
     } catch (err) {
       console.error('Error fetching admin cabang data:', err);
     } finally {
@@ -541,8 +555,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     }
   };
 
-  const warehouseMachines = machines.filter((m) => m.status === 'gudang');
-
   // Khusus Tab Tugas Lapangan Aktif: Render langsung tampilan tugas penuh tanpa padding ganda & banner redundan
   if (activeTab === 'admin_task' && profile?.assigned_task) {
     if (profile.assigned_task === 'logistik' || profile.assigned_task === 'driver') {
@@ -642,7 +654,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 tracking-wide">
-                            {d.machine?.machine_code || 'Tanpa Mesin'}
+                            {displayMachineCode(d.machine?.machine_code)}
                           </span>
                           {d.created_at && (
                             <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
@@ -1038,54 +1050,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Mesin (Placeholder Modern dengan Status Unit) */}
+      {/* Tab: Mesin (Mobile Hybrid Machine & Prefix Manager) */}
       {activeTab === 'machines' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Manajemen Mesin</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Inventaris & pemeliharaan unit mesin koin cabang
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-              <Sparkles className="w-3 h-3" />
-              Segera Hadir
-            </span>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs">
-            <h3 className="text-xs font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3">
-              Status Unit Cabang ({machines.length} Total)
-            </h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/60 dark:border-slate-700/60 text-xs">
-                <span className="text-slate-500 dark:text-slate-400 block font-semibold">Unit di Gudang:</span>
-                <span className="font-black text-slate-900 dark:text-white text-lg mt-0.5 block">
-                  {warehouseMachines.length} <span className="text-xs font-medium text-slate-500">Unit</span>
-                </span>
-              </div>
-              <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/60 text-xs">
-                <span className="text-emerald-700 dark:text-emerald-400 block font-semibold">Unit Terpasang:</span>
-                <span className="font-black text-emerald-900 dark:text-emerald-200 text-lg mt-0.5 block">
-                  {machines.filter((m) => m.status === 'terpasang').length} <span className="text-xs font-medium text-emerald-600">Unit</span>
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center shadow-xs">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center mb-3">
-              <Cpu className="w-7 h-7" />
-            </div>
-            <h3 className="text-sm font-black text-slate-900 dark:text-white">
-              Detail Registrasi & Riwayat Mesin
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
-              Fitur input serial number, riwayat mutasi toko, dan log servis mesin sedang dipersiapkan.
-            </p>
-          </div>
-        </div>
+        <MachineManagerMobile
+          branchId={activeBranchId}
+          machines={machines}
+          droppingStaff={droppingUsers}
+          stores={branchStores}
+          onRefresh={fetchBranchData}
+        />
       )}
 
       {/* Tab: Laporan (Absensi Harian Seluruh Karyawan Cabang) */}
@@ -1524,7 +1497,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             phone: '',
             machine: detail.machine,
           };
-          const machineCode = detail.machine?.machine_code || store.machine?.machine_code || 'Tanpa Mesin';
+          const machineCode = displayMachineCode(detail.machine?.machine_code || store.machine?.machine_code);
 
           return (
             <>

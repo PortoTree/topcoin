@@ -39,6 +39,7 @@ import confetti from 'canvas-confetti';
 import type { Store, DroppingTransaction } from '../../types';
 import { toast } from '../../context/ToastContext';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
+import { displayMachineCode } from '../../lib/machineCodeLogic';
 
 interface DroppingViewProps {
   activeTab: string;
@@ -552,6 +553,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 previous_counter_meter: off.previous_counter_meter || 0,
                 actual_physical_meter: off.actual_physical_meter,
                 store_share_amount: off.store_share_amount || 0,
+                net_deposit_amount: Math.max(0, (off.gross_omset || (off.coins_collected ? off.coins_collected * 1000 : 0)) - (off.store_share_amount || 0)),
                 photo_machine_url: off.photo_machine_blob || '',
                 photo_machine_number_url: off.photo_machine_number_blob || '',
                 photo_coin_url: off.photo_coin_blob || '',
@@ -1130,7 +1132,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         {store.name}
                       </h3>
                       <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
-                        {store.machine?.machine_code || 'Tanpa Mesin'}
+                        {displayMachineCode(store.machine?.machine_code)}
                       </span>
                     </div>
 
@@ -1220,7 +1222,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 <span>Kembali</span>
               </button>
               <span className="text-[15px] font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200 dark:border-indigo-800 font-mono">
-                {selectedStore?.machine?.machine_code}
+                {displayMachineCode(selectedStore?.machine?.machine_code)}
               </span>
             </div>
 
@@ -1262,7 +1264,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       Kode Unit Mesin:
                     </span>
                     <span className="text-xs font-black font-mono text-slate-800 dark:text-slate-200">
-                      {selectedStore?.machine?.machine_code}
+                      {displayMachineCode(selectedStore?.machine?.machine_code)}
                     </span>
                   </div>
                 </div>
@@ -1507,7 +1509,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
                         <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter}</strong></span>
                         {selectedStore && (
-                          <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{selectedStore.machine?.machine_code}</strong></span>
+                          <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{displayMachineCode(selectedStore.machine?.machine_code)}</strong></span>
                         )}
                       </div>
                     </div>
@@ -2013,7 +2015,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         {item.store?.name}
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        {item.machine?.machine_code} • {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                        {displayMachineCode(item.machine?.machine_code)} • {new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                       </p>
                     </div>
                     <span className={`text-xs font-extrabold font-mono ${item.has_omset !== false
@@ -2116,7 +2118,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
                     </div>
                     <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 flex-shrink-0">
-                      {store.machine?.machine_code || 'Tanpa Mesin'}
+                      {displayMachineCode(store.machine?.machine_code)}
                     </span>
                   </div>
 

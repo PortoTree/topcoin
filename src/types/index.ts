@@ -43,6 +43,7 @@ export interface UserProfile {
   auth_provider?: 'pin' | 'google';
   branch_id?: string | null;
   assigned_task?: 'logistik' | 'marketing' | 'dropping' | 'admin_cabang' | 'driver' | null;
+  machine_prefix?: string | null;
   is_active: boolean;
   deletion_status?: 'active' | 'pending_deletion';
   deletion_requested_by?: string | null;
@@ -68,6 +69,8 @@ export interface Machine {
   id: string;
   branch_id?: string;
   machine_code: string;
+  machine_number?: number | null;
+  assigned_dropping_id?: string | null;
   current_store_id: string | null;
   status: MachineStatus;
   last_counter_meter?: number;
@@ -76,6 +79,7 @@ export interface Machine {
   updated_at?: string;
   branch?: Branch;
   store?: Store;
+  dropping_user?: Partial<UserProfile> | null;
 }
 
 export type StoreStatus = 'proses' | 'dikirim' | 'terpasang' | 'terkirim' | 'nonaktif';
