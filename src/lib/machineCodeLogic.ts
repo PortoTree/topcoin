@@ -36,24 +36,24 @@ export function formatMachineCode(
 }
 
 /**
- * Format kode mesin lengkap dengan tanda kurung siku untuk UI visual
- * Contoh: [PAMPAM-01]
+ * Format badge kode mesin bersih tanpa kurung siku
+ * Contoh: PAMPAM-01
  */
 export function formatMachineBadge(
   prefix: string | null | undefined,
   machineNumber: number | null | undefined
 ): string {
-  return `[${formatMachineCode(prefix, machineNumber)}]`;
+  return formatMachineCode(prefix, machineNumber);
 }
 
 /**
- * Memastikan tampilan kode mesin selalu dalam kurung siku [PREFIX-01]
- * Jika input sudah [PAMPAM-01] atau PAMPAM-01, output tetap [PAMPAM-01]
+ * Memastikan tampilan kode mesin selalu bersih tanpa karakter kurung siku [...]
+ * Jika input [PAMPAM-01] atau PAMPAM-01, output tetap bersih: PAMPAM-01
  */
 export function displayMachineCode(code?: string | null): string {
   if (!code) return 'Tanpa Mesin';
   const clean = code.replace(/^\[+|\]+$/g, '').trim();
-  return clean ? `[${clean}]` : 'Tanpa Mesin';
+  return clean || 'Tanpa Mesin';
 }
 
 /**

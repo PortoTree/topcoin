@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
 import {
@@ -15,6 +16,7 @@ import {
 import type { Machine, UserProfile, Store } from '../../../types';
 import {
   formatMachineCode,
+  displayMachineCode,
   sanitizeMachinePrefix,
   getNextAvailableMachineNumber,
   recodeMachinesForDropping,
@@ -310,7 +312,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             Kelola Mesin & Prefix Dropping
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Format kode mesin standar [NAMA-01 s/d 20] per personil dropping
+            Format kode mesin NAMA-01 s/d NAMA-20 per personil dropping
           </p>
         </div>
         <button
@@ -376,8 +378,8 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                       <span className="font-black text-sm text-slate-900 dark:text-white">
                         {staff.full_name}
                       </span>
-                      <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-black bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                        [{currentPrefix}-01..20]
+                      <span className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-indigo-50 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        {currentPrefix}-01..20
                       </span>
                     </div>
 
@@ -435,11 +437,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
           <button
             type="button"
             onClick={() => setSelectedDroppingFilter('all')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-              selectedDroppingFilter === 'all'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'all'
+              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+              }`}
           >
             Semua Mesin ({machines.length})
           </button>
@@ -453,11 +454,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 key={staff.id}
                 type="button"
                 onClick={() => setSelectedDroppingFilter(staff.id)}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
-                  isSelected
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isSelected
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  }`}
               >
                 <span>{staff.full_name}</span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-mono ${isSelected ? 'bg-indigo-800 text-indigo-100' : 'bg-slate-100 dark:bg-slate-800'}`}>
@@ -469,11 +469,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
           <button
             type="button"
             onClick={() => setSelectedDroppingFilter('unassigned')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-              selectedDroppingFilter === 'unassigned'
-                ? 'bg-amber-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-            }`}
+            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingFilter === 'unassigned'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+              }`}
           >
             Gudang ({machines.filter((m) => !m.assigned_dropping_id).length})
           </button>
@@ -500,7 +499,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 tracking-wider">
-                      [{m.machine_code}]
+                      {displayMachineCode(m.machine_code)}
                     </span>
                     {typeof m.machine_number === 'number' && (
                       <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
@@ -510,11 +509,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   </div>
 
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                      isInstalled
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                        : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
-                    }`}
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${isInstalled
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                      : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                      }`}
                   >
                     {isInstalled ? (
                       <>
@@ -573,7 +571,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       {/* ========================================================================= */}
       {/* MODAL 1: SETTING PREFIX KODE MESIN DROPPING                               */}
       {/* ========================================================================= */}
-      {isPrefixModalOpen && selectedStaffForPrefix && (
+      {isPrefixModalOpen && selectedStaffForPrefix && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
@@ -597,7 +595,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Prefix Kode Mesin (Contoh: PAMPAM / BUDI)
+                  Nama pada setiap Kode Mesin.
                 </label>
                 <input
                   type="text"
@@ -608,25 +606,16 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 />
               </div>
 
-              {/* Live Preview Format Kode Mesin */}
-              <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-1">
-                <span className="text-[10px] uppercase font-extrabold tracking-wider text-indigo-700 dark:text-indigo-400 block">
-                  Preview Format Mesin Dropping:
+              {/* Live Preview Format Kode Mesin (HANYA 1 CONTOH, TANPA KURUNG SIKU) */}
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500 dark:text-slate-400 block">
+                  Contoh Kode Mesin:
                 </span>
-                <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                  <span className="font-mono font-black text-xs text-indigo-900 dark:text-indigo-200 px-2 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-indigo-200 dark:border-indigo-700">
-                    [{sanitizeMachinePrefix(inputPrefix)}-01]
-                  </span>
-                  <span className="font-mono font-black text-xs text-indigo-900 dark:text-indigo-200 px-2 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-indigo-200 dark:border-indigo-700">
-                    [{sanitizeMachinePrefix(inputPrefix)}-02]
-                  </span>
-                  <span className="text-xs text-slate-400">...</span>
-                  <span className="font-mono font-black text-xs text-indigo-900 dark:text-indigo-200 px-2 py-0.5 bg-white dark:bg-slate-900 rounded-md border border-indigo-200 dark:border-indigo-700">
-                    [{sanitizeMachinePrefix(inputPrefix)}-20]
-                  </span>
-                </div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                  Mengubah prefix ini akan otomatis meng-update kode semua mesin yang sedang dipegang oleh staf ini.
+                <span className="font-mono font-black text-base text-indigo-600 dark:text-indigo-400 block tracking-wider">
+                  {formatMachineCode(inputPrefix, 1)}
+                </span>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Mengubah prefix ini otomatis memperbarui seluruh kode mesin staf ini (contoh nomor 01 s/d 20).
                 </p>
               </div>
             </div>
@@ -649,13 +638,14 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 2: TRANSFER / TUKAR DROPPING PEMEGANG MESIN                        */}
       {/* ========================================================================= */}
-      {isTransferModalOpen && selectedMachineForTransfer && (
+      {isTransferModalOpen && selectedMachineForTransfer && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
@@ -664,7 +654,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   Tukar / Pindahkan Mesin
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Unit saat ini: <strong className="font-mono text-slate-900 dark:text-white">[{selectedMachineForTransfer.machine_code}]</strong>
+                  Unit saat ini: <strong className="font-mono text-slate-900 dark:text-white">{displayMachineCode(selectedMachineForTransfer.machine_code)}</strong>
                 </p>
               </div>
               <button
@@ -709,7 +699,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                         Hasil Kode Mesin Baru:
                       </span>
                       <span className="font-mono font-black text-sm text-emerald-900 dark:text-emerald-200 block">
-                        [{formatMachineCode(prefix, nextNum)}] (Slot #{String(nextNum).padStart(2, '0')})
+                        {formatMachineCode(prefix, nextNum)} (Slot #{String(nextNum).padStart(2, '0')})
                       </span>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         Mesin akan otomatis menempati slot nomor kosong pada rute {targetStaff?.full_name}.
@@ -742,13 +732,14 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ========================================================================= */}
       {/* MODAL 3: TAMBAH 1 UNIT MESIN MANUAL                                       */}
       {/* ========================================================================= */}
-      {isAddMachineModalOpen && (
+      {isAddMachineModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
@@ -809,7 +800,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 />
               </div>
 
-              {/* Preview Hasil Kode */}
+              {/* Preview Hasil Kode (BERSIH TANPA KURUNG SIKU) */}
               {(() => {
                 const targetStaff = droppingStaff.find((s) => s.id === addDroppingId);
                 const prefix = targetStaff
@@ -823,7 +814,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                       Kode Mesin yang Dibuat:
                     </span>
                     <span className="font-mono font-black text-base text-indigo-900 dark:text-indigo-200 block mt-0.5">
-                      [{code}]
+                      {code}
                     </span>
                   </div>
                 );
@@ -866,7 +857,8 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

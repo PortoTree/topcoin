@@ -18,9 +18,9 @@ assert.equal(formatMachineCode('  Pampam  ', 5), 'PAMPAM-05');
 assert.equal(formatMachineCode('pampam', 20), 'PAMPAM-20');
 assert.equal(formatMachineCode('budi', 10), 'BUDI-10');
 assert.equal(formatMachineCode(null, 3), 'MESIN-03');
-assert.equal(formatMachineBadge('pampam', 1), '[PAMPAM-01]');
-assert.equal(displayMachineCode('PAMPAM-01'), '[PAMPAM-01]');
-assert.equal(displayMachineCode('[PAMPAM-01]'), '[PAMPAM-01]');
+assert.equal(formatMachineBadge('pampam', 1), 'PAMPAM-01');
+assert.equal(displayMachineCode('PAMPAM-01'), 'PAMPAM-01');
+assert.equal(displayMachineCode('[PAMPAM-01]'), 'PAMPAM-01');
 assert.equal(displayMachineCode(null), 'Tanpa Mesin');
 console.log('✓ Test 1 Lulus: Prefix disanitasi & nomor dipad menjadi 2 digit');
 
