@@ -25,7 +25,6 @@ import {
   ClipboardCheck,
   Sparkles,
   Store as StoreIcon,
-  Info,
   Gauge,
   Camera,
   Clock,

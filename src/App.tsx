@@ -44,7 +44,10 @@ const MainAppContent: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-100 dark:bg-slate-950 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 gap-3 transition-colors">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-12 h-12 rounded-2xl bg-white/10 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 shadow-md flex items-center justify-center p-2">
+          <img src="/topcoin.png" alt="PCB TOP COIN" className="w-full h-full object-contain" />
+        </div>
+        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         <p className="text-xs font-semibold">Memuat PCB TOP COIN Multi-Cabang...</p>
       </div>
     );

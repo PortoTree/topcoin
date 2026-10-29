@@ -4,7 +4,6 @@ import { useTheme } from '../context/useTheme';
 import { useBranch } from '../context/BranchContext';
 import { ActionPromptModal } from './ActionPromptModal';
 import {
-  Coins,
   Sun,
   Moon,
   LogOut,
@@ -49,8 +48,8 @@ export const MobileHeader: React.FC = () => {
         <div className="flex items-center justify-between gap-2">
           {/* Brand & Date Info */}
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0">
-              <Coins className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center shadow-md shadow-indigo-500/20 flex-shrink-0 overflow-hidden p-1">
+              <img src="/topcoin.png" alt="PCB TOP COIN" className="w-full h-full object-contain drop-shadow-xs" />
             </div>
 
             <div className="min-w-0">

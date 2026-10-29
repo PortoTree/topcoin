@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/useTheme';
-import { Coins, KeyRound, User, ArrowRight, ShieldCheck, Zap, Sun, Moon } from 'lucide-react';
+import { KeyRound, User, ArrowRight, ShieldCheck, Zap, Sun, Moon } from 'lucide-react';
 import type { UserRole } from '../../types';
 
 export const LoginView: React.FC = () => {
@@ -61,8 +61,8 @@ export const LoginView: React.FC = () => {
       {/* Top Branding */}
       <div className="pt-2 pb-3 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-amber-400 p-0.5 shadow-xl shadow-indigo-500/20 mb-3 animate-bounce-subtle">
-          <div className="w-full h-full bg-slate-900 dark:bg-slate-950 rounded-[14px] flex items-center justify-center">
-            <Coins className="w-8 h-8 text-amber-400" />
+          <div className="w-full h-full bg-slate-900 dark:bg-slate-950 rounded-[14px] flex items-center justify-center overflow-hidden p-2">
+            <img src="/topcoin.png" alt="PCB TOP COIN Logo" className="w-full h-full object-contain drop-shadow" />
           </div>
         </div>
         <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">

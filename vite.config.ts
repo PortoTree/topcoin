@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'boneka.png', 'nomor.png', 'coin.png', 'optional.png'],
+      includeAssets: ['favicon.svg', 'boneka.png', 'nomor.png', 'coin.png', 'optional.png', 'topcoin.png'],
       manifest: {
         name: 'PCB TOP COIN - Dropping & Omset',
         short_name: 'TOP COIN',
@@ -20,13 +20,13 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/coin.png',
+            src: '/topcoin.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any maskable',
           },
           {
-            src: '/coin.png',
+            src: '/topcoin.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',
