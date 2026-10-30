@@ -621,10 +621,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                     </div>
 
                     {/* Baris 3: Pemegang Dropping & Tombol Pindah */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                      <div className="flex items-center gap-1.5 text-xs">
-                        <span className="text-slate-400 font-medium">Dropping:</span>
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                      <div className="flex items-center gap-1.5 text-xs min-w-0">
+                        <span className="text-slate-400 font-medium shrink-0">Dropping:</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap overflow-visible">
                           {assignedStaff?.full_name || 'Belum Ditugaskan'}
                         </span>
                       </div>
@@ -632,7 +632,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                       <button
                         type="button"
                         onClick={() => handleOpenTransferModal(m)}
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer"
+                        className="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-300 border border-slate-200 dark:border-slate-700 text-[11px] font-bold flex items-center gap-1 transition active:scale-95 cursor-pointer shrink-0"
                       >
                         <ArrowRightLeft className="w-3 h-3" />
                         <span>Tukar / Pindah</span>
