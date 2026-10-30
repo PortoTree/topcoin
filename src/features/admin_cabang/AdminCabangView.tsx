@@ -263,15 +263,18 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       }
 
       // 3. Machines in this branch
-      const { data: mData } = await supabase
+      const { data: mData, error: mError } = await supabase
         .from('machines')
         .select(`
           *,
-          store:stores(name, address)
+          store:stores!fk_machines_current_store(name, address)
         `)
         .eq('branch_id', activeBranchId)
         .order('machine_code', { ascending: true });
 
+      if (mError) {
+        console.error('Error fetching machines:', mError);
+      }
       if (mData) setMachines(mData as Machine[]);
 
       // 4. Stores in this branch
