@@ -67,6 +67,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   const [addStoreId, setAddStoreId] = useState<string>('');
   const [isSavingAdd, setIsSavingAdd] = useState(false);
 
+  // State loading toggle kunjungan mesin
+  const [togglingMachineId, setTogglingMachineId] = useState<string | null>(null);
+
   // Filter mesin berdasarkan dropping & pencarian
   const filteredMachines = useMemo(() => {
     return machines.filter((m) => {
@@ -318,6 +321,55 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       toast.error('Gagal menambah mesin: ' + err.message);
     } finally {
       setIsSavingAdd(false);
+    }
+  };
+
+  // Toggle 1x / 2x Kunjungan untuk Mesin yang terpasang
+  const handleToggleVisitRequirement = async (m: Machine) => {
+    if (togglingMachineId) return;
+
+    const isCurrentlyTwoVisits = m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan');
+    const newTarget = isCurrentlyTwoVisits ? 1 : 2;
+
+    // Bersihkan atau tambahkan catatan 2x Kunjungan pada notes mesin
+    let updatedNotes = m.notes || '';
+    if (newTarget === 2) {
+      if (!updatedNotes.includes('2x Kunjungan')) {
+        updatedNotes = updatedNotes ? `${updatedNotes} [2x Kunjungan]` : '[2x Kunjungan]';
+      }
+    } else {
+      updatedNotes = updatedNotes.replace(/\[?2x Kunjungan\]?/gi, '').trim();
+    }
+
+    setTogglingMachineId(m.id);
+    try {
+      const { error } = await supabase
+        .from('machines')
+        .update({
+          daily_visit_target: newTarget,
+          notes: updatedNotes || null,
+        })
+        .eq('id', m.id);
+
+      if (error) {
+        // Fallback jika kolom daily_visit_target belum dibuat di database Supabase: update notes saja
+        const { error: fallbackErr } = await supabase
+          .from('machines')
+          .update({
+            notes: updatedNotes || null,
+          })
+          .eq('id', m.id);
+
+        if (fallbackErr) throw fallbackErr;
+      }
+
+      toast.success(`Mesin ${displayMachineCode(m.machine_code)} diatur ke ${newTarget}x Kunjungan`);
+      await onRefresh();
+    } catch (err: any) {
+      console.error('Error toggling visit requirement:', err);
+      toast.error('Gagal memperbarui pengaturan kunjungan: ' + err.message);
+    } finally {
+      setTogglingMachineId(null);
     }
   };
 
@@ -1016,15 +1068,19 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
                           {isInstalled && (
                             <div className="shrink-0">
-                              {m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan') ? (
-                                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80">
-                                  2x Kunjungan
-                                </span>
-                              ) : (
-                                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80">
-                                  1x Kunjungan
-                                </span>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleVisitRequirement(m)}
+                                disabled={togglingMachineId === m.id}
+                                title="Klik untuk mengubah jumlah kunjungan"
+                                className="px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-slate-400 hover:border-slate-800 dark:border-slate-500 dark:hover:border-slate-200 text-slate-800 dark:text-slate-200 bg-transparent transition active:scale-95 cursor-pointer disabled:opacity-50 select-none"
+                              >
+                                {togglingMachineId === m.id
+                                  ? '...'
+                                  : m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan')
+                                    ? '2x Kunjungan'
+                                    : '1x Kunjungan'}
+                              </button>
                             </div>
                           )}
                         </div>
