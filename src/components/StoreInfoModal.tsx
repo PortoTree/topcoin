@@ -418,3 +418,4 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
     </>
   );
 };
+
