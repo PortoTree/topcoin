@@ -36,14 +36,22 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import type { Store, DroppingTransaction } from '../../types';
+import type { Store, DroppingTransaction, UserProfile } from '../../types';
 import { toast } from '../../context/ToastContext';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { displayMachineCode } from '../../lib/machineCodeLogic';
+import {
+  getEffectiveDroppingTargetId,
+  filterStoresForDropping,
+  formatVirtualMachineCode,
+  getDroppingPageHeaderTitle,
+} from '../../lib/droppingSubstitutionLogic';
 
 interface DroppingViewProps {
   activeTab: string;
   tabClickTick?: number;
+  substituteDroppingUserId?: string | null;
+  onClearSubstitute?: () => void;
 }
 
 // Fallback demo stores with machines for testing
@@ -146,9 +154,58 @@ const DEMO_DROPPING_STORES: Store[] = [
   },
 ];
 
-export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickTick = 0 }) => {
+export const DroppingView: React.FC<DroppingViewProps> = ({
+  activeTab,
+  tabClickTick = 0,
+  substituteDroppingUserId: propSubstituteUserId,
+  onClearSubstitute,
+}) => {
   const { profile, activeRole } = useAuth();
   const { currentBranch } = useBranch();
+
+  // State Pengganti Dropping (jika dibuka oleh Admin)
+  const activeSubstituteId = useMemo(() => {
+    if (propSubstituteUserId !== undefined) return propSubstituteUserId;
+    if (profile?.id) {
+      return localStorage.getItem(`topcoin_admin_substitute_dropping_${profile.id}`) || null;
+    }
+    return null;
+  }, [propSubstituteUserId, profile?.id]);
+
+  const effectiveDroppingId = useMemo(() => {
+    return getEffectiveDroppingTargetId({
+      profile,
+      substituteUserId: activeSubstituteId,
+    });
+  }, [profile, activeSubstituteId]);
+
+  const isSubstituting = Boolean(
+    (profile?.role === 'admin_cabang' || profile?.role === 'admin') &&
+    activeSubstituteId
+  );
+
+  const [substituteStaff, setSubstituteStaff] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (!activeSubstituteId) {
+      setSubstituteStaff(null);
+      return;
+    }
+    let isMounted = true;
+    supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', activeSubstituteId)
+      .single()
+      .then(({ data }) => {
+        if (isMounted && data) {
+          setSubstituteStaff(data as UserProfile);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [activeSubstituteId]);
 
   // Active stores for selection
   const [activeStores, setActiveStores] = useState<Store[]>([]);
@@ -501,15 +558,31 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         .order('name', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        setActiveStores(data as Store[]);
+        const rawStores = data as Store[];
+        const isolatedStores = filterStoresForDropping({
+          stores: rawStores,
+          effectiveDroppingId,
+          isAllDroppingView: false,
+        });
+        setActiveStores(isolatedStores);
       } else {
-        setActiveStores(DEMO_DROPPING_STORES);
+        const fallback = filterStoresForDropping({
+          stores: DEMO_DROPPING_STORES,
+          effectiveDroppingId,
+          isAllDroppingView: false,
+        });
+        setActiveStores(fallback);
       }
     } catch (err) {
       console.error('Error fetching active stores:', err);
-      setActiveStores(DEMO_DROPPING_STORES);
+      const fallback = filterStoresForDropping({
+        stores: DEMO_DROPPING_STORES,
+        effectiveDroppingId,
+        isAllDroppingView: false,
+      });
+      setActiveStores(fallback);
     }
-  }, [activeBranchId]);
+  }, [activeBranchId, effectiveDroppingId]);
 
   // Fetch today's transactions for the active branch (syncs across all field staff & roles)
   const fetchTodayDroppings = useCallback(async () => {
@@ -1031,9 +1104,43 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
             <div className="pt-1">
               <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <StoreIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                <span>Daftar dropping {profile?.full_name || 'Budi'}</span>
+                <span>{getDroppingPageHeaderTitle({ profile, substituteStaff })}</span>
               </h2>
             </div>
+
+            {/* Banner Mode Pengganti Dropping (Admin menggantikan staf libur) */}
+            {isSubstituting && substituteStaff && (
+              <div className="p-3.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/60 flex items-center justify-between text-xs shadow-2xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 font-bold text-xs shadow-xs">
+                    {(profile?.machine_prefix || 'ADMIN').slice(0, 2)}
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] uppercase font-bold text-indigo-600 dark:text-indigo-400 block tracking-wider">
+                      Tugas Pengganti Dropping
+                    </span>
+                    <p className="font-bold text-slate-900 dark:text-white truncate">
+                      Menggantikan: <span className="underline decoration-indigo-400">{substituteStaff.full_name}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="font-mono font-black text-[11px] px-2 py-0.5 rounded-lg bg-indigo-600 text-white shadow-2xs">
+                    {profile?.machine_prefix || 'ADMIN'}
+                  </span>
+                  {onClearSubstitute && (
+                    <button
+                      type="button"
+                      onClick={onClearSubstitute}
+                      className="text-[10px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 underline font-medium cursor-pointer"
+                      title="Lepas Penugasan Pengganti"
+                    >
+                      Batal
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {submitSuccess && (
               <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-900 dark:text-emerald-200 text-xs shadow-xs flex items-start gap-3 animate-in fade-in duration-200">
@@ -1175,7 +1282,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   }
                 }
 
-                const machineCode = displayMachineCode(store.machine?.machine_code);
+                const machineCode = isSubstituting
+                  ? formatVirtualMachineCode({
+                      originalMachineCode: store.machine?.machine_code,
+                      virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                    })
+                  : displayMachineCode(store.machine?.machine_code);
 
                 return (
                   <div
@@ -1559,7 +1671,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       <div className="flex items-center justify-between text-[11px] mt-1 text-slate-500 dark:text-slate-400">
                         <span>Meteran terakhir sistem: <strong className="font-mono text-slate-700 dark:text-slate-300">{prevMeter}</strong></span>
                         {selectedStore && (
-                          <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">{displayMachineCode(selectedStore.machine?.machine_code)}</strong></span>
+                          <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">
+                            {isSubstituting
+                              ? formatVirtualMachineCode({
+                                  originalMachineCode: selectedStore.machine?.machine_code,
+                                  virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                                })
+                              : displayMachineCode(selectedStore.machine?.machine_code)}
+                          </strong></span>
                         )}
                       </div>
                     </div>
@@ -2211,7 +2330,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       Outlet Mitra
                     </span>
                     <h4 className="text-lg font-bold text-slate-900 dark:text-white">
-                      <span className="font-mono font-black">{displayMachineCode(store.machine?.machine_code)}</span>
+                      <span className="font-mono font-black">
+                        {isSubstituting
+                          ? formatVirtualMachineCode({
+                              originalMachineCode: store.machine?.machine_code,
+                              virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                            })
+                          : displayMachineCode(store.machine?.machine_code)}
+                      </span>
                       <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
                       <span>{store.name}</span>
                     </h4>

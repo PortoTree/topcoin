@@ -45,7 +45,7 @@ import { RouteManagerMobile } from './components/RouteManagerMobile';
 import { StoreListMobile } from './components/StoreListMobile';
 import { AddStaffModalMobile } from './components/AddStaffModalMobile';
 import { EditStaffModalMobile } from './components/EditStaffModalMobile';
-import { displayMachineCode } from '../../lib/machineCodeLogic';
+import { displayMachineCode, sanitizeMachinePrefix } from '../../lib/machineCodeLogic';
 import { compareStaff, filterStaff } from '../../lib/staffLogic';
 
 interface AdminCabangViewProps {
@@ -89,6 +89,16 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
   const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
+
+  // State Pengganti Dropping saat Admin bertugas Dropping
+  const [substituteDroppingUserId, setSubstituteDroppingUserId] = useState<string | null>(() => {
+    if (profile?.id) {
+      return localStorage.getItem(`topcoin_admin_substitute_dropping_${profile.id}`) || null;
+    }
+    return null;
+  });
+  const [isSelectingSubstituteModalOpen, setIsSelectingSubstituteModalOpen] = useState(false);
+  const [targetAdminForDropping, setTargetAdminForDropping] = useState<UserProfile | null>(null);
 
   const getStaffRoleInfo = (staff: UserProfile) => {
     if (staff.role === 'branch_manager') {
@@ -514,7 +524,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   };
 
   // Reassign Admin Cabang Task / Pengelola
-  const handleChangeAdminTask = async (staff: UserProfile, selectedValue: string) => {
+  const handleChangeAdminTask = async (staff: UserProfile, selectedValue: string, substituteId?: string | null) => {
     const isPengelola = selectedValue === 'admin_cabang';
     const newTask = isPengelola ? null : (selectedValue as 'logistik' | 'marketing' | 'dropping' | 'driver');
     const label = isPengelola ? 'Pengelola' : selectedValue.toUpperCase();
@@ -525,6 +535,18 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         setBranchStaff((prev) =>
           prev.map((s) => (s.id === staff.id ? { ...s, assigned_task: newTask } : s))
         );
+        if (newTask === 'dropping') {
+          if (substituteId) {
+            localStorage.setItem(`topcoin_admin_substitute_dropping_${staff.id}`, substituteId);
+            if (staff.id === profile?.id) setSubstituteDroppingUserId(substituteId);
+          } else {
+            localStorage.removeItem(`topcoin_admin_substitute_dropping_${staff.id}`);
+            if (staff.id === profile?.id) setSubstituteDroppingUserId(null);
+          }
+        } else {
+          localStorage.removeItem(`topcoin_admin_substitute_dropping_${staff.id}`);
+          if (staff.id === profile?.id) setSubstituteDroppingUserId(null);
+        }
         toast.success(`Penugasan ${staff.full_name} kini menjadi ${label}. Tab tugas akan otomatis menyesuaikan.`);
       } else {
         toast.error(res.message || 'Gagal mengubah penugasan admin.');
@@ -543,7 +565,18 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       return <MarketingView activeTab="new_store" />;
     }
     if (profile.assigned_task === 'dropping') {
-      return <DroppingView activeTab="store_visits" />;
+      return (
+        <DroppingView
+          activeTab="store_visits"
+          substituteDroppingUserId={substituteDroppingUserId}
+          onClearSubstitute={() => {
+            if (profile?.id) {
+              localStorage.removeItem(`topcoin_admin_substitute_dropping_${profile.id}`);
+              setSubstituteDroppingUserId(null);
+            }
+          }}
+        />
+      );
     }
   }
 
@@ -1461,7 +1494,19 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 onClick={() => {
                   close();
                   if (staff.role === 'admin_cabang' || staff.role === 'admin') {
-                    handleChangeAdminTask(staff, 'dropping');
+                    const pureDroppingStaff = branchStaff.filter(
+                      (u) =>
+                        u.role === 'dropping' &&
+                        u.id !== staff.id &&
+                        u.is_active !== false &&
+                        u.deletion_status !== 'pending_deletion'
+                    );
+                    if (pureDroppingStaff.length > 0) {
+                      setTargetAdminForDropping(staff);
+                      setIsSelectingSubstituteModalOpen(true);
+                    } else {
+                      handleChangeAdminTask(staff, 'dropping', null);
+                    }
                   } else {
                     handleChangeStaffRole(staff, 'dropping');
                   }
@@ -1959,6 +2004,108 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Pilih Petugas Dropping yang Digantikan oleh Admin */}
+      {isSelectingSubstituteModalOpen && targetAdminForDropping && (
+        <BottomSheetModal
+          isOpen={isSelectingSubstituteModalOpen}
+          onClose={() => {
+            setIsSelectingSubstituteModalOpen(false);
+            setTargetAdminForDropping(null);
+          }}
+          maxWidthClass="sm:max-w-md"
+        >
+          {(_, close) => {
+            const pureDroppingStaff = branchStaff.filter(
+              (u) =>
+                u.role === 'dropping' &&
+                u.id !== targetAdminForDropping.id &&
+                u.is_active !== false &&
+                u.deletion_status !== 'pending_deletion'
+            );
+
+            return (
+              <div className="p-4 sm:p-5 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                      Pilih Petugas yang Digantikan
+                    </h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Admin akan mewarisi rute & toko mitra petugas yang sedang libur
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={close}
+                    className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                  {pureDroppingStaff.map((staff) => {
+                    const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
+                    const staffMachinesCount = machines.filter((m) => m.assigned_dropping_id === staff.id).length;
+                    const isCurrentSubstitute = substituteDroppingUserId === staff.id;
+
+                    return (
+                      <button
+                        key={staff.id}
+                        type="button"
+                        onClick={() => {
+                          close();
+                          handleChangeAdminTask(targetAdminForDropping, 'dropping', staff.id);
+                        }}
+                        className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
+                          isCurrentSubstitute
+                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
+                            : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 flex-shrink-0">
+                            {staff.full_name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-sm font-bold text-slate-900 dark:text-white block truncate">
+                              {staff.full_name}
+                            </span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2 mt-0.5">
+                              <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">Prefix: {prefix}</span>
+                              <span>•</span>
+                              <span>{staffMachinesCount} Unit Mesin</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {isCurrentSubstitute && (
+                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                            <Check className="w-3.5 h-3.5" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {/* Opsi Mandiri */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      handleChangeAdminTask(targetAdminForDropping, 'dropping', null);
+                    }}
+                    className="w-full p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 text-xs font-bold text-center transition cursor-pointer"
+                  >
+                    Tugas Mandiri (Bawa Mesin Sendiri / Tanpa Menggantikan)
+                  </button>
+                </div>
+              </div>
+            );
+          }}
+        </BottomSheetModal>
       )}
 
       {/* Modal Aksi Custom (Pengganti window.prompt & window.confirm) */}
