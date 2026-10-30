@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Cpu,
   FileSpreadsheet,
-  CalendarDays,
   ClipboardCheck,
   DollarSign,
   Coins,
@@ -99,13 +98,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         // 5 Navigasi Default Utama Sesuai Instruksi User:
         // 1. Tugas (dynamic tugas admin)
         // 2. Omset (placeholder)
-        // 3. Jadwal (karyawan/staff)
+        // 3. Petugas (karyawan/staff)
         // 4. Mesin (placeholder)
         // 5. Laporan (absensi harian)
         return [
           { id: 'admin_task', label: 'Tugas', icon: taskIcon },
           { id: 'omset', label: 'Omset', icon: TrendingUp },
-          { id: 'schedule', label: 'Jadwal', icon: CalendarDays },
+          { id: 'schedule', label: 'Petugas', icon: Users },
           { id: 'machines', label: 'Mesin', icon: Cpu },
           { id: 'reports', label: 'Laporan', icon: ClipboardCheck },
         ];
