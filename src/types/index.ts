@@ -75,6 +75,7 @@ export interface Machine {
   status: MachineStatus;
   last_counter_meter?: number;
   notes: string | null;
+  daily_visit_target?: number;
   created_at: string;
   updated_at?: string;
   branch?: Branch;

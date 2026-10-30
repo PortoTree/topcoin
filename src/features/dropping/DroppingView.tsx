@@ -1121,19 +1121,53 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   }
                 }
 
+                const isTwoVisitsRequired = Boolean(
+                  store.machine?.daily_visit_target === 2 ||
+                  store.machine?.notes?.includes('2x Kunjungan')
+                );
+
+                // Teks status kunjungan di bawah nama toko (sesuai spesifikasi)
+                let visitSubtext = '';
+                if (isTwoVisitsRequired) {
+                  if (!todayTx) {
+                    visitSubtext = 'Perlu 2x kunjungan: Belum di kunjungi';
+                  } else if (hasOmsetTaken) {
+                    visitSubtext = 'Perlu 2x Kunjungan: Kunjungan kedua selesai.';
+                  } else if (isStoreClosedTx || isMinimalCoinTx || isCustomKendalaTx) {
+                    visitSubtext = 'Perlu 2x Kunjungan: Kendala kunjungan pertama / kedua.';
+                  } else {
+                    visitSubtext = 'Perlu 2x Kunjungan: Kunjungan pertama selesai.';
+                  }
+                } else {
+                  if (!todayTx) {
+                    visitSubtext = 'Status kunjungan: Belum di kunjungi.';
+                  } else if (hasOmsetTaken) {
+                    visitSubtext = 'Status kunjungan: Selesai di kunjungi.';
+                  } else if (isStoreClosedTx || isMinimalCoinTx || isCustomKendalaTx) {
+                    visitSubtext = 'Status kunjungan: Kendala kunjungan.';
+                  } else {
+                    visitSubtext = 'Status kunjungan: Selesai di kunjungi.';
+                  }
+                }
+
                 return (
                   <div
                     key={store.id}
-                    className="p-3.5 sm:p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs transition hover:border-slate-300 dark:hover:border-slate-700 space-y-3"
+                    className="p-3.5 sm:p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs transition hover:border-slate-300 dark:hover:border-slate-700 space-y-2.5"
                   >
                     {/* [namatoko] [nomormesin] */}
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        {store.name}
-                      </h3>
-                      <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
-                        {displayMachineCode(store.machine?.machine_code)}
-                      </span>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {store.name}
+                        </h3>
+                        <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
+                          {displayMachineCode(store.machine?.machine_code)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                        {visitSubtext}
+                      </p>
                     </div>
 
                     {/* [tombol aksi]: [WA] + [Maps] + [Info] + [status flex-1 di kanan] */}
