@@ -475,16 +475,13 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                 </span>
               </div>
 
-              {/* List Kartu Rute */}
+              {/* List Rute Relokasi (Unboxed agar lega di mobile) */}
               <div className="space-y-3">
                 {relocationItems.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs space-y-2 relative"
-                  >
+                  <div key={item.id} className="space-y-1.5 relative">
                     {relocationItems.length > 1 && (
-                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-100 dark:border-slate-800/60">
-                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">
+                      <div className="flex items-center justify-between pb-1">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
                           Unit #{idx + 1}
                         </span>
                         <button
@@ -504,13 +501,13 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                           setStorePicker({ type: 'origin', itemIndex: idx });
                           setStoreSearch('');
                         }}
-                        className={`p-2.5 rounded-xl border text-left cursor-pointer transition active:scale-98 ${
+                        className={`p-3 rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
                           item.originStoreId
-                            ? 'bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-200 dark:border-indigo-800'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400'
+                            ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800'
+                            : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400'
                         }`}
                       >
-                        <span className="text-[9px] font-black uppercase text-slate-500 dark:text-slate-400 block tracking-wider mb-1">
+                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block tracking-wider mb-1">
                           Pindah Dari
                         </span>
                         {item.originStoreId ? (
@@ -526,14 +523,15 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
-                            <Search className="w-3 h-3" /> Pilih toko &amp; mesin...
+                            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate">Pilih toko &amp; mesin...</span>
                           </span>
                         )}
                       </div>
 
                       {/* Panah Tengah */}
-                      <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                        <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                        <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                       </div>
 
                       {/* Box Dipindah Ke */}
@@ -542,13 +540,13 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                           setStorePicker({ type: 'target', itemIndex: idx });
                           setStoreSearch('');
                         }}
-                        className={`p-2.5 rounded-xl border text-left cursor-pointer transition active:scale-98 ${
+                        className={`p-3 rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
                           item.targetStoreId
-                            ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800'
-                            : 'bg-slate-50 dark:bg-slate-800/60 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-400'
+                            ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                            : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-400'
                         }`}
                       >
-                        <span className="text-[9px] font-black uppercase text-slate-500 dark:text-slate-400 block tracking-wider mb-1">
+                        <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 block tracking-wider mb-1">
                           Dipindah Ke
                         </span>
                         {item.targetStoreId ? (
@@ -562,7 +560,8 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                           </div>
                         ) : (
                           <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
-                            <Search className="w-3 h-3" /> Pilih toko tujuan...
+                            <Search className="w-3.5 h-3.5 flex-shrink-0" />
+                            <span className="truncate">Pilih toko tujuan...</span>
                           </span>
                         )}
                       </div>
