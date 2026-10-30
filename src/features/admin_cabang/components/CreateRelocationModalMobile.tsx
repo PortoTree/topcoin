@@ -371,7 +371,7 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
     <>
       <BottomSheetModal item={true} onClose={onClose}>
         {(_, close) => (
-          <form onSubmit={handleDispatch} className="space-y-4">
+          <form onSubmit={handleDispatch} className="space-y-4 w-full max-w-full overflow-hidden">
             {/* Header Modal */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
@@ -475,10 +475,10 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                 </span>
               </div>
 
-              {/* List Rute Relokasi (Unboxed agar lega di mobile) */}
-              <div className="space-y-3">
+              {/* List Rute Relokasi (Unboxed & Responsif agar tidak overflow/tembus) */}
+              <div className="space-y-3 w-full">
                 {relocationItems.map((item, idx) => (
-                  <div key={item.id} className="space-y-1.5 relative">
+                  <div key={item.id} className="space-y-1.5 relative w-full">
                     {relocationItems.length > 1 && (
                       <div className="flex items-center justify-between pb-1">
                         <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -494,16 +494,16 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                       </div>
                     )}
 
-                    <div className="grid grid-cols-[1fr,auto,1fr] items-center gap-2">
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 sm:gap-2 w-full">
                       {/* Box Pindah Dari */}
                       <div
                         onClick={() => {
                           setStorePicker({ type: 'origin', itemIndex: idx });
                           setStoreSearch('');
                         }}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
+                        className={`min-w-0 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
                           item.originStoreId
-                            ? 'bg-indigo-50/70 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800'
+                            ? 'bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800'
                             : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-400'
                         }`}
                       >
@@ -522,7 +522,7 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
+                          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium min-w-0">
                             <Search className="w-3.5 h-3.5 flex-shrink-0" />
                             <span className="truncate">Pilih toko &amp; mesin...</span>
                           </span>
@@ -530,8 +530,8 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                       </div>
 
                       {/* Panah Tengah */}
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
-                        <ArrowRight className="w-4 h-4 stroke-[2.5]" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                       </div>
 
                       {/* Box Dipindah Ke */}
@@ -540,9 +540,9 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                           setStorePicker({ type: 'target', itemIndex: idx });
                           setStoreSearch('');
                         }}
-                        className={`p-3 rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
+                        className={`min-w-0 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border text-left cursor-pointer transition active:scale-98 shadow-2xs ${
                           item.targetStoreId
-                            ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                            ? 'bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800'
                             : 'bg-white dark:bg-slate-900 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-400'
                         }`}
                       >
@@ -559,7 +559,7 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium">
+                          <span className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 font-medium min-w-0">
                             <Search className="w-3.5 h-3.5 flex-shrink-0" />
                             <span className="truncate">Pilih toko tujuan...</span>
                           </span>
