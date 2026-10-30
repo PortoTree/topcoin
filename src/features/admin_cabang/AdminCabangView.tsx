@@ -20,7 +20,6 @@ import {
   Trash2,
   ChevronDown,
   Check,
-  TrendingUp,
   ClipboardCheck,
   Sparkles,
   Store as StoreIcon,
@@ -45,6 +44,7 @@ import { RouteManagerMobile } from './components/RouteManagerMobile';
 import { StoreListMobile } from './components/StoreListMobile';
 import { AddStaffModalMobile } from './components/AddStaffModalMobile';
 import { EditStaffModalMobile } from './components/EditStaffModalMobile';
+import { OmsetDroppingTabMobile } from './components/OmsetDroppingTabMobile';
 import { displayMachineCode, sanitizeMachinePrefix } from '../../lib/machineCodeLogic';
 import { compareStaff, filterStaff } from '../../lib/staffLogic';
 
@@ -877,65 +877,13 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Omset (Placeholder Modern dengan Quick Metrics) */}
+      {/* Tab: Omset Dropping Mobile */}
       {activeTab === 'omset' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Analisis Omset</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Ringkasan performa omset cabang {currentBranch?.name}
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-              <Sparkles className="w-3 h-3" />
-              Segera Hadir
-            </span>
-          </div>
-
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
-              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
-                Omset Kotor
-              </span>
-              <span className="text-sm font-black text-slate-900 dark:text-white mt-0.5 block truncate">
-                {formatIDR(totalGrossToday)}
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
-              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
-                Jatah Toko
-              </span>
-              <span className="text-sm font-black text-amber-600 dark:text-amber-400 mt-0.5 block truncate">
-                {formatIDR(totalShareToday)}
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
-              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
-                Setoran Bersih
-              </span>
-              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
-                {formatIDR(totalNetToday)}
-              </span>
-            </div>
-          </div>
-
-          {/* Modern Placeholder Card */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center shadow-xs">
-            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center mb-3">
-              <TrendingUp className="w-7 h-7" />
-            </div>
-            <h3 className="text-sm font-black text-slate-900 dark:text-white">
-              Grafik & Visualisasi Omset
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
-              Modul analitik grafik omset harian, tren perputaran koin, dan performa per toko sedang dalam tahap pengembangan.
-            </p>
-          </div>
-        </div>
+        <OmsetDroppingTabMobile
+          activeBranchId={activeBranchId}
+          branchStaff={branchStaff}
+          todayDroppings={droppings}
+        />
       )}
 
       {/* Tab: Jadwal (Karyawan Cabang & Pengajuan Hapus Akun) */}

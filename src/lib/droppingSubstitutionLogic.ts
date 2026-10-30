@@ -105,7 +105,7 @@ export function getDroppingPageHeaderTitle(params: {
   const adminName = profile?.full_name || 'Petugas Dropping';
 
   if (substituteStaff && substituteStaff.full_name) {
-    return `Daftar dropping ${adminName}`;
+    return `Daftar dropping ${adminName} (Menggantikan ${substituteStaff.full_name})`;
   }
 
   return `Daftar dropping ${adminName}`;
