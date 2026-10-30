@@ -787,13 +787,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     }
 
     // 2. Validasi Omset jika checklist dicentang, atau validasi meteran jika tidak dicentang
-    if (hasOmset) {
+    // CATATAN: Jika petugas mencentang dan mengisi Laporan Kondisi / Kendala Toko (hasOptional),
+    // maka kolom koin, bagi hasil toko, dan foto nota TIDAK WAJIB (petugas bisa langsung simpan kendala khusus).
+    if (hasOmset && !hasOptional) {
       if (coinsCollected <= 0) {
         toast.warning('Karena checklist penarikan koin dicentang, masukkan total koin terambil di laci (harus lebih dari 0).');
         return;
       }
 
-      // Poin 1: Foto Nota wajib saat Tarik Omset dicentang
+      // Poin 1: Foto Nota wajib saat Tarik Omset dicentang (hanya jika bukan laporan kendala)
       if (!photoNota) {
         toast.warning('Wajib melampirkan Foto Nota / Kuitansi Toko saat penarikan omset.');
         return;
@@ -803,7 +805,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         toast.warning('Ada selisih meteran fisik! Wajib mengisi kolom Catatan Kendala Selisih.');
         return;
       }
-    } else {
+    } else if (!hasOmset) {
       if (!hasOptional && !noOmsetMeterStr.trim()) {
         toast.warning('Silakan masukkan angka meteran yang terbaca di mesin saat ini.');
         return;
@@ -819,7 +821,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     setIsSubmitting(true);
     setSubmitSuccess(null);
 
-    const finalMeterReading = hasOmset
+    const isActualOmsetTaken = hasOmset && !hasOptional && coinsCollected > 0;
+    const finalHasOmset = isActualOmsetTaken;
+    const finalMeterReading = isActualOmsetTaken
       ? (actualPhysicalMeter ?? calculatedNewMeter)
       : (parseInt(noOmsetMeterStr, 10) || prevMeter);
 
@@ -841,18 +845,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
           store_name: store.name,
           machine_id: store.current_machine_id,
           machine_code: store.machine?.machine_code || '',
-          has_omset: hasOmset,
-          coins_collected: hasOmset ? coinsCollected : 0,
-          gross_omset: hasOmset ? grossOmset : 0,
+          has_omset: finalHasOmset,
+          coins_collected: isActualOmsetTaken ? coinsCollected : 0,
+          gross_omset: isActualOmsetTaken ? grossOmset : 0,
           previous_counter_meter: prevMeter,
           actual_physical_meter: finalMeterReading,
-          has_mismatch: hasOmset ? hasMismatch : false,
-          discrepancy_reason: hasOmset && hasMismatch ? discrepancyReason.trim() : null,
-          store_share_amount: hasOmset ? storeShareAmount : 0,
+          has_mismatch: isActualOmsetTaken ? hasMismatch : false,
+          discrepancy_reason: isActualOmsetTaken && hasMismatch ? discrepancyReason.trim() : null,
+          store_share_amount: isActualOmsetTaken ? storeShareAmount : 0,
           photo_machine_blob: photoMachine || null,
           photo_machine_number_blob: photoMachineNumber || null,
-          photo_coin_blob: !hasOmset ? photoCoin : null,
-          photo_nota_blob: hasOmset ? photoNota : null,
+          photo_coin_blob: !isActualOmsetTaken ? photoCoin : null,
+          photo_nota_blob: isActualOmsetTaken ? photoNota : null,
           photo_optional_blob: hasOptional ? photoOptional : null,
           optional_notes: finalOptionalNotes,
           latitude,
@@ -894,8 +898,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
       const [urlMachine, urlMachineNumber, urlCoin, urlNota, urlOptional] = await Promise.all([
         photoMachine ? uploadToCloudinary(photoMachine, 'droppings/machine') : Promise.resolve(null),
         photoMachineNumber ? uploadToCloudinary(photoMachineNumber, 'droppings/machine_number') : Promise.resolve(null),
-        !hasOmset && photoCoin ? uploadToCloudinary(photoCoin, 'droppings/coin') : Promise.resolve(null),
-        hasOmset && photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
+        !isActualOmsetTaken && photoCoin ? uploadToCloudinary(photoCoin, 'droppings/coin') : Promise.resolve(null),
+        isActualOmsetTaken && photoNota ? uploadToCloudinary(photoNota, 'droppings/nota') : Promise.resolve(null),
         hasOptional && photoOptional ? uploadToCloudinary(photoOptional, 'droppings/optional') : Promise.resolve(null),
       ]);
 
@@ -905,14 +909,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         dropping_user_id: profile.id,
         store_id: store.id,
         machine_id: store.current_machine_id,
-        has_omset: Boolean(hasOmset),
-        coins_collected: hasOmset ? coinsCollected : 0,
-        gross_omset: hasOmset ? grossOmset : 0,
+        has_omset: Boolean(finalHasOmset),
+        coins_collected: isActualOmsetTaken ? coinsCollected : 0,
+        gross_omset: isActualOmsetTaken ? grossOmset : 0,
         previous_counter_meter: prevMeter,
         actual_physical_meter: finalMeterReading,
-        has_mismatch: hasOmset ? hasMismatch : false,
-        discrepancy_reason: hasOmset && hasMismatch ? discrepancyReason.trim() : null,
-        store_share_amount: hasOmset ? storeShareAmount : 0,
+        has_mismatch: isActualOmsetTaken ? hasMismatch : false,
+        discrepancy_reason: isActualOmsetTaken && hasMismatch ? discrepancyReason.trim() : null,
+        store_share_amount: isActualOmsetTaken ? storeShareAmount : 0,
         photo_machine_url: urlMachine,
         photo_machine_number_url: urlMachineNumber,
         photo_coin_url: urlCoin,
@@ -943,9 +947,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
       setSubmitSuccess(
-        hasOmset
+        isActualOmsetTaken
           ? `Sukses!, "${store.name}" berhasil dicatat: ${coinsCollected} Koin (${formatIDR(grossOmset)}). Setoran bersih: ${formatIDR(netDepositAmount)}.`
-          : `Sukses! Kunjungan toko "${store.name}" berhasil dicatat.`
+          : `Sukses! Laporan kunjungan toko "${store.name}" berhasil dicatat.`
       );
       setActiveStores((prev) =>
         prev.map((s) =>
@@ -1571,7 +1575,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block mt-1 leading-relaxed">
                       {isHasOmsetLocked
-                        ? 'Opsi tarik omset terkunci wajib karena toko berada dalam status belum ambil omset.'
+                        ? 'Kunjungan ini perlu tarik omset karena toko berada dalam status belum ambil omset.'
                         : hasOmset
                           ? 'Lanjutkan dengan mengisi kolom koin yang sudah dihitung.'
                           : 'Klik untuk tarik omset (Pastikan sudah menghitung koin).'}
@@ -1586,7 +1590,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Total Koin Terambil di Laci *
+                          Total Koin Terambil di Laci {hasOptional ? '(Opsional jika ada kendala)' : '*'}
                         </label>
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                           1 Koin = Rp 1.000
@@ -1597,11 +1601,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         <input
                           type="text"
                           inputMode="numeric"
-                          required={hasOmset}
-                          placeholder="Contoh: 30"
+                          required={hasOmset && !hasOptional}
+                          placeholder={hasOptional ? "Kosongkan jika ada kendala..." : "Contoh: 30"}
                           value={coinsCollectedStr}
                           onChange={(e) => setCoinsCollectedStr(e.target.value)}
-                          className={`w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 shadow-xs transition-all ${submitAttempted && hasOmset && coinsCollected <= 0
+                          className={`w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 shadow-xs transition-all ${submitAttempted && hasOmset && !hasOptional && coinsCollected <= 0
                             ? 'border border-rose-400 dark:border-rose-500/80 focus:ring-rose-500'
                             : 'border border-slate-300 dark:border-slate-700 focus:ring-emerald-500'
                             }`}
@@ -1723,12 +1727,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                         </button>
                         <div>
                           <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                            Nominal yang diserahkan ke Toko *
+                            Nominal yang diserahkan ke Toko {hasOptional ? '(Opsional)' : '*'}
                           </label>
                           <input
                             type="text"
                             inputMode="numeric"
-                            required={hasOmset}
+                            required={hasOmset && !hasOptional}
                             placeholder="Contoh: 3000"
                             value={storeShareStr}
                             onChange={(e) => setStoreShareStr(e.target.value)}
@@ -1798,7 +1802,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                             setMultiStepStartIndex(2);
                             setIsMultiStepCameraOpen(true);
                           }}
-                          className={`w-full py-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.99] ${submitAttempted && hasOmset && !photoNota
+                          className={`w-full py-4 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition cursor-pointer active:scale-[0.99] ${submitAttempted && hasOmset && !hasOptional && !photoNota
                             ? 'border-rose-400 dark:border-rose-500/80 bg-slate-50/50 dark:bg-slate-800/40 hover:bg-slate-100/60'
                             : 'border-amber-300 dark:border-amber-700/60 bg-amber-50/30 dark:bg-amber-950/20 hover:bg-amber-50 dark:hover:bg-amber-950/40'
                             }`}
