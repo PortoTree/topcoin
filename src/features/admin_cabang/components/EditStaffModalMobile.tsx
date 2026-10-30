@@ -3,8 +3,11 @@ import { createPortal } from 'react-dom';
 import { X, UserCheck, Phone, User, KeyRound, Cpu } from 'lucide-react';
 import { toast } from '../../../context/ToastContext';
 import { supabase } from '../../../lib/supabase';
-import { validateEditStaffForm } from '../../../lib/staffLogic';
-import type { UserProfile } from '../../../types';
+import {
+  generateAutoPrefix,
+  validateEditStaffForm,
+} from '../../../lib/staffLogic';
+import type { UserProfile, UserRole } from '../../../types';
 
 interface EditStaffModalMobileProps {
   isOpen: boolean;
@@ -20,39 +23,51 @@ export const EditStaffModalMobile: React.FC<EditStaffModalMobileProps> = ({
   onSuccess,
 }) => {
   const [fullName, setFullName] = useState('');
+  const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
-  const [pin, setPin] = useState('');
+  const [role, setRole] = useState<UserRole>('dropping');
   const [machinePrefix, setMachinePrefix] = useState('');
+  const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync state ketika staff dipilih
   useEffect(() => {
     if (staff) {
       setFullName(staff.full_name || '');
+      setUsername(staff.username || '');
       setPhone(staff.phone || '');
-      setPin('');
+      setRole((staff.role as UserRole) || 'dropping');
       setMachinePrefix(staff.machine_prefix || '');
+      setPin('');
     }
   }, [staff]);
 
   if (!isOpen || !staff) return null;
 
-  const isDropping = staff.role === 'dropping' || staff.assigned_task === 'dropping';
+  // Handle Perubahan Role
+  const handleRoleChange = (newRole: UserRole) => {
+    setRole(newRole);
+    if (newRole === 'dropping' && !machinePrefix) {
+      setMachinePrefix(generateAutoPrefix(fullName));
+    }
+  };
 
+  // Submit Perubahan Profil Staf
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const cleanFullName = fullName.trim();
+    const cleanUsername = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
     const cleanPhone = phone.trim();
     const cleanPin = pin.trim();
-    const cleanPrefix = isDropping ? (machinePrefix.trim().toUpperCase() || 'MESIN') : null;
+    const cleanPrefix = role === 'dropping' ? (machinePrefix.trim().toUpperCase() || 'MESIN') : null;
 
-    // 1. Validasi
+    // 1. Validasi Input Form
     const validation = validateEditStaffForm({
       fullName: cleanFullName,
       phone: cleanPhone,
       pin: cleanPin,
-      role: staff.role,
+      role,
       machinePrefix: cleanPrefix,
     });
 
@@ -61,17 +76,35 @@ export const EditStaffModalMobile: React.FC<EditStaffModalMobileProps> = ({
       return;
     }
 
+    if (!cleanUsername || cleanUsername.length < 3) {
+      toast.error('Username minimal 3 karakter.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      const updatePayload: {
-        full_name: string;
-        phone: string;
-        pin?: string;
-        machine_prefix?: string | null;
-        updated_at: string;
-      } = {
+      // 2. Cek apakah username dipakai oleh akun lain
+      if (cleanUsername !== (staff.username || '').toLowerCase()) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', cleanUsername)
+          .neq('id', staff.id)
+          .maybeSingle();
+
+        if (existingUser) {
+          toast.error(`Username "@${cleanUsername}" sudah digunakan oleh akun lain.`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // 3. Update Profil di Tabel profiles
+      const updatePayload: Record<string, any> = {
         full_name: cleanFullName,
+        username: cleanUsername,
         phone: cleanPhone,
+        role,
         updated_at: new Date().toISOString(),
       };
 
@@ -79,7 +112,7 @@ export const EditStaffModalMobile: React.FC<EditStaffModalMobileProps> = ({
         updatePayload.pin = cleanPin;
       }
 
-      if (isDropping && cleanPrefix) {
+      if (role === 'dropping') {
         updatePayload.machine_prefix = cleanPrefix;
       }
 
@@ -90,168 +123,204 @@ export const EditStaffModalMobile: React.FC<EditStaffModalMobileProps> = ({
         .select()
         .single();
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      const updated: UserProfile = {
+      const updatedProfile: UserProfile = {
         ...staff,
-        full_name: cleanFullName,
-        phone: cleanPhone,
-        ...(cleanPin ? { pin: cleanPin } : {}),
-        ...(isDropping && cleanPrefix ? { machine_prefix: cleanPrefix } : {}),
+        ...updatePayload,
       };
 
-      toast.success(`Profil "${cleanFullName}" berhasil diperbarui.`);
-      onSuccess(data ? (data as UserProfile) : updated);
+      toast.success(`Profil "${cleanFullName}" (@${cleanUsername}) berhasil diperbarui!`);
+      onSuccess(data ? (data as UserProfile) : updatedProfile);
       onClose();
     } catch (err: any) {
-      console.error('Gagal memperbarui staf:', err);
-      toast.error(err.message || 'Gagal menyimpan perubahan profil petugas.');
+      console.error('Error updating staff:', err);
+      toast.error(err.message || 'Gagal menyimpan perubahan data karyawan.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div
-        className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom duration-250"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+      <div className="w-full max-w-sm max-h-[90vh] flex flex-col bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl">
         {/* Header Modal */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <UserCheck className="w-5 h-5" />
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <UserCheck className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                Edit Data Petugas
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                Edit Karyawan Cabang
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                @{staff.username} • {staff.role}
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Perbarui profil & akses login operasional
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90"
+            className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 overflow-y-auto">
+        {/* Form Body - Scrollable */}
+        <form onSubmit={handleSubmit} className="space-y-3 pt-3 overflow-y-auto scrollbar-none text-xs">
           {/* 1. Nama Lengkap */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Nama Lengkap <span className="text-rose-600 font-extrabold">*</span>
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Nama Lengkap <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
+              <User className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="text"
                 required
+                placeholder="Misal: Andi Saputra"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nama lengkap petugas..."
-                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
               />
-              <User className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
             </div>
           </div>
 
-          {/* 2. Nomor WhatsApp */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Nomor WhatsApp / HP <span className="text-rose-600 font-extrabold">*</span>
+          {/* 2. Nomor WhatsApp / Telepon */}
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Nomor WhatsApp / HP <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
+              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               <input
                 type="tel"
                 required
+                placeholder="081234567890"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/[^0-9+]/g, ''))}
-                placeholder="0812xxxxxxxx"
-                className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition"
+                onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
               />
-              <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Nomor aktif untuk koordinasi cabang dan notifikasi sistem.
-            </p>
           </div>
 
-          {/* 3. Prefix Kode Mesin (Khusus Staf Dropping) */}
-          {isDropping && (
-            <div className="space-y-1 p-3 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/40">
+          {/* 3. Peran / Tugas Operasional */}
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Peran Operasional <span className="text-rose-500 font-bold ml-0.5">*</span>
+            </label>
+            <select
+              value={role}
+              onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+              className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+            >
+              <option value="dropping">Dropping</option>
+              <option value="marketing">Marketing</option>
+              <option value="logistik">Logistik</option>
+              {(staff.role === 'admin_cabang' || staff.role === 'admin') && (
+                <option value="admin_cabang">Admin Cabang</option>
+              )}
+              {staff.role === 'branch_manager' && (
+                <option value="branch_manager">Branch Manager</option>
+              )}
+            </select>
+          </div>
+
+          {/* 4. Khusus Role Dropping: Prefix Kode Mesin */}
+          {role === 'dropping' && (
+            <div className="space-y-1 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <Cpu className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Prefix Kode Mesin Dropping</span>
+                <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+                  Kode Mesin <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                  Format: {machinePrefix || 'KODE'}-01
+                  Contoh: {machinePrefix || 'MSN'}-01
                 </span>
               </div>
               <input
                 type="text"
-                maxLength={10}
+                required
+                placeholder="NAMA"
                 value={machinePrefix}
-                onChange={(e) => setMachinePrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                placeholder="Contoh: NAUFAL, ANDI"
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white font-black text-xs tracking-wider uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition"
+                onChange={(e) => {
+                  setMachinePrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
+                }}
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white uppercase outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
               />
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Identitas kode mesin yang dipegang petugas ini di lapangan.
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                kode mesin untuk petugas dropping.
               </p>
             </div>
           )}
 
-          {/* 4. PIN Baru (Opsional ganti) */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Ganti PIN Login (Opsional)
+          {/* 5. Username Login */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Username Login <span className="text-rose-500 font-bold ml-0.5">*</span>
+              </label>
+            </div>
+            <div className="relative">
+              <span className="text-slate-400 font-bold absolute left-3.5 top-2.5 text-xs pointer-events-none">
+                @
+              </span>
+              <input
+                type="text"
+                required
+                placeholder="andi"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                }}
+                className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Digunakan saat login aplikasi.
+            </p>
+          </div>
+
+          {/* 6. PIN Keamanan 6-Digit */}
+          <div>
+            <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
+              PIN Login (6-Digit)
             </label>
             <div className="relative flex items-center">
+              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none z-10" />
               <input
                 type="password"
                 inputMode="numeric"
                 maxLength={6}
-                value={pin}
-                onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••••"
-                className="w-full pl-9 pr-3.5 h-9 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-white text-xs font-sans tracking-widest placeholder:text-slate-400 placeholder:font-sans placeholder:tracking-widest placeholder:leading-none focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors placeholder:text-slate-400 placeholder:text-xs placeholder:font-sans placeholder:tracking-[0.3em]"
               />
-              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
             </div>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Biarkan kosong jika tidak ingin mengubah PIN saat ini.
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Kosongkan jika tidak ingin mengubah PIN saat ini.
             </p>
           </div>
 
-          {/* Tombol Aksi */}
-          <div className="pt-2 flex items-center gap-2">
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 pt-2 flex-shrink-0">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition active:scale-95 cursor-pointer disabled:opacity-50"
+              className="w-1/2 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-600/20 transition active:scale-95 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-1/2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <span>Simpan Perubahan</span>
-              )}
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
             </button>
           </div>
         </form>
