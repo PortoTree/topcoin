@@ -929,36 +929,35 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             {/* Scrollable Body */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {/* Card Prefix & Tombol Edit Prefix */}
-              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
                       Prefix Kode Mesin
                     </span>
-                    <span className="font-mono font-black text-lg text-indigo-600 dark:text-indigo-400">
-                      {prefix}
-                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-mono font-black text-lg text-indigo-600 dark:text-indigo-400">
+                        {prefix}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPrefixModal(activeStaff)}
+                        className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-2xs"
+                        title="Edit Prefix"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
                       Total Dipegang
                     </span>
-                    <span className="font-mono font-black text-base text-slate-900 dark:text-white">
-                      {assignedMachines.length}{' '}
-                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ 20 Unit</span>
+                    <span className="font-mono font-black text-base text-slate-900 dark:text-white block mt-0.5">
+                      {assignedMachines.length} <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Unit</span>
                     </span>
                   </div>
                 </div>
-
-                {/* 1 Tombol Edit Prefix */}
-                <button
-                  type="button"
-                  onClick={() => handleOpenPrefixModal(activeStaff)}
-                  className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/20 active:scale-98 transition cursor-pointer"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  <span>Edit Prefix Kode Mesin</span>
-                </button>
               </div>
 
               {/* Section: List Kode Mesin */}
