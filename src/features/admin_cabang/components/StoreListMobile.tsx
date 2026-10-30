@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
 import { uploadToCloudinary } from '../../../lib/cloudinary';
 import { compressImage } from '../../../lib/imageCompression';
+import { getDeviceLocation } from '../../../lib/geolocation';
 import { BottomSheetModal } from '../../../components/BottomSheetModal';
 import { ActionPromptModal, type ActionPromptConfig } from '../../../components/ActionPromptModal';
 import { StoreInfoModal } from '../../../components/StoreInfoModal';
@@ -208,33 +209,22 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // GPS Auto-detect / Kunci GPS (Sama persis seperti fitur di Marketing)
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      toast.warning('Perangkat Anda tidak mendukung pendeteksi GPS.');
-      return;
-    }
-
+  // GPS Auto-detect / Kunci GPS dengan dukungan multi-stage fallback & pesan error akurat
+  const handleGetLocation = async () => {
     setIsGettingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const acc = Math.round(position.coords.accuracy);
-        setLatitude(lat);
-        setLongitude(lng);
-        setGpsAccuracy(acc);
-        setManualInput(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
-        setIsGettingGps(false);
-        toast.success(`Titik GPS toko berhasil dikunci (±${acc}m).`);
-      },
-      (error) => {
-        console.error('GPS error:', error);
-        toast.error('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
-        setIsGettingGps(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    try {
+      const pos = await getDeviceLocation();
+      setLatitude(pos.latitude);
+      setLongitude(pos.longitude);
+      setGpsAccuracy(pos.accuracy);
+      setManualInput(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`);
+      toast.success(`Titik GPS toko berhasil dikunci (±${pos.accuracy}m).`);
+    } catch (errMsg: any) {
+      console.warn('GPS location error:', errMsg);
+      toast.error(typeof errMsg === 'string' ? errMsg : 'Gagal mendeteksi lokasi GPS.');
+    } finally {
+      setIsGettingGps(false);
+    }
   };
 
   // Handler input koordinat / link Maps manual jika admin tidak sedang di toko
@@ -513,7 +503,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
                     onClick={() => setShowManualCoord(true)}
                     className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium underline cursor-pointer"
                   >
-                    + Masukkan koordinat / link Maps manual
+                    + Masukkan koordinat maps
                   </button>
                 ) : (
                   <div className="space-y-1.5 mt-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-800/60">
@@ -533,7 +523,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
                       type="text"
                       value={manualInput}
                       onChange={(e) => handleManualInputChange(e.target.value)}
-                      placeholder="Contoh: -8.153713, 112.583569 atau paste link Google Maps..."
+                      placeholder="Contoh: -8.153713, 112.583569"
                       className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                     />
                     {manualInput.trim() && !latitude && (
@@ -1086,8 +1076,8 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
                           setIsFilterDropdownOpen(false);
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer ${isSelected
-                            ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
-                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
+                          ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
                           }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -1097,8 +1087,8 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           <span
                             className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md ${isSelected
-                                ? 'bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                              ? 'bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                               }`}
                           >
                             {opt.count}

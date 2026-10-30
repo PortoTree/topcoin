@@ -18,6 +18,7 @@ import {
   getStoreMapCategory,
   getNavigationUrls,
 } from '../utils/mapLogic';
+import { getDeviceLocation } from '../../../lib/geolocation';
 import { useMobileBackHandler } from '../../../hooks/useMobileBackHandler';
 import { toast } from '../../../context/ToastContext';
 
@@ -242,49 +243,40 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
   };
 
-  // GPS realtime user position
-  const handleLocateUser = () => {
-    if (!navigator.geolocation) {
-      toast.error('Perangkat Anda tidak mendukung fitur lokasi GPS.');
-      return;
-    }
-
+  // GPS realtime user position dengan fallback otomatis
+  const handleLocateUser = async () => {
     setIsLocatingUser(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setIsLocatingUser(false);
-        const { latitude, longitude } = pos.coords;
-        const map = mapInstanceRef.current;
-        if (!map) return;
+    try {
+      const { latitude, longitude } = await getDeviceLocation();
+      const map = mapInstanceRef.current;
+      if (!map) return;
 
-        map.flyTo([latitude, longitude], 15, { animate: true, duration: 1 });
+      map.flyTo([latitude, longitude], 15, { animate: true, duration: 1 });
 
-        // Marker posisi pengguna
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setLatLng([latitude, longitude]);
-        } else {
-          const userIcon = L.divIcon({
-            className: 'user-location-marker',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-            html: `
-              <div class="relative w-6 h-6 flex items-center justify-center">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white shadow-lg"></span>
-              </div>
-            `,
-          });
-          userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
-        }
-        toast.success('Lokasi Anda berhasil ditemukan.');
-      },
-      (err) => {
-        setIsLocatingUser(false);
-        console.warn('Geolocation error:', err);
-        toast.error('Gagal mengambil posisi GPS. Pastikan izin lokasi aktif.');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
+      // Marker posisi pengguna
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setLatLng([latitude, longitude]);
+      } else {
+        const userIcon = L.divIcon({
+          className: 'user-location-marker',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12],
+          html: `
+            <div class="relative w-6 h-6 flex items-center justify-center">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-4 w-4 bg-blue-600 border-2 border-white shadow-lg"></span>
+            </div>
+          `,
+        });
+        userMarkerRef.current = L.marker([latitude, longitude], { icon: userIcon }).addTo(map);
+      }
+      toast.success('Lokasi Anda berhasil ditemukan.');
+    } catch (err: any) {
+      console.warn('Geolocation error:', err);
+      toast.error(typeof err === 'string' ? err : 'Gagal mengambil posisi GPS.');
+    } finally {
+      setIsLocatingUser(false);
+    }
   };
 
   return (
