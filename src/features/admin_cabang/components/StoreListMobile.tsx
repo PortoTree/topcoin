@@ -7,6 +7,7 @@ import { BottomSheetModal } from '../../../components/BottomSheetModal';
 import { ActionPromptModal, type ActionPromptConfig } from '../../../components/ActionPromptModal';
 import { StoreInfoModal } from '../../../components/StoreInfoModal';
 import { displayMachineCode } from '../../../lib/machineCodeLogic';
+import { useMobileBackHandler } from '../../../hooks/useMobileBackHandler';
 import type { Store, Machine, UserProfile } from '../../../types';
 import {
   Search,
@@ -27,6 +28,9 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Filter,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 
 // ===========================================================================
@@ -577,10 +581,17 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all'); // 'all' | 'CADANGAN' | staffName | 'BEKAS'
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [selectedStoreInfo, setSelectedStoreInfo] = useState<Store | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
+
+  // Tutup dropdown filter saat user menekan tombol Back bawaan HP
+  useMobileBackHandler({
+    enabled: isFilterDropdownOpen,
+    onBack: () => setIsFilterDropdownOpen(false),
+  });
 
   // Set ID toko yang pernah direlokasi dari tabel driver_tasks
   const [relocatedStoreIds, setRelocatedStoreIds] = useState<Set<string>>(new Set());
@@ -784,15 +795,60 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
   };
 
   // =========================================================================
-  // FILTER CHIPS
+  // FILTER DROPDOWN OPTIONS
   // =========================================================================
 
-  const filterChips: Array<{ id: string; label: string }> = [
-    { id: 'all', label: 'Semua' },
-    { id: 'CADANGAN', label: 'Cadangan' },
-    ...droppingStaffGroups.map((name) => ({ id: name, label: name.split(' ')[0] })),
-    { id: 'BEKAS', label: 'Bekas' },
-  ];
+  const filterOptions = useMemo(() => {
+    let countCadangan = 0;
+    let countBekas = 0;
+    const staffCountMap = new Map<string, number>();
+
+    for (const cs of categorizedStores) {
+      if (cs.category === 'CADANGAN') {
+        countCadangan++;
+      } else if (cs.category === 'BEKAS') {
+        countBekas++;
+      } else if (cs.droppingStaffName) {
+        const cur = staffCountMap.get(cs.droppingStaffName) || 0;
+        staffCountMap.set(cs.droppingStaffName, cur + 1);
+      }
+    }
+
+    return [
+      {
+        id: 'all',
+        label: 'Semua',
+        fullLabel: 'Semua Kategori Toko',
+        count: stores.length,
+        dotColor: 'bg-indigo-500',
+      },
+      {
+        id: 'CADANGAN',
+        label: 'Cadangan',
+        fullLabel: 'Cadangan (Marketing)',
+        count: countCadangan,
+        dotColor: 'bg-amber-500',
+      },
+      ...droppingStaffGroups.map((name) => ({
+        id: name,
+        label: name.split(' ')[0], // Nama panggilan petugas
+        fullLabel: `Petugas: ${name}`,
+        count: staffCountMap.get(name) || 0,
+        dotColor: 'bg-emerald-500',
+      })),
+      {
+        id: 'BEKAS',
+        label: 'Bekas',
+        fullLabel: 'Bekas (Pernah Pasang Mesin)',
+        count: countBekas,
+        dotColor: 'bg-rose-500',
+      },
+    ];
+  }, [stores.length, categorizedStores, droppingStaffGroups]);
+
+  const activeOption = useMemo(() => {
+    return filterOptions.find((opt) => opt.id === activeFilter) || filterOptions[0];
+  }, [filterOptions, activeFilter]);
 
   // =========================================================================
   // STYLING PER KATEGORI
@@ -885,21 +941,96 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         </div>
       </div>
 
-      {/* Filter Chips Horizontal */}
-      <div className="pb-3 flex gap-2 overflow-x-auto scrollbar-none">
-        {filterChips.map((chip) => (
-          <button
-            key={chip.id}
-            type="button"
-            onClick={() => setActiveFilter(chip.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 border transition cursor-pointer ${activeFilter === chip.id
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600'
+      {/* Filter Dropdown */}
+      <div className="relative pb-3">
+        <button
+          type="button"
+          onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs active:scale-[0.99] transition cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+              <Filter className="w-3.5 h-3.5" />
+            </div>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 flex-shrink-0">
+                Filter:
+              </span>
+              <span className="truncate font-extrabold text-xs text-slate-900 dark:text-white">
+                {activeOption.label}
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0">
+                ({activeOption.count} toko)
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <span className={`w-2 h-2 rounded-full ${activeOption.dotColor}`} />
+            <ChevronDown
+              className={`w-4 h-4 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${
+                isFilterDropdownOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
               }`}
-          >
-            {chip.label}
-          </button>
-        ))}
+            />
+          </div>
+        </button>
+
+        {/* Dropdown Floating Menu */}
+        {isFilterDropdownOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-30"
+              onClick={() => setIsFilterDropdownOpen(false)}
+            />
+            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden p-1.5 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/80 mb-1 flex items-center justify-between">
+                <span>Pilih Kategori Toko</span>
+                <span className="text-[9px] font-normal lowercase">klik untuk memfilter</span>
+              </div>
+              <div className="max-h-60 overflow-y-auto space-y-0.5 scrollbar-none">
+                {filterOptions.map((opt) => {
+                  const isSelected = activeFilter === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveFilter(opt.id);
+                        setIsFilterDropdownOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
+                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dotColor}`} />
+                        <span className="truncate">{opt.fullLabel}</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span
+                          className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                            isSelected
+                              ? 'bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {opt.count}
+                        </span>
+                        {isSelected ? (
+                          <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                        ) : (
+                          <div className="w-3.5 h-3.5" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Loading State */}
