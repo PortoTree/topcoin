@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
+import { uploadToCloudinary } from '../../../lib/cloudinary';
+import { compressImage } from '../../../lib/imageCompression';
 import { BottomSheetModal } from '../../../components/BottomSheetModal';
 import { ActionPromptModal, type ActionPromptConfig } from '../../../components/ActionPromptModal';
 import { StoreInfoModal } from '../../../components/StoreInfoModal';
@@ -20,6 +22,11 @@ import {
   Pencil,
   Trash2,
   Clock,
+  Camera,
+  Image as ImageIcon,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 // ===========================================================================
@@ -54,6 +61,71 @@ interface CategorizedStore {
 // ===========================================================================
 
 /**
+ * Ekstraksi koordinat latitude & longitude dari berbagai varian input Google Maps:
+ * 1. Embed iframe HTML: <iframe src="https://www.google.com/maps/embed?pb=!1m18!...!2d<lng>!3d<lat>..." ...>
+ * 2. Embed URL: ...!2d<lng>!3d<lat>... atau !3d<lat>!4d<lng>...
+ * 3. Place / View URL: .../@<lat>,<lng>...
+ * 4. Search query: ?q=<lat>,<lng> atau query=<lat>,<lng>
+ * 5. Koordinat manual langsung: "-7.2575, 112.7521"
+ */
+export function parseGmapsCoordinates(input: string): { latitude: number; longitude: number } | null {
+  if (!input || typeof input !== 'string') return null;
+  const str = input.trim();
+
+  // 1. Cek Google Maps Embed URL/iframe: !2d<lng>!3d<lat>
+  const embedMatch = str.match(/!2d(-?\d+(?:\.\d+)?)[^!]*!3d(-?\d+(?:\.\d+)?)/i);
+  if (embedMatch) {
+    const lng = parseFloat(embedMatch[1]);
+    const lat = parseFloat(embedMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  // 1b. Alternatif embed: !3d<lat>!4d<lng>
+  const embedAltMatch = str.match(/!3d(-?\d+(?:\.\d+)?)[^!]*!4d(-?\d+(?:\.\d+)?)/i);
+  if (embedAltMatch) {
+    const lat = parseFloat(embedAltMatch[1]);
+    const lng = parseFloat(embedAltMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  // 2. Cek format URL @<lat>,<lng>
+  const atMatch = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (atMatch) {
+    const lat = parseFloat(atMatch[1]);
+    const lng = parseFloat(atMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  // 3. Cek query parameter q=<lat>,<lng> atau query=<lat>,<lng> atau ll=<lat>,<lng>
+  const queryMatch = str.match(/[?&](?:q|query|ll|center)=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)/i);
+  if (queryMatch) {
+    const lat = parseFloat(queryMatch[1]);
+    const lng = parseFloat(queryMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  // 4. Cek format koordinat langsung: -7.2575, 112.7521
+  const directMatch = str.match(/^(-?\d{1,2}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)$/);
+  if (directMatch) {
+    const lat = parseFloat(directMatch[1]);
+    const lng = parseFloat(directMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Format tanggal & jam sesuai permintaan user:
  * [time, dd/mm/yyyy] contoh: 14:30, 30/10/2026
  */
@@ -75,7 +147,7 @@ function cleanPhone(phone: string): string {
 }
 
 // ===========================================================================
-// FORM EDIT / TAMBAH TOKO
+// FORM EDIT / TAMBAH TOKO DENGAN GOOGLE MAPS EMBED & FOTO TOKO
 // ===========================================================================
 
 interface StoreFormData {
@@ -83,6 +155,7 @@ interface StoreFormData {
   owner_name: string;
   address: string;
   phone: string;
+  gmaps_input: string;
 }
 
 interface StoreFormModalProps {
@@ -99,16 +172,67 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
   onSuccess,
 }) => {
   const isEdit = Boolean(store);
+
+  // Inisialisasi gmaps_input: jika edit dan sudah ada koordinat, tampilkan koordinat
+  const initialGmapsInput = store?.latitude && store?.longitude
+    ? `${store.latitude}, ${store.longitude}`
+    : '';
+
   const [form, setForm] = useState<StoreFormData>({
     name: store?.name ?? '',
     owner_name: store?.owner_name ?? '',
     address: store?.address ?? '',
     phone: store?.phone ?? '',
+    gmaps_input: initialGmapsInput,
   });
-  const [isSaving, setIsSaving] = useState(false);
+
+  // State untuk Foto Toko
+  const [photoPreview, setPhotoPreview] = useState<string | null>(store?.photo_store_url || null);
+  const [photoBlob, setPhotoBlob] = useState<Blob | string | null>(null);
+  const [isPhotoRemoved, setIsPhotoRemoved] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Hidden Input Refs untuk Kamera & File Picker
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time parsing Google Maps embed / link / koordinat
+  const parsedCoords = useMemo(() => {
+    return parseGmapsCoordinates(form.gmaps_input);
+  }, [form.gmaps_input]);
 
   const handleChange = (field: keyof StoreFormData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Handler saat user memilih file gambar dari Kamera atau Galeri
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Kompres gambar otomatis di sisi client (target WebP ~150-250 KB)
+      const compressed = await compressImage(file, 1200, 1200, 0.75);
+      setPhotoPreview(compressed.base64);
+      setPhotoBlob(compressed.blob);
+      setIsPhotoRemoved(false);
+      toast.success('Foto toko berhasil dimuat.');
+    } catch (err) {
+      console.warn('Gagal mengompres foto, menggunakan fallback:', err);
+      const url = URL.createObjectURL(file);
+      setPhotoPreview(url);
+      setPhotoBlob(file);
+      setIsPhotoRemoved(false);
+    } finally {
+      // Reset input agar bisa memilih ulang file yang sama jika diperlukan
+      e.target.value = '';
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoPreview(null);
+    setPhotoBlob(null);
+    setIsPhotoRemoved(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,14 +241,46 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
       toast.error('Nama toko wajib diisi.');
       return;
     }
+
     setIsSaving(true);
     try {
+      // 1. Unggah foto ke Cloudinary jika ada foto baru
+      let finalPhotoUrl = isPhotoRemoved ? null : (store?.photo_store_url || null);
+      if (photoBlob) {
+        try {
+          const uploadedUrl = await uploadToCloudinary(photoBlob, 'stores');
+          if (uploadedUrl) {
+            finalPhotoUrl = uploadedUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Gagal upload ke Cloudinary, fallback local:', uploadErr);
+          if (typeof photoPreview === 'string') {
+            finalPhotoUrl = photoPreview;
+          }
+        }
+      }
+
+      // 2. Hitung titik koordinat (dari hasil generate gmaps embed/link atau data lama)
+      let finalLat: number | null = null;
+      let finalLng: number | null = null;
+
+      if (parsedCoords) {
+        finalLat = parsedCoords.latitude;
+        finalLng = parsedCoords.longitude;
+      } else if (store?.latitude && store?.longitude && form.gmaps_input.trim()) {
+        finalLat = store.latitude;
+        finalLng = store.longitude;
+      }
+
       const payload = {
         name: form.name.trim(),
         owner_name: form.owner_name.trim(),
         address: form.address.trim(),
         phone: form.phone.trim() || null,
         branch_id: branchId,
+        latitude: finalLat,
+        longitude: finalLng,
+        photo_store_url: finalPhotoUrl,
       };
 
       if (isEdit && store) {
@@ -140,7 +296,11 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
       } else {
         const { data, error } = await supabase
           .from('stores')
-          .insert({ ...payload, status: 'proses', current_machine_id: null, photo_store_url: null })
+          .insert({
+            ...payload,
+            status: 'proses',
+            current_machine_id: null,
+          })
           .select()
           .single();
         if (error) throw error;
@@ -163,7 +323,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
       {(_, close) => (
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
             <div>
               <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
                 {isEdit ? 'Edit Toko Mitra' : 'Tambah Toko Baru'}
@@ -181,8 +341,26 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
             </button>
           </div>
 
-          {/* Fields */}
-          <div className="space-y-3">
+          {/* Hidden File Inputs (Kamera & Galeri) */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleImageFileChange}
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageFileChange}
+          />
+
+          {/* Form Fields */}
+          <div className="space-y-3.5">
+            {/* 1. Nama Toko */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Nama Toko <span className="text-rose-500">*</span>
@@ -197,6 +375,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
               />
             </div>
 
+            {/* 2. Nama Pemilik */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Nama Pemilik
@@ -210,9 +389,10 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
               />
             </div>
 
+            {/* 3. Alamat */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Alamat
+                Alamat Toko
               </label>
               <textarea
                 rows={2}
@@ -223,6 +403,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
               />
             </div>
 
+            {/* 4. Nomor WhatsApp */}
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Nomor WhatsApp
@@ -236,10 +417,125 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500"
               />
             </div>
+
+            {/* 5. Kolom Link / Embed Google Maps */}
+            <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Link / Embed Google Maps
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Generate Titik Toko</span>
+              </label>
+              <textarea
+                rows={2}
+                value={form.gmaps_input}
+                onChange={(e) => handleChange('gmaps_input', e.target.value)}
+                placeholder="Paste kode Embed HTML (iframe), link share Google Maps, atau koordinat (-7.2575, 112.7521)..."
+                className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 resize-none"
+              />
+
+              {/* Status Real-time Titik Koordinat yang Ter-generate */}
+              {parsedCoords ? (
+                <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-[11px] text-emerald-800 dark:text-emerald-300">
+                  <span className="flex items-center gap-1.5 font-bold truncate">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                    Titik: {parsedCoords.latitude.toFixed(6)}, {parsedCoords.longitude.toFixed(6)}
+                  </span>
+                  <a
+                    href={`https://maps.google.com/?q=${parsedCoords.latitude},${parsedCoords.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 font-bold underline hover:text-emerald-900 dark:hover:text-emerald-200 flex-shrink-0 ml-2"
+                  >
+                    Cek di Maps <ExternalLink className="w-2.5 h-2.5" />
+                  </a>
+                </div>
+              ) : form.gmaps_input.trim() ? (
+                <div className="flex items-center gap-1.5 p-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-[11px] text-amber-800 dark:text-amber-300">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>Titik belum terdeteksi. Pastikan link berisi koordinat atau paste embed iframe Google Maps.</span>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight">
+                  💡 Tips: Di Google Maps, klik <strong>Bagikan</strong> &gt; <strong>Sematkan peta</strong> lalu copy kode HTML-nya, atau masukkan koordinat langsung.
+                </p>
+              )}
+            </div>
+
+            {/* 6. Kolom Buka Kamera & Upload Foto Toko */}
+            <div className="space-y-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                  Foto Tampak Depan Toko
+                </span>
+                <span className="text-[10px] text-slate-400 font-normal">Kamera / Galeri</span>
+              </label>
+
+              {photoPreview ? (
+                <div className="relative w-full h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 group">
+                  <img
+                    src={photoPreview}
+                    alt="Preview Foto Toko"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="px-2.5 py-1.5 rounded-lg bg-white/90 text-slate-900 text-[11px] font-bold flex items-center gap-1 shadow-md hover:bg-white cursor-pointer"
+                    >
+                      <Camera className="w-3 h-3" /> Foto Ulang
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRemovePhoto}
+                      className="px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold flex items-center gap-1 shadow-md hover:bg-rose-500 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" /> Hapus
+                    </button>
+                  </div>
+                  {/* Tombol Hapus Pojok Kanan Atas Selalu Siap Tap */}
+                  <button
+                    type="button"
+                    onClick={handleRemovePhoto}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white cursor-pointer shadow-xs"
+                    title="Hapus foto"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="py-3 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-500 text-slate-700 dark:text-slate-200 text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                      <Camera className="w-4 h-4" />
+                    </div>
+                    <span>Buka Kamera</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    className="py-3 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 hover:border-indigo-500 text-slate-700 dark:text-slate-200 text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <ImageIcon className="w-4 h-4" />
+                    </div>
+                    <span>Pilih dari Galeri</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-1">
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
             <button
               type="button"
               onClick={close}
@@ -257,7 +553,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
               ) : (
                 <>{isEdit ? <Pencil className="w-4 h-4" /> : <Plus className="w-4 h-4" />}</>
               )}
-              {isEdit ? 'Simpan Perubahan' : 'Tambah Toko'}
+              {isSaving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Tambah Toko'}
             </button>
           </div>
         </form>
@@ -321,14 +617,6 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
 
   // =========================================================================
   // MAPPER & KALKULASI KATEGORI
-  // Logika Kategori:
-  // 1. Toko memiliki mesin aktif -> [NAMA PETUGAS DROPPING] (cth: [NAUFAL])
-  // 2. Toko tidak memiliki mesin, tapi pernah dipasang mesin (relokasi selesai / nonaktif) -> [BEKAS]
-  // 3. Toko belum memiliki mesin -> [CADANGAN] (sumber dari marketing)
-  //
-  // Logika Nomor Mesin:
-  // - Jika ada mesin dipasang -> tampilkan badge kode mesin
-  // - Jika tidak ada mesin dipasang -> kolom nomor mesin DI-HIDE
   // =========================================================================
 
   const machineByStoreId = useMemo(() => {
@@ -369,8 +657,6 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
       }
 
       // Kategori BEKAS:
-      // Pernah ada relokasi mesin (completed 'relokasi_mesin' dengan toko ini sbg store_id)
-      // ATAU store.status === 'nonaktif' ATAU pernah terpasang tapi mesin sudah ditarik
       const isRelocated = relocatedStoreIds.has(store.id);
       const wasEverInstalled = isRelocated || store.status === 'nonaktif' || Boolean(store.delivered_at);
       if (!hasMachineNow && wasEverInstalled) {
@@ -383,7 +669,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         };
       }
 
-      // Default: CADANGAN (dari input marketing yang belum dipasang mesin)
+      // Default: CADANGAN
       return {
         store,
         category: 'CADANGAN',
@@ -786,7 +1072,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         </div>
       )}
 
-      {/* ===== MODAL: Detail Informasi Toko Mitra (Sama Persis dengan Dropping) ===== */}
+      {/* ===== MODAL: Detail Informasi Toko Mitra ===== */}
       {selectedStoreInfo && (
         <StoreInfoModal
           store={selectedStoreInfo}
@@ -826,7 +1112,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
                   }}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-4 h-4" />
                   Edit Data Toko
                 </button>
               </div>

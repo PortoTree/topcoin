@@ -247,6 +247,21 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
               {/* 1. Profil Toko & Kontak */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                {/* Foto Toko (jika ada) */}
+                {store.photo_store_url && (
+                  <div className="relative w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs mb-1">
+                    <img
+                      src={store.photo_store_url}
+                      alt={store.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1">
+                      <Camera className="w-3 h-3 text-indigo-400" />
+                      Foto Depan Toko
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
                     Outlet Mitra
