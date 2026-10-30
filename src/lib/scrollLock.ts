@@ -56,3 +56,4 @@ export function forceUnlockBodyScroll(): void {
   document.body.style.overflow = '';
   document.body.style.touchAction = '';
 }
+

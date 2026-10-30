@@ -8,6 +8,7 @@ import { ActionPromptModal, type ActionPromptConfig } from '../../../components/
 import { StoreInfoModal } from '../../../components/StoreInfoModal';
 import { displayMachineCode } from '../../../lib/machineCodeLogic';
 import { useMobileBackHandler } from '../../../hooks/useMobileBackHandler';
+import { StoreMapMobile } from '../../maps/components/StoreMapMobile';
 import type { Store, Machine, UserProfile } from '../../../types';
 import {
   Search,
@@ -31,6 +32,7 @@ import {
   Filter,
   ChevronDown,
   Check,
+  Map as MapIcon,
 } from 'lucide-react';
 
 // ===========================================================================
@@ -582,6 +584,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<string>('all'); // 'all' | 'CADANGAN' | staffName | 'BEKAS'
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [showMapView, setShowMapView] = useState(false);
   const [selectedStoreInfo, setSelectedStoreInfo] = useState<Store | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
@@ -825,21 +828,21 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
       {
         id: 'CADANGAN',
         label: 'Cadangan',
-        fullLabel: 'Cadangan (Marketing)',
+        fullLabel: 'Cadangan',
         count: countCadangan,
         dotColor: 'bg-amber-500',
       },
       ...droppingStaffGroups.map((name) => ({
         id: name,
         label: name.split(' ')[0], // Nama panggilan petugas
-        fullLabel: `Petugas: ${name}`,
+        fullLabel: `${name}`,
         count: staffCountMap.get(name) || 0,
         dotColor: 'bg-emerald-500',
       })),
       {
         id: 'BEKAS',
         label: 'Bekas',
-        fullLabel: 'Bekas (Pernah Pasang Mesin)',
+        fullLabel: 'Bekas',
         count: countBekas,
         dotColor: 'bg-rose-500',
       },
@@ -941,96 +944,105 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         </div>
       </div>
 
-      {/* Filter Dropdown */}
-      <div className="relative pb-3">
+      {/* Baris Tombol [Buka Maps] (Kiri) & Filter Dropdown (Kanan) */}
+      <div className="flex items-center gap-2 pb-3">
+        {/* Tombol Buka Maps */}
         <button
           type="button"
-          onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
-          className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs active:scale-[0.99] transition cursor-pointer"
+          onClick={() => setShowMapView(true)}
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer flex-shrink-0"
+          title="Buka Peta Persebaran Toko Mitra"
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
-              <Filter className="w-3.5 h-3.5" />
-            </div>
+          <MapIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+          <span className="whitespace-nowrap">Buka Maps</span>
+        </button>
+
+        {/* Filter Dropdown */}
+        <div className="relative flex-1 min-w-0">
+          <button
+            type="button"
+            onClick={() => setIsFilterDropdownOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs active:scale-[0.99] transition cursor-pointer"
+          >
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 flex-shrink-0">
-                Filter:
-              </span>
+              <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                <Filter className="w-3 h-3" />
+              </div>
               <span className="truncate font-extrabold text-xs text-slate-900 dark:text-white">
                 {activeOption.label}
               </span>
               <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0">
-                ({activeOption.count} toko)
+                ({activeOption.count})
               </span>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            <span className={`w-2 h-2 rounded-full ${activeOption.dotColor}`} />
-            <ChevronDown
-              className={`w-4 h-4 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${
-                isFilterDropdownOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
-              }`}
-            />
-          </div>
-        </button>
-
-        {/* Dropdown Floating Menu */}
-        {isFilterDropdownOpen && (
-          <>
-            <div
-              className="fixed inset-0 z-30"
-              onClick={() => setIsFilterDropdownOpen(false)}
-            />
-            <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden p-1.5 animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/80 mb-1 flex items-center justify-between">
-                <span>Pilih Kategori Toko</span>
-                <span className="text-[9px] font-normal lowercase">klik untuk memfilter</span>
-              </div>
-              <div className="max-h-60 overflow-y-auto space-y-0.5 scrollbar-none">
-                {filterOptions.map((opt) => {
-                  const isSelected = activeFilter === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => {
-                        setActiveFilter(opt.id);
-                        setIsFilterDropdownOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer ${
-                        isSelected
-                          ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
-                          : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dotColor}`} />
-                        <span className="truncate">{opt.fullLabel}</span>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                        <span
-                          className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
-                            isSelected
-                              ? 'bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200'
-                              : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                          }`}
-                        >
-                          {opt.count}
-                        </span>
-                        {isSelected ? (
-                          <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
-                        ) : (
-                          <div className="w-3.5 h-3.5" />
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+              <span className={`w-2 h-2 rounded-full ${activeOption.dotColor}`} />
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${
+                  isFilterDropdownOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
+                }`}
+              />
             </div>
-          </>
-        )}
+          </button>
+
+          {/* Dropdown Floating Menu */}
+          {isFilterDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-30"
+                onClick={() => setIsFilterDropdownOpen(false)}
+              />
+              <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/80 mb-1 flex items-center justify-between">
+                  <span>Pilih Kategori Toko</span>
+                  <span className="text-[9px] font-normal lowercase">klik untuk filter</span>
+                </div>
+                <div className="max-h-60 overflow-y-auto space-y-0.5 scrollbar-none">
+                  {filterOptions.map((opt) => {
+                    const isSelected = activeFilter === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveFilter(opt.id);
+                          setIsFilterDropdownOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
+                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dotColor}`} />
+                          <span className="truncate">{opt.fullLabel}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span
+                            className={`text-[11px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                              isSelected
+                                ? 'bg-indigo-200/60 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                            }`}
+                          >
+                            {opt.count}
+                          </span>
+                          {isSelected ? (
+                            <Check className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                          ) : (
+                            <div className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Loading State */}
@@ -1281,6 +1293,23 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         config={actionPrompt}
         onClose={() => setActionPrompt(null)}
       />
+
+      {/* ===== VIEW: Peta Persebaran Lokasi Toko Mitra (Leaflet.js) ===== */}
+      {showMapView && (
+        <StoreMapMobile
+          stores={stores}
+          machines={machines}
+          droppingUsers={droppingUsers}
+          relocatedStoreIds={relocatedStoreIds}
+          branchName={branchName}
+          initialFilter={activeFilter}
+          onClose={() => setShowMapView(false)}
+          onOpenStoreDetail={(targetStore) => {
+            setShowMapView(false);
+            setSelectedStoreInfo(targetStore);
+          }}
+        />
+      )}
     </div>
   );
 };
