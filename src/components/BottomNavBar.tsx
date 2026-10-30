@@ -69,6 +69,15 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
     touchStartY.current = null;
   };
 
+  // Icon dinamis untuk tugas admin lapangan
+  const assignedTask = profile.assigned_task;
+  const taskIcon =
+    assignedTask === 'logistik' || assignedTask === 'driver'
+      ? Truck
+      : assignedTask === 'marketing'
+        ? StoreIcon
+        : ClipboardList;
+
   const getNavItems = () => {
     switch (currentRole) {
       case 'owner':
@@ -87,13 +96,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         ];
       case 'admin_cabang':
       case 'admin': {
-        // 5 Navigasi Utama: omset | petugas | laporan | rute | absen
+        // 5 Navigasi Utama: tugas | omset | aktifitas | rute | petugas
         return [
+          { id: 'admin_task', label: 'Tugas', icon: taskIcon },
           { id: 'omset', label: 'Omset', icon: TrendingUp },
-          { id: 'schedule', label: 'Petugas', icon: Users },
-          { id: 'reports', label: 'Laporan', icon: Clock },
+          { id: 'reports', label: 'Aktifitas', icon: Clock },
           { id: 'route', label: 'Rute', icon: Route },
-          { id: 'attendance', label: 'Absen', icon: CalendarDays },
+          { id: 'schedule', label: 'Petugas', icon: Users },
         ];
       }
       case 'marketing':
@@ -121,19 +130,11 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
 
   const navItems = getNavItems();
 
-  // 5 Navigasi Tambahan: libur | logistik | tugas | toko | mesin
-  const assignedTask = profile.assigned_task;
-  const taskIcon =
-    assignedTask === 'logistik' || assignedTask === 'driver'
-      ? Truck
-      : assignedTask === 'marketing'
-        ? StoreIcon
-        : ClipboardList;
-
+  // 5 Navigasi Tambahan: libur | logistik | absen | toko | mesin
   const adminExpandedMenus = [
     { id: 'leave', label: 'Libur', icon: CalendarOff },
     { id: 'driver_dispatch', label: 'Logistik', icon: Truck },
-    { id: 'admin_task', label: 'Tugas', icon: taskIcon },
+    { id: 'attendance', label: 'Absen', icon: CalendarDays },
     { id: 'stores', label: 'Toko', icon: StoreIcon },
     { id: 'machines', label: 'Mesin', icon: Cpu },
   ];
@@ -143,9 +144,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
       {/* Backdrop saat Drawer Ter-expand dengan Transisi Halus Fade */}
       {isAdmin && (
         <div
-          className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-2xs transition-opacity duration-200 ease-out ${
-            isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-          }`}
+          className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-2xs transition-opacity duration-200 ease-out ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
           onClick={() => setIsExpanded(false)}
         />
       )}
@@ -155,11 +155,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${
-          hasRoundedNav
-            ? 'rounded-t-3xl border-t border-x border-slate-200 dark:border-slate-800 shadow-2xl'
-            : 'rounded-none border-t border-slate-200 dark:border-slate-800 shadow-lg'
-        }`}
+        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${hasRoundedNav
+          ? 'rounded-t-3xl border-t border-x border-slate-200 dark:border-slate-800 shadow-2xl'
+          : 'rounded-none border-t border-slate-200 dark:border-slate-800 shadow-lg'
+          }`}
       >
         {/* Drag Pill Handle Minimalis (Khusus Akun Admin - Tanpa Teks) */}
         {isAdmin && (
@@ -170,11 +169,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
           >
             {/* Visual Drag Bar */}
             <div
-              className={`h-1 rounded-full transition-all duration-200 ${
-                isExpanded
-                  ? 'bg-indigo-500 w-12 h-1.5 shadow-xs shadow-indigo-500/50'
-                  : 'bg-slate-300 dark:bg-slate-700 w-10 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
-              }`}
+              className={`h-1 rounded-full transition-all duration-200 ${isExpanded
+                ? 'bg-indigo-500 w-12 h-1.5 shadow-xs shadow-indigo-500/50'
+                : 'bg-slate-300 dark:bg-slate-700 w-10 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
+                }`}
             />
           </div>
         )}
@@ -182,11 +180,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         {/* Drawer Menu Tambahan: Animasi CSS Grid yang Halus & Responsif (Tanpa Delay Max-Height) */}
         {isAdmin && (
           <div
-            className={`grid transition-[grid-template-rows,opacity] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-              isExpanded
-                ? 'grid-rows-[1fr] opacity-100 mb-1 border-b border-slate-200 dark:border-slate-800'
-                : 'grid-rows-[0fr] opacity-0 mb-0 border-b-0 pointer-events-none'
-            }`}
+            className={`grid transition-[grid-template-rows,opacity] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)] ${isExpanded
+              ? 'grid-rows-[1fr] opacity-100 mb-1 border-b border-slate-200 dark:border-slate-800'
+              : 'grid-rows-[0fr] opacity-0 mb-0 border-b-0 pointer-events-none'
+              }`}
           >
             <div className="overflow-hidden">
               <div className="px-1 pt-0.5 pb-2">
@@ -211,18 +208,16 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
                           onTabChange(menu.id);
                           setIsExpanded(false);
                         }}
-                        className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
-                          isCurrentActive
-                            ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
-                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
-                        }`}
+                        className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isCurrentActive
+                          ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                          }`}
                       >
                         <div
-                          className={`p-1 rounded-lg transition-colors ${
-                            isCurrentActive
-                              ? 'bg-indigo-100 dark:bg-indigo-500/15'
-                              : 'bg-transparent'
-                          }`}
+                          className={`p-1 rounded-lg transition-colors ${isCurrentActive
+                            ? 'bg-indigo-100 dark:bg-indigo-500/15'
+                            : 'bg-transparent'
+                            }`}
                         >
                           <Icon className={`w-5 h-5 ${isCurrentActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
                         </div>
@@ -255,8 +250,8 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
                   if (isExpanded) setIsExpanded(false);
                 }}
                 className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isActive
-                    ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                  ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
                   }`}
               >
                 <div
