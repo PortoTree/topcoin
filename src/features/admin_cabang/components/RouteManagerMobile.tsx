@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
 import { BottomSheetModal } from '../../../components/BottomSheetModal';
 import { StoreInfoModal } from '../../../components/StoreInfoModal';
+import { CreateRelocationModalMobile } from './CreateRelocationModalMobile';
 import {
   Route,
   Truck,
@@ -22,6 +23,9 @@ import {
   RefreshCw,
   User,
   Store as StoreIcon,
+  Filter,
+  ChevronDown,
+  Plus,
 } from 'lucide-react';
 import type { Machine, UserProfile, Store, DriverTask } from '../../../types';
 import {
@@ -32,6 +36,7 @@ import {
 
 interface RouteManagerMobileProps {
   branchId: string;
+  branchName?: string;
   machines: Machine[];
   droppingStaff: UserProfile[];
   stores: Store[];
@@ -40,6 +45,7 @@ interface RouteManagerMobileProps {
 
 export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
   branchId,
+  branchName,
   machines,
   droppingStaff,
   stores,
@@ -69,7 +75,36 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
   const [driverTasks, setDriverTasks] = useState<DriverTask[]>([]);
   const [isLoadingLogistics, setIsLoadingLogistics] = useState(false);
   const [logisticsFilter, setLogisticsFilter] = useState<'all' | 'completed' | 'in_progress' | 'kendala'>('all');
+  const [isLogisticsFilterOpen, setIsLogisticsFilterOpen] = useState(false);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [selectedTaskForSummary, setSelectedTaskForSummary] = useState<DriverTask | null>(null);
+
+  // Filter Options untuk Dropdown
+  const logisticsFilterOptions = useMemo(() => [
+    { id: 'all', label: 'Semua', count: driverTasks.length, dotColor: 'bg-slate-400' },
+    {
+      id: 'in_progress',
+      label: 'Proses / Antar',
+      count: driverTasks.filter((t) => t.status === 'in_progress').length,
+      dotColor: 'bg-blue-500',
+    },
+    {
+      id: 'completed',
+      label: 'Selesai',
+      count: driverTasks.filter((t) => t.status === 'completed').length,
+      dotColor: 'bg-emerald-500',
+    },
+    {
+      id: 'kendala',
+      label: 'Kendala',
+      count: driverTasks.filter((t) => t.status === 'kendala').length,
+      dotColor: 'bg-rose-500',
+    },
+  ], [driverTasks]);
+
+  const activeLogisticsOption = useMemo(() => {
+    return logisticsFilterOptions.find((opt) => opt.id === logisticsFilter) || logisticsFilterOptions[0];
+  }, [logisticsFilterOptions, logisticsFilter]);
 
   // Fetch Riwayat Tugas Logistik
   const fetchLogisticsTasks = useCallback(async () => {
@@ -401,47 +436,96 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
             </button>
           </div>
 
-          {/* Filter Status Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+          {/* Baris Filter Dropdown & Tombol Buat Tugas */}
+          <div className="flex items-center gap-2 pb-1">
+            {/* Filter Dropdown */}
+            <div className="relative flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => setIsLogisticsFilterOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-100 hover:border-indigo-400 dark:hover:border-indigo-500 shadow-2xs active:scale-[0.99] transition cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                    <Filter className="w-3 h-3" />
+                  </div>
+                  <span className="truncate font-extrabold text-xs text-slate-900 dark:text-white">
+                    {activeLogisticsOption.label}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 flex-shrink-0">
+                    ({activeLogisticsOption.count})
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-1">
+                  <span className={`w-2 h-2 rounded-full ${activeLogisticsOption.dotColor}`} />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-400 transition-transform duration-200 ${
+                      isLogisticsFilterOpen ? 'rotate-180 text-indigo-600 dark:text-indigo-400' : ''
+                    }`}
+                  />
+                </div>
+              </button>
+
+              {/* Dropdown Floating Menu */}
+              {isLogisticsFilterOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-30"
+                    onClick={() => setIsLogisticsFilterOpen(false)}
+                  />
+                  <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden p-1.5 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 border-b border-slate-100 dark:border-slate-800/80 mb-1 flex items-center justify-between">
+                      <span>Status Tugas Logistik</span>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto space-y-0.5 scrollbar-none">
+                      {logisticsFilterOptions.map((opt) => {
+                        const isSelected = logisticsFilter === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setLogisticsFilter(opt.id as any);
+                              setIsLogisticsFilterOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-700 dark:text-indigo-300 font-extrabold'
+                                : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100/70 dark:hover:bg-slate-800/70 font-medium'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${opt.dotColor}`} />
+                              <span className="truncate">{opt.label}</span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                                isSelected
+                                  ? 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-200'
+                                  : 'text-slate-400 dark:text-slate-500'
+                              }`}
+                            >
+                              {opt.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Tombol Buat Tugas */}
             <button
               type="button"
-              onClick={() => setLogisticsFilter('all')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'all'
-                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
+              onClick={() => setShowCreateTaskModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-black text-xs shadow-md shadow-orange-500/20 active:scale-95 transition cursor-pointer flex-shrink-0"
+              title="Buat Tugas Relokasi Mesin"
             >
-              Semua ({driverTasks.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogisticsFilter('in_progress')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'in_progress'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
-            >
-              Proses / Antar ({driverTasks.filter((t) => t.status === 'in_progress').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogisticsFilter('completed')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'completed'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
-            >
-              Selesai ({driverTasks.filter((t) => t.status === 'completed').length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogisticsFilter('kendala')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'kendala'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
-            >
-              Kendala ({driverTasks.filter((t) => t.status === 'kendala').length})
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span className="whitespace-nowrap">Buat tugas</span>
             </button>
           </div>
 
@@ -1063,6 +1147,22 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
         machineCodeOverride={selectedStoreForInfo?.machineCode}
         onClose={() => setSelectedStoreForInfo(null)}
       />
+
+      {/* ========================================================================= */}
+      {/* MODAL BUAT TUGAS RELOKASI MESIN (MOBILE ONLY)                             */}
+      {/* ========================================================================= */}
+      {showCreateTaskModal && (
+        <CreateRelocationModalMobile
+          branchId={branchId}
+          branchName={branchName}
+          onClose={() => setShowCreateTaskModal(false)}
+          onSuccess={() => {
+            setShowCreateTaskModal(false);
+            fetchLogisticsTasks();
+            onRefresh();
+          }}
+        />
+      )}
     </div>
   );
 };

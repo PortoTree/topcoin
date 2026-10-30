@@ -31,6 +31,7 @@ import {
   Search,
   Pencil,
   CalendarOff,
+  BarChart3,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
@@ -1165,11 +1166,108 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       {activeTab === 'route' && (
         <RouteManagerMobile
           branchId={activeBranchId}
+          branchName={currentBranch?.name}
           machines={machines}
           droppingStaff={droppingUsers}
           stores={branchStores}
           onRefresh={fetchBranchData}
         />
+      )}
+
+      {/* Tab: Analisa (Ringkasan Finansial & Analisa Performa Toko) */}
+      {activeTab === 'analisa' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Analisa Performa</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Ringkasan analitik dan produktivitas cabang {currentBranch?.name}
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+
+          {/* Quick Metrics Grid */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Omset Kotor
+              </span>
+              <span className="text-sm font-black text-slate-900 dark:text-white mt-0.5 block truncate">
+                {formatIDR(totalGrossToday)}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Jatah Toko
+              </span>
+              <span className="text-sm font-black text-amber-600 dark:text-amber-400 mt-0.5 block truncate">
+                {formatIDR(totalShareToday)}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400 block truncate">
+                Setoran Bersih
+              </span>
+              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block truncate">
+                {formatIDR(totalNetToday)}
+              </span>
+            </div>
+          </div>
+
+          {/* KPI Operasional */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                  Toko Terpasang
+                </span>
+                <StoreIcon className="w-3.5 h-3.5 text-indigo-500" />
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-base font-black text-slate-900 dark:text-white">
+                  {branchStores.filter((s) => s.status === 'terpasang').length}
+                </span>
+                <span className="text-xs text-slate-400">/ {branchStores.length} Toko</span>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                  Mesin Aktif
+                </span>
+                <Coins className="w-3.5 h-3.5 text-amber-500" />
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="text-base font-black text-slate-900 dark:text-white">
+                  {machines.filter((m) => m.status === 'terpasang').length}
+                </span>
+                <span className="text-xs text-slate-400">/ {machines.length} Unit</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Placeholder Banner Analisa Detail Tiap Toko */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 text-center shadow-xs space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 mx-auto flex items-center justify-center">
+              <BarChart3 className="w-7 h-7" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                Analisa Detail Tiap Toko Segera Hadir
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto leading-relaxed">
+                Fitur kalkulasi performa omset, margin bagi hasil, dan riwayat produktivitas tiap toko mitra sedang dalam tahap integrasi.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Tab: Libur (Placeholder Segera Hadir) */}

@@ -17,6 +17,7 @@ import {
   Route,
   Clock,
   CalendarOff,
+  BarChart3,
 } from 'lucide-react';
 
 interface BottomNavBarProps {
@@ -130,10 +131,10 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
 
   const navItems = getNavItems();
 
-  // 5 Navigasi Tambahan: libur | logistik | absen | toko | mesin
+  // 5 Navigasi Tambahan: libur | analisa | absen | toko | mesin
   const adminExpandedMenus = [
     { id: 'leave', label: 'Libur', icon: CalendarOff },
-    { id: 'driver_dispatch', label: 'Logistik', icon: Truck },
+    { id: 'analisa', label: 'Analisa', icon: BarChart3 },
     { id: 'attendance', label: 'Absen', icon: CalendarDays },
     { id: 'stores', label: 'Toko', icon: StoreIcon },
     { id: 'machines', label: 'Mesin', icon: Cpu },
