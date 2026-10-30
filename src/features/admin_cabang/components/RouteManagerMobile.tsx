@@ -668,29 +668,32 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL DETAIL MESIN & TOKO DROPPING                                        */}
+      {/* MODAL DETAIL MESIN & TOKO DROPPING (FULLSCREEN & MOBILE BACK HANDLED)     */}
       {/* ========================================================================= */}
-      {selectedDroppingForDetail && (() => {
-        const staff = selectedDroppingForDetail;
-        const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
-        const assignedMachines = machines
-          .filter((m) => m.assigned_dropping_id === staff.id)
-          .sort((a, b) => {
-            const storeA = stores.find((s) => s.id === a.current_store_id);
-            const storeB = stores.find((s) => s.id === b.current_store_id);
-            const routeA = typeof storeA?.route_order === 'number' && storeA.route_order > 0 ? storeA.route_order : 9999;
-            const routeB = typeof storeB?.route_order === 'number' && storeB.route_order > 0 ? storeB.route_order : 9999;
-            if (routeA !== routeB) return routeA - routeB;
-            return (a.machine_number || 0) - (b.machine_number || 0);
-          });
+      <BottomSheetModal
+        isFullscreen={true}
+        item={selectedDroppingForDetail}
+        onClose={() => setSelectedDroppingForDetail(null)}
+      >
+        {(staff, close) => {
+          const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
+          const assignedMachines = machines
+            .filter((m) => m.assigned_dropping_id === staff.id)
+            .sort((a, b) => {
+              const storeA = stores.find((s) => s.id === a.current_store_id);
+              const storeB = stores.find((s) => s.id === b.current_store_id);
+              const routeA = typeof storeA?.route_order === 'number' && storeA.route_order > 0 ? storeA.route_order : 9999;
+              const routeB = typeof storeB?.route_order === 'number' && storeB.route_order > 0 ? storeB.route_order : 9999;
+              if (routeA !== routeB) return routeA - routeB;
+              return (a.machine_number || 0) - (b.machine_number || 0);
+            });
 
-        return createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-              {/* Header Modal */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+          return (
+            <div className="flex flex-col h-full bg-white dark:bg-slate-950">
+              {/* Header Modal Fullscreen Sticky */}
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
                 <div className="min-w-0 pr-2">
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white truncate">
+                  <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
                     {staff.full_name}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -699,7 +702,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     <button
                       type="button"
                       onClick={() => handleOpenPrefixModal(staff)}
-                      className="text-[11px] font-bold text-indigo-600 hover:underline flex items-center gap-0.5 ml-1"
+                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 ml-1 cursor-pointer"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>Ubah</span>
@@ -708,18 +711,18 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setSelectedDroppingForDetail(null)}
-                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
+                  onClick={close}
+                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Body: Daftar Mesin & Toko Dropping */}
-              <div className="p-4 overflow-y-auto space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80">
+              {/* Body: Daftar Mesin & Toko Dropping Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80">
                 <div className="flex items-center justify-between pb-1">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Daftar Mesin ({assignedMachines.length}/20):
+                    Daftar Mesin ({assignedMachines.length}/20 Unit):
                   </span>
                   <span className="text-[10px] text-slate-400 font-medium">
                     Atur urutan rute & target kunjungan
@@ -727,7 +730,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                 </div>
 
                 {assignedMachines.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 text-xs">
+                  <div className="py-12 text-center text-slate-400 text-xs">
                     Petugas ini belum memiliki mesin yang ditugaskan.
                   </div>
                 ) : (
@@ -736,11 +739,11 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     const isInstalled = m.status === 'terpasang' && m.current_store_id;
 
                     return (
-                      <div key={m.id} className="pt-3 first:pt-0 flex items-center justify-between gap-2 text-xs">
+                      <div key={m.id} className="pt-3.5 first:pt-0 flex items-center justify-between gap-2 text-xs">
                         {/* Kolom Kiri: Kode Mesin & Lokasi Toko */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-mono font-black text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                            <span className="font-mono font-black text-slate-900 dark:text-white px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
                               {displayMachineCode(m.machine_code)}
                             </span>
                             <span
@@ -754,7 +757,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                             </span>
                           </div>
 
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block mt-1">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-1.5 text-sm">
                             {storeMitra?.name || 'Di Gudang Cabang'}
                           </span>
 
@@ -795,7 +798,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                                     setEditingStoreRouteId(m.current_store_id!);
                                     setInputRouteOrder(storeMitra?.route_order?.toString() || '');
                                   }}
-                                  className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                                  className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                                 >
                                   <span>
                                     {storeMitra?.route_order ? `Rute #${storeMitra.route_order}` : '+ Set Rute'}
@@ -815,7 +818,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                               onClick={() => handleToggleVisitRequirement(m)}
                               disabled={togglingMachineId === m.id}
                               title="Klik untuk mengubah target kunjungan harian"
-                              className="px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-slate-400 hover:border-slate-800 dark:border-slate-500 dark:hover:border-slate-200 text-slate-800 dark:text-slate-200 bg-transparent transition active:scale-95 cursor-pointer disabled:opacity-50 select-none"
+                              className="px-3.5 py-1.5 rounded-full text-xs font-semibold border border-dashed border-slate-400 hover:border-slate-800 dark:border-slate-500 dark:hover:border-slate-200 text-slate-800 dark:text-slate-200 bg-transparent transition active:scale-95 cursor-pointer disabled:opacity-50 select-none"
                             >
                               {togglingMachineId === m.id
                                 ? '...'
@@ -831,10 +834,9 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                 )}
               </div>
             </div>
-          </div>,
-          document.body
-        );
-      })()}
+          );
+        }}
+      </BottomSheetModal>
 
       {/* ========================================================================= */}
       {/* MODAL EDIT PREFIX DROPPING                                                */}
@@ -895,9 +897,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL SUMMARY LENGKAP DETAIL TUGAS LOGISTIK                               */}
+      {/* MODAL SUMMARY LENGKAP DETAIL TUGAS LOGISTIK (FULLSCREEN & MOBILE BACK)    */}
       {/* ========================================================================= */}
       <BottomSheetModal
+        isFullscreen={true}
         item={selectedTaskForSummary}
         onClose={() => setSelectedTaskForSummary(null)}
       >
@@ -911,12 +914,12 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           const assignedText = teamInfo ? teamInfo[1] : (task.driver?.full_name || 'Petugas Lapangan');
 
           return (
-            <div className="space-y-4">
-              {/* Header Modal */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col h-full bg-white dark:bg-slate-950">
+              {/* Header Modal Fullscreen Sticky */}
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+                <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                       isCompleted
                         ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
                         : isKendala
@@ -927,19 +930,19 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     }`}
                   >
                     {isCompleted ? (
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="w-5 h-5" />
                     ) : isKendala ? (
-                      <AlertTriangle className="w-4 h-4" />
+                      <AlertTriangle className="w-5 h-5" />
                     ) : (
-                      <Truck className="w-4 h-4" />
+                      <Truck className="w-5 h-5" />
                     )}
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 dark:text-white">
-                      {isReloc ? 'Summary Relokasi Mesin' : 'Summary Tugas Logistik'}
+                  <div className="min-w-0">
+                    <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                      {isReloc ? 'Detail Relokasi Mesin' : 'Detail Tugas Logistik'}
                     </h3>
                     <span
-                      className={`text-[11px] font-bold ${
+                      className={`text-xs font-bold block truncate ${
                         isCompleted
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : isKendala
@@ -962,64 +965,67 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                 <button
                   type="button"
                   onClick={close}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Rute & Info Tugas */}
-              <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl border border-slate-200 dark:border-slate-700/80 text-xs space-y-2">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold">Toko Asal / Pengambilan:</span>
-                  <span className="font-bold text-slate-900 dark:text-white text-sm block">
-                    {task.store?.name || 'Toko Asal'}
-                  </span>
-                  {task.store?.address && (
-                    <span className="text-[11px] text-slate-500 block">{task.store.address}</span>
+              {/* Body: Konten Scrollable */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {/* Rute & Info Tugas */}
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs space-y-3">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-semibold">Toko Asal / Pengambilan:</span>
+                    <span className="font-bold text-slate-900 dark:text-white text-sm block">
+                      {task.store?.name || 'Toko Asal'}
+                    </span>
+                    {task.store?.address && (
+                      <span className="text-[11px] text-slate-500 block mt-0.5">{task.store.address}</span>
+                    )}
+                  </div>
+
+                  {task.target_store && (
+                    <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800">
+                      <span className="text-[10px] text-indigo-500 dark:text-indigo-400 block font-semibold">Toko Tujuan / Pemasangan:</span>
+                      <span className="font-bold text-slate-900 dark:text-white text-sm block">
+                        {task.target_store.name}
+                      </span>
+                      {task.target_store.address && (
+                        <span className="text-[11px] text-slate-500 block mt-0.5">{task.target_store.address}</span>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                {task.target_store && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-700">
-                    <span className="text-[10px] text-indigo-500 block font-semibold">Toko Tujuan / Pemasangan:</span>
-                    <span className="font-bold text-slate-900 dark:text-white text-sm block">
-                      {task.target_store.name}
+                {/* Detail Petugas & Mesin */}
+                <div className="grid grid-cols-2 gap-2.5 text-xs">
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Unit Mesin:</span>
+                    <span className="font-mono font-black text-slate-900 dark:text-white text-sm mt-0.5 block">
+                      {task.machine?.machine_code ? displayMachineCode(task.machine.machine_code) : '-'}
                     </span>
-                    {task.target_store.address && (
-                      <span className="text-[11px] text-slate-500 block">{task.target_store.address}</span>
-                    )}
+                  </div>
+                  <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-[10px] text-slate-400 block font-semibold">Petugas Lapangan:</span>
+                    <span className="font-bold text-slate-900 dark:text-white mt-0.5 block truncate">
+                      {assignedText}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Catatan / Keterangan Kendala */}
+                {task.notes && (
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                      Catatan Tugas:
+                    </span>
+                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
+                      {task.notes}
+                    </p>
                   </div>
                 )}
               </div>
-
-              {/* Detail Petugas & Mesin */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block font-semibold">Unit Mesin:</span>
-                  <span className="font-mono font-black text-slate-900 dark:text-white text-sm mt-0.5 block">
-                    {task.machine?.machine_code ? displayMachineCode(task.machine.machine_code) : '-'}
-                  </span>
-                </div>
-                <div className="p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 block font-semibold">Petugas Lapangan:</span>
-                  <span className="font-bold text-slate-900 dark:text-white mt-0.5 block truncate">
-                    {assignedText}
-                  </span>
-                </div>
-              </div>
-
-              {/* Catatan / Keterangan Kendala */}
-              {task.notes && (
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
-                    Catatan Tugas:
-                  </span>
-                  <p className="text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
-                    {task.notes}
-                  </p>
-                </div>
-              )}
             </div>
           );
         }}
