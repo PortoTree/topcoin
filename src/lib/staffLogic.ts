@@ -66,7 +66,8 @@ export function validateNewStaffForm(params: {
     return { isValid: false, error: 'Nomor WhatsApp / HP wajib valid (minimal 8 digit).' };
   }
 
-  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+  const effectivePin = pin.trim() || '123456';
+  if (!effectivePin || effectivePin.length !== 6 || !/^\d{6}$/.test(effectivePin)) {
     return { isValid: false, error: 'PIN login wajib 6 digit angka.' };
   }
 

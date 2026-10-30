@@ -30,7 +30,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
   const [role, setRole] = useState<'dropping' | 'marketing' | 'logistik'>('dropping');
   const [machinePrefix, setMachinePrefix] = useState('');
   const [isPrefixEdited, setIsPrefixEdited] = useState(false);
-  const [pin, setPin] = useState('123456');
+  const [pin, setPin] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
@@ -197,7 +197,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
           {/* 1. Nama Lengkap */}
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Nama Lengkap *
+              Nama Lengkap <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
               <User className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
@@ -216,7 +216,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-slate-700 dark:text-slate-300">
-                Username Login *
+                Username Login <span className="text-rose-500 font-bold ml-0.5">*</span>
               </label>
               <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-0.5">
                 <Sparkles className="w-2.5 h-2.5" />
@@ -247,7 +247,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
           {/* 3. Nomor WhatsApp / Telepon */}
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Nomor WhatsApp / HP *
+              Nomor WhatsApp / HP <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
               <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
@@ -265,7 +265,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
           {/* 4. Peran / Tugas Operasional */}
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Peran Operasional *
+              Peran Operasional <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <select
               value={role}
@@ -280,28 +280,29 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
 
           {/* 5. Khusus Role Dropping: Prefix Kode Mesin */}
           {role === 'dropping' && (
-            <div className="p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-1.5 animate-in fade-in duration-150">
+            <div className="space-y-1 animate-in fade-in duration-150">
               <div className="flex items-center justify-between">
-                <label className="font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5 text-[11px]">
-                  <Cpu className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                  Prefix Kode Mesin Dropping:
+                <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-indigo-500" />
+                  Prefix Kode Mesin Dropping <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
-                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-mono font-bold">
+                <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
                   Format: {machinePrefix || 'MESIN'}-01
                 </span>
               </div>
               <input
                 type="text"
+                required
                 placeholder="ANDI"
                 value={machinePrefix}
                 onChange={(e) => {
                   setMachinePrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
                   setIsPrefixEdited(true);
                 }}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-700 rounded-xl font-mono font-black text-slate-900 dark:text-white uppercase outline-none focus:outline-none focus:ring-0 focus:border-indigo-600 transition-colors"
+                className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white uppercase outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
               />
-              <p className="text-[10px] text-indigo-700 dark:text-indigo-300 leading-tight">
-                Prefix ini akan menjadi identitas kode mesin yang dipegang staf ini (misal {machinePrefix || 'ANDI'}-01 s/d {machinePrefix || 'ANDI'}-20).
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                Prefix kode mesin rute dropping ({machinePrefix || 'MESIN'}-01 s/d {machinePrefix || 'MESIN'}-20).
               </p>
             </div>
           )}
@@ -309,7 +310,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
           {/* 6. PIN Keamanan 6-Digit */}
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-              PIN Login (6-Digit) *
+              PIN Login (6-Digit) <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
@@ -317,11 +318,10 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
                 type="password"
                 inputMode="numeric"
                 maxLength={6}
-                required
-                placeholder="123456"
+                placeholder="••••••"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors placeholder:text-slate-400 placeholder:text-lg"
               />
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
