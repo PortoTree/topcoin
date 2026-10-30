@@ -114,7 +114,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
     if (staff.role === 'logistik' || staff.role === 'driver' || staff.role === 'kurir') {
       return {
         label: 'Logistik',
-        colorClass: 'text-amber-600/80 dark:text-amber-400/80',
+        colorClass: 'text-slate-900/70 dark:text-slate-200/70',
       };
     }
     if (staff.role === 'dropping') {
@@ -958,12 +958,12 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       isBM ? 'bg-purple-50/40 dark:bg-purple-950/20 rounded-xl px-2 my-0.5' : ''
                     }`}
                   >
-                    {/* Baris 1: [nama lengkap] | [role teks biasa dengan opacity warna dasar] */}
+                    {/* Baris 1: [nama lengkap] • [role teks biasa dengan opacity warna dasar] */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                         {staff.full_name}
                       </span>
-                      <span className="text-slate-400 dark:text-slate-500 font-normal">|</span>
+                      <span className="text-slate-400 dark:text-slate-500 text-xs select-none">•</span>
                       {(() => {
                         const roleInfo = getStaffRoleInfo(staff);
                         return (
@@ -987,16 +987,36 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       )}
                     </div>
 
-                    {/* Baris 2: [nomor whatsapp dengan icon whatsapp.png]                  [icon] [icon] */}
+                    {/* Baris 2: [nomor whatsapp hijau & bisa diklik membuka WA]                  [icon] [icon] */}
                     <div className="flex items-center justify-between gap-2 mt-1">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-mono font-medium">
-                        <img
-                          src="/whatsapp.png"
-                          alt="WhatsApp"
-                          className="w-3.5 h-3.5 object-contain flex-shrink-0"
-                        />
-                        <span>{staff.phone || '-'}</span>
-                      </div>
+                      {staff.phone ? (
+                        <a
+                          href={`https://wa.me/${(() => {
+                            const clean = staff.phone.replace(/[^0-9]/g, '');
+                            return clean.startsWith('0') ? '62' + clean.slice(1) : clean;
+                          })()}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold hover:underline active:scale-95 transition cursor-pointer"
+                          title={`Chat WhatsApp dengan ${staff.full_name}`}
+                        >
+                          <img
+                            src="/whatsapp.png"
+                            alt="WhatsApp"
+                            className="w-3.5 h-3.5 object-contain flex-shrink-0"
+                          />
+                          <span>{staff.phone}</span>
+                        </a>
+                      ) : (
+                        <div className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-mono">
+                          <img
+                            src="/whatsapp.png"
+                            alt="WhatsApp"
+                            className="w-3.5 h-3.5 object-contain flex-shrink-0 opacity-40 grayscale"
+                          />
+                          <span>-</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {isBM ? (
