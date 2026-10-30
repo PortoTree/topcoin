@@ -327,7 +327,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               Belum ada staf dengan role Dropping di cabang ini.
             </p>
           ) : (
-            <div className="divide-y divide-slate-200 dark:divide-slate-800">
+            <div className="divide-y divide-slate-200 dark:divide-slate-700">
               {droppingStaff.map((staff) => {
                 const staffMachines = machines.filter((m) => m.assigned_dropping_id === staff.id);
 
@@ -683,7 +683,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           return (
             <div className="flex flex-col h-full bg-white dark:bg-slate-950">
               {/* Header Modal Fullscreen Sticky */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
                 <div className="min-w-0 pr-2">
                   <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
                     {staff.full_name}
@@ -711,8 +711,8 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               </div>
 
               {/* Body: Daftar Mesin & Toko Dropping Scrollable */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80">
-                <div className="pb-1.5">
+              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 divide-y divide-slate-200 dark:divide-slate-700">
+                <div className="pb-2">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
                     Total mesin ({assignedMachines.length})
                   </span>
@@ -792,7 +792,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                                   className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
                                 >
                                   <span>
-                                    {storeMitra?.route_order ? `Rute #${storeMitra.route_order}` : '+ Set Rute'}
+                                    {storeMitra?.route_order ? `Rute ${storeMitra.route_order}` : '+ Set Rute'}
                                   </span>
                                   <Edit2 className="w-2.5 h-2.5" />
                                 </button>
@@ -907,7 +907,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           return (
             <div className="flex flex-col h-full bg-white dark:bg-slate-950">
               {/* Header Modal Fullscreen Sticky */}
-              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <div
                     className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isCompleted
