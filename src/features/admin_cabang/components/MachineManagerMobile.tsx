@@ -70,6 +70,11 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   // State loading toggle kunjungan mesin
   const [togglingMachineId, setTogglingMachineId] = useState<string | null>(null);
 
+  // State ubah nomor rute toko
+  const [editingStoreRouteId, setEditingStoreRouteId] = useState<string | null>(null);
+  const [inputRouteOrder, setInputRouteOrder] = useState<string>('');
+  const [isSavingRouteOrder, setIsSavingRouteOrder] = useState<boolean>(false);
+
   // Filter mesin berdasarkan dropping & pencarian
   const filteredMachines = useMemo(() => {
     return machines.filter((m) => {
@@ -370,6 +375,31 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       toast.error('Gagal memperbarui pengaturan kunjungan: ' + err.message);
     } finally {
       setTogglingMachineId(null);
+    }
+  };
+
+  // Simpan Nomor Rute Toko Langsung
+  const handleSaveStoreRouteOrder = async (storeId: string) => {
+    const parsedNum = parseInt(inputRouteOrder, 10);
+    const newRouteOrder = isNaN(parsedNum) || parsedNum <= 0 ? null : parsedNum;
+
+    setIsSavingRouteOrder(true);
+    try {
+      const { error } = await supabase
+        .from('stores')
+        .update({ route_order: newRouteOrder })
+        .eq('id', storeId);
+
+      if (error) throw error;
+
+      toast.success(newRouteOrder ? `Rute toko diatur ke urutan #${newRouteOrder}` : 'Nomor rute toko dihapus');
+      setEditingStoreRouteId(null);
+      await onRefresh();
+    } catch (err: any) {
+      console.error('Error saving store route order:', err);
+      toast.error('Gagal menyimpan nomor rute: ' + err.message);
+    } finally {
+      setIsSavingRouteOrder(false);
     }
   };
 
@@ -747,7 +777,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                         Hasil Kode Mesin Baru:
                       </span>
                       <span className="font-mono font-black text-sm text-emerald-900 dark:text-emerald-200 block">
-                        {formatMachineCode(prefix, nextNum)} (Slot #{String(nextNum).padStart(2, '0')})
+                        {formatMachineCode(prefix, nextNum)}
                       </span>
                       <p className="text-[10px] text-slate-500 dark:text-slate-400">
                         Mesin akan otomatis menempati slot nomor kosong pada rute {targetStaff?.full_name}.
@@ -1034,7 +1064,10 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   <div className="space-y-2">
                     {assignedMachines.map((m) => {
                       const isInstalled = !!m.current_store_id;
-                      const storeName = m.store?.name || stores.find((s) => s.id === m.current_store_id)?.name;
+                      const storeObj = stores.find((s) => s.id === m.current_store_id);
+                      const storeName = m.store?.name || storeObj?.name;
+                      const routeOrder = storeObj?.route_order;
+                      const isEditingRoute = editingStoreRouteId === m.current_store_id;
 
                       return (
                         <div
@@ -1046,10 +1079,20 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                               <span className="font-mono font-black text-sm text-slate-900 dark:text-white tracking-wide">
                                 {displayMachineCode(m.machine_code)}
                               </span>
-                              {m.machine_number && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
-                                  Slot #{String(m.machine_number).padStart(2, '0')}
-                                </span>
+                              {isInstalled && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (m.current_store_id) {
+                                      setEditingStoreRouteId(m.current_store_id);
+                                      setInputRouteOrder(routeOrder ? String(routeOrder) : '');
+                                    }
+                                  }}
+                                  className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 font-mono hover:bg-indigo-100 transition cursor-pointer"
+                                  title="Klik untuk ubah urutan rute"
+                                >
+                                  {routeOrder ? `Rute #${routeOrder}` : '+ Set Rute'}
+                                </button>
                               )}
                             </div>
 
@@ -1064,6 +1107,37 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                                 </div>
                               )}
                             </div>
+
+                            {/* Quick Inline Edit Rute */}
+                            {isEditingRoute && m.current_store_id && (
+                              <div className="pt-1.5 flex items-center gap-1.5 animate-in fade-in duration-150">
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Urutan Rute:</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  autoFocus
+                                  value={inputRouteOrder}
+                                  placeholder="No..."
+                                  onChange={(e) => setInputRouteOrder(e.target.value)}
+                                  className="w-16 px-2 py-0.5 text-xs font-mono font-bold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md text-slate-900 dark:text-white outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={isSavingRouteOrder}
+                                  onClick={() => handleSaveStoreRouteOrder(m.current_store_id!)}
+                                  className="px-2 py-0.5 text-[10px] font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md cursor-pointer transition disabled:opacity-50"
+                                >
+                                  {isSavingRouteOrder ? '...' : 'Simpan'}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingStoreRouteId(null)}
+                                  className="px-1.5 py-0.5 text-[10px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer"
+                                >
+                                  Batal
+                                </button>
+                              </div>
+                            )}
                           </div>
 
                           {isInstalled && (

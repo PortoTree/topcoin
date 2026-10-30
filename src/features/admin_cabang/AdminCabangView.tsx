@@ -32,6 +32,8 @@ import {
   Pencil,
   Route,
   CalendarOff,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
@@ -87,6 +89,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [selectedStaffForRole, setSelectedStaffForRole] = useState<UserProfile | null>(null);
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
   const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
+
+  // Route Management State
+  const [selectedDroppingForRoute, setSelectedDroppingForRoute] = useState<string>('all');
+  const [isReorderingRoute, setIsReorderingRoute] = useState<boolean>(false);
 
   const getStaffRoleInfo = (staff: UserProfile) => {
     if (staff.role === 'branch_manager') {
@@ -1160,30 +1166,173 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Rute (Placeholder Segera Hadir) */}
-      {activeTab === 'route' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Rute & Wilayah Toko</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Pemetaan jalur kunjungan toko dan optimasi rute dropping
-              </p>
+      {/* Tab: Rute & Urutan Kunjungan Toko */}
+      {activeTab === 'route' && (() => {
+        // Filter toko terpasang / aktif
+        const activeStoresList = branchStores.filter((s) => s.status === 'terpasang' || s.status === 'terkirim' || s.current_machine_id);
+
+        // Filter berdasarkan dropping pemegang mesin jika dipilih
+        const storesByDropping = activeStoresList.filter((s) => {
+          if (selectedDroppingForRoute === 'all') return true;
+          const assignedMachine = machines.find((m) => m.id === s.current_machine_id || m.current_store_id === s.id);
+          return assignedMachine?.assigned_dropping_id === selectedDroppingForRoute;
+        }).sort((a, b) => {
+          const orderA = typeof a.route_order === 'number' && a.route_order > 0 ? a.route_order : 9999;
+          const orderB = typeof b.route_order === 'number' && b.route_order > 0 ? b.route_order : 9999;
+          if (orderA !== orderB) return orderA - orderB;
+          return a.name.localeCompare(b.name);
+        });
+
+        // Swap order toko
+        const handleMoveRouteOrder = async (index: number, direction: 'up' | 'down') => {
+          const targetIndex = direction === 'up' ? index - 1 : index + 1;
+          if (targetIndex < 0 || targetIndex >= storesByDropping.length) return;
+
+          const currentStore = storesByDropping[index];
+          const targetStore = storesByDropping[targetIndex];
+
+          const newCurrentOrder = targetIndex + 1;
+          const newTargetOrder = index + 1;
+
+          setIsReorderingRoute(true);
+          try {
+            await Promise.all([
+              supabase.from('stores').update({ route_order: newCurrentOrder }).eq('id', currentStore.id),
+              supabase.from('stores').update({ route_order: newTargetOrder }).eq('id', targetStore.id),
+            ]);
+
+            toast.success(`Urutan rute berhasil ditukar (#${newCurrentOrder} ⇄ #${newTargetOrder})`);
+            await fetchBranchData();
+          } catch (err: any) {
+            console.error('Error reordering route:', err);
+            toast.error('Gagal menukar urutan: ' + err.message);
+          } finally {
+            setIsReorderingRoute(false);
+          }
+        };
+
+        return (
+          <div className="space-y-4 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Route className="w-5 h-5 text-indigo-500" />
+                  <span>Urutan Rute Kunjungan</span>
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Susun urutan nomor rute agar tampil berurutan di tugas dropping.
+                </p>
+              </div>
             </div>
-            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-              <Sparkles className="w-3 h-3" />
-              Segera Hadir
-            </span>
+
+            {/* Filter Dropping */}
+            {droppingUsers.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDroppingForRoute('all')}
+                  className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${selectedDroppingForRoute === 'all'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                    }`}
+                >
+                  Semua Rute ({activeStoresList.length})
+                </button>
+                {droppingUsers.map((staff) => {
+                  const staffStoresCount = activeStoresList.filter((s) => {
+                    const assignedMachine = machines.find((m) => m.id === s.current_machine_id || m.current_store_id === s.id);
+                    return assignedMachine?.assigned_dropping_id === staff.id;
+                  }).length;
+                  const isSelected = selectedDroppingForRoute === staff.id;
+
+                  return (
+                    <button
+                      key={staff.id}
+                      type="button"
+                      onClick={() => setSelectedDroppingForRoute(staff.id)}
+                      className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${isSelected
+                        ? 'bg-indigo-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                        }`}
+                    >
+                      <span>{staff.full_name}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                        {staffStoresCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* List Toko & Urutan Rute */}
+            {storesByDropping.length === 0 ? (
+              <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                <Route className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Belum ada toko yang terpasang mesin
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Pasang mesin ke toko mitra terlebih dahulu untuk mulai mengatur rute kunjungan.
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-2">
+                {storesByDropping.map((store, idx) => {
+                  const assignedMachine = machines.find((m) => m.id === store.current_machine_id || m.current_store_id === store.id);
+                  const droppingStaff = droppingUsers.find((d) => d.id === assignedMachine?.assigned_dropping_id);
+                  const isFirst = idx === 0;
+                  const isLast = idx === storesByDropping.length - 1;
+
+                  return (
+                    <div key={store.id} className="py-2.5 px-2 flex items-center justify-between gap-3">
+                      {/* Urutan Badge & Info */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 font-mono font-black text-xs flex items-center justify-center shrink-0">
+                          #{idx + 1}
+                        </span>
+
+                        <div className="min-w-0 space-y-0.5">
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            <span className="font-mono font-black">{assignedMachine ? displayMachineCode(assignedMachine.machine_code) : 'NO-MESIN'}</span>
+                            <span className="text-slate-400 dark:text-slate-500 font-normal mx-1.5">|</span>
+                            <span>{store.name}</span>
+                          </h4>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                            {droppingStaff ? `Dropping: ${droppingStaff.full_name}` : 'Belum ada dropping'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Tombol Naik / Turun */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          disabled={isFirst || isReorderingRoute}
+                          onClick={() => handleMoveRouteOrder(idx, 'up')}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer active:scale-90"
+                          title="Pindah ke Atas"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isLast || isReorderingRoute}
+                          onClick={() => handleMoveRouteOrder(idx, 'down')}
+                          className="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer active:scale-90"
+                          title="Pindah ke Bawah"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-2">
-            <Route className="w-10 h-10 text-indigo-500 mx-auto" />
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Manajemen Rute Lapangan</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Fitur pemetaan koordinat rute toko dan efisiensi jalur dropping sedang disiapkan.
-            </p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Tab: Libur (Placeholder Segera Hadir) */}
       {activeTab === 'leave' && (

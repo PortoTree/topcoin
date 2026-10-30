@@ -366,6 +366,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     const codeMatch = st.machine?.machine_code?.toLowerCase().includes(q) || false;
     const addrMatch = st.address.toLowerCase().includes(q);
     return nameMatch || codeMatch || addrMatch;
+  }).sort((a, b) => {
+    // 1. Urutkan berdasarkan nomor rute jika sudah diatur (route_order)
+    const orderA = typeof a.route_order === 'number' && a.route_order > 0 ? a.route_order : 9999;
+    const orderB = typeof b.route_order === 'number' && b.route_order > 0 ? b.route_order : 9999;
+    if (orderA !== orderB) return orderA - orderB;
+
+    // 2. Fallback: urutkan berdasarkan nama toko
+    return a.name.localeCompare(b.name);
   });
 
 
@@ -1164,11 +1172,18 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   >
                     {/* [nomormesin | namatoko] */}
                     <div className="space-y-0.5">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                        <span className="font-mono font-black">{machineCode}</span>
-                        <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
-                        <span>{store.name}</span>
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        {typeof store.route_order === 'number' && store.route_order > 0 && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/60 font-mono flex-shrink-0">
+                            #{store.route_order}
+                          </span>
+                        )}
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                          <span className="font-mono font-black">{machineCode}</span>
+                          <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
+                          <span>{store.name}</span>
+                        </h3>
+                      </div>
                       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                         {visitSubtext}
                       </p>
@@ -1582,7 +1597,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                          Total Koin Terambil di Laci {hasOptional ? '(Opsional jika ada kendala)' : '*'}
+                          Total Koin Terhitung {hasOptional}
                         </label>
                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                           1 Koin = Rp 1.000
@@ -1594,7 +1609,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                           type="text"
                           inputMode="numeric"
                           required={hasOmset && !hasOptional}
-                          placeholder={hasOptional ? "Kosongkan jika ada kendala..." : "Contoh: 30"}
+                          placeholder={hasOptional ? "..." : "Contoh: 30"}
                           value={coinsCollectedStr}
                           onChange={(e) => setCoinsCollectedStr(e.target.value)}
                           className={`w-full pl-10 pr-3 py-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-base font-mono font-bold text-slate-900 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-slate-800 focus:outline-none focus:ring-2 shadow-xs transition-all ${submitAttempted && hasOmset && !hasOptional && coinsCollected <= 0

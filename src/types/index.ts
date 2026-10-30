@@ -96,6 +96,7 @@ export interface Store {
   longitude: number | null;
   status: StoreStatus;
   current_machine_id: string | null;
+  route_order?: number | null;
   sales_id?: string | null;
   kurir_id?: string | null;
   marketing_id?: string | null;
