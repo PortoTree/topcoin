@@ -64,54 +64,49 @@ const MainAppContent: React.FC = () => {
   }
 
   // 1. Not logged in -> Show Login View (Username + PIN)
-  if (!profile) {
-    return (
-      <div className="mobile-container bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
-        <LoginView />
-      </div>
-    );
-  }
-
   // 2. Field worker who has NOT checked in today -> Show Attendance Home View
-  // Management roles (Owner, BM, Admin Cabang) bypass attendance and go straight to their operational views
-  if (!isManagementRole(role) && !activeRole) {
-    return (
-      <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
-        <AttendanceHomeView />
-      </div>
-    );
-  }
-
   // 3. User is ready (Management or Field worker who has checked in) -> Show Operational Dashboard
   const currentOperatingRole = activeRole || role;
 
   return (
-    <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
-      {/* Mobile Top Header */}
-      <MobileHeader />
+    <>
+      {!profile ? (
+        <div className="mobile-container bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+          <LoginView />
+        </div>
+      ) : !isManagementRole(role) && !activeRole ? (
+        <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+          <AttendanceHomeView />
+        </div>
+      ) : (
+        <div className="mobile-container relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors duration-200">
+          {/* Mobile Top Header */}
+          <MobileHeader />
 
-      {/* Main Content View by Active Role */}
-      <main className="w-full">
-        {currentOperatingRole === 'owner' && <OwnerView activeTab={activeTab} />}
-        {currentOperatingRole === 'branch_manager' && <BranchManagerView activeTab={activeTab} />}
-        {(currentOperatingRole === 'admin_cabang' || currentOperatingRole === 'admin') && (
-          <AdminCabangView activeTab={activeTab} />
-        )}
-        {(currentOperatingRole === 'marketing' || currentOperatingRole === 'sales') && (
-          <MarketingView activeTab={activeTab} />
-        )}
-        {(currentOperatingRole === 'logistik' || currentOperatingRole === 'driver' || currentOperatingRole === 'kurir') && (
-          <DriverView activeTab={activeTab} />
-        )}
-        {currentOperatingRole === 'dropping' && (
-          <DroppingView activeTab={activeTab} tabClickTick={tabClickTick} />
-        )}
-      </main>
+          {/* Main Content View by Active Role */}
+          <main className="w-full">
+            {currentOperatingRole === 'owner' && <OwnerView activeTab={activeTab} />}
+            {currentOperatingRole === 'branch_manager' && <BranchManagerView activeTab={activeTab} />}
+            {(currentOperatingRole === 'admin_cabang' || currentOperatingRole === 'admin') && (
+              <AdminCabangView activeTab={activeTab} />
+            )}
+            {(currentOperatingRole === 'marketing' || currentOperatingRole === 'sales') && (
+              <MarketingView activeTab={activeTab} />
+            )}
+            {(currentOperatingRole === 'logistik' || currentOperatingRole === 'driver' || currentOperatingRole === 'kurir') && (
+              <DriverView activeTab={activeTab} />
+            )}
+            {currentOperatingRole === 'dropping' && (
+              <DroppingView activeTab={activeTab} tabClickTick={tabClickTick} />
+            )}
+          </main>
 
-      {/* Mobile Ergonomic Bottom Navigation */}
-      <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
+          {/* Mobile Ergonomic Bottom Navigation */}
+          <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
+        </div>
+      )}
 
-      {/* Modal Konfirmasi Keluar saat tombol Back ditekan di halaman utama */}
+      {/* Modal Konfirmasi Keluar saat tombol Back ditekan di halaman utama / root */}
       <ActionPromptModal
         config={
           showExitConfirmModal
@@ -120,12 +115,16 @@ const MainAppContent: React.FC = () => {
                 variant: 'danger',
                 title: 'Keluar dari Aplikasi?',
                 subtitle: 'Konfirmasi Keluar',
-                message: 'Apakah Anda yakin ingin keluar dari sesi aplikasi TOP COIN?',
+                message: profile
+                  ? 'Apakah Anda yakin ingin keluar dari sesi aplikasi TOP COIN?'
+                  : 'Apakah Anda ingin keluar dari aplikasi TOP COIN?',
                 confirmLabel: 'Ya, Keluar',
                 cancelLabel: 'Batal',
                 onConfirm: async () => {
                   setShowExitConfirmModal(false);
-                  await logout();
+                  if (profile) {
+                    await logout();
+                  }
                 },
                 onCancel: () => setShowExitConfirmModal(false),
               }
@@ -133,7 +132,7 @@ const MainAppContent: React.FC = () => {
         }
         onClose={() => setShowExitConfirmModal(false)}
       />
-    </div>
+    </>
   );
 };
 
