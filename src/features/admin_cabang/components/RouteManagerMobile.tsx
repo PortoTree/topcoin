@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '../../../lib/supabase';
 import { toast } from '../../../context/ToastContext';
 import { BottomSheetModal } from '../../../components/BottomSheetModal';
+import { StoreInfoModal } from '../../../components/StoreInfoModal';
 import {
   Route,
   Truck,
@@ -60,6 +61,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
   const [editingStoreRouteId, setEditingStoreRouteId] = useState<string | null>(null);
   const [inputRouteOrder, setInputRouteOrder] = useState<string>('');
   const [isSavingRouteOrder, setIsSavingRouteOrder] = useState<boolean>(false);
+  const [selectedStoreForInfo, setSelectedStoreForInfo] = useState<{ store: Store; machineCode?: string } | null>(null);
 
   // =========================================================================
   // STATE LOGISTIK
@@ -262,6 +264,20 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
     } finally {
       setIsSavingRouteOrder(false);
     }
+  };
+
+  const handleOpenStoreInfo = (m: Machine, storeMitra?: Store) => {
+    if (!storeMitra) {
+      toast.info(`Unit mesin ${displayMachineCode(m.machine_code)} masih di Gudang Cabang (belum terpasang di toko).`);
+      return;
+    }
+    setSelectedStoreForInfo({
+      store: {
+        ...storeMitra,
+        machine: m,
+      },
+      machineCode: m.machine_code,
+    });
   };
 
   return (
@@ -714,10 +730,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               {/* Body: Daftar Mesin & Toko Dropping Scrollable */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3.5 divide-y divide-slate-200 dark:divide-slate-700">
                 <div className="pb-2">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                  <span className="text-x font-bold text-slate-800 dark:text-slate-200 block">
                     Total mesin ({assignedMachines.length})
                   </span>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                     Atur urutan rute & jumlah kunjungan
                   </p>
                 </div>
@@ -736,9 +752,14 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                         {/* Kolom Kiri: Kode Mesin & Lokasi Toko */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1.5 flex-nowrap">
-                            <span className="font-mono font-black text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenStoreInfo(m, storeMitra)}
+                              className="font-mono font-black text-slate-900 dark:text-white px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 hover:border-indigo-500 shrink-0 cursor-pointer active:scale-95 transition"
+                              title="Lihat informasi toko mitra"
+                            >
                               {displayMachineCode(m.machine_code)}
-                            </span>
+                            </button>
 
                             {!isInstalled && (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 shrink-0">
@@ -804,9 +825,14 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                             )}
                           </div>
 
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-1.5 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStoreInfo(m, storeMitra)}
+                            className="font-semibold text-slate-800 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 truncate block mt-1.5 text-sm text-left cursor-pointer transition w-full"
+                            title="Lihat informasi toko mitra"
+                          >
                             {storeMitra?.name || 'Di Gudang Cabang'}
-                          </span>
+                          </button>
                         </div>
 
                         {/* Kolom Kanan: Toggle 1x / 2x Kunjungan */}
@@ -1027,6 +1053,15 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           );
         }}
       </BottomSheetModal>
+
+      {/* ========================================================================= */}
+      {/* MODAL INFORMASI TOKO MITRA (PERSIS SEPERTI DI DAFTAR TUGAS DROPPING)      */}
+      {/* ========================================================================= */}
+      <StoreInfoModal
+        store={selectedStoreForInfo?.store || null}
+        machineCodeOverride={selectedStoreForInfo?.machineCode}
+        onClose={() => setSelectedStoreForInfo(null)}
+      />
     </div>
   );
 };
