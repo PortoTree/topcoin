@@ -949,7 +949,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                       </button>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-center">
                     <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
                       Total Dipegang
                     </span>
