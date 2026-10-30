@@ -1054,8 +1054,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               />
             </div>
 
-            {/* Stores List */}
-            <div className="space-y-3">
+            {/* Stores List (Nempel ke body dengan border divider) */}
+            <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {filteredStores.map((store) => {
                 const todayTx = todayDroppings.find(
                   (t) => t.store_id === store.id || (t.store && t.store.name === store.name)
@@ -1150,59 +1150,36 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   }
                 }
 
+                const machineCode = displayMachineCode(store.machine?.machine_code);
+
                 return (
                   <div
                     key={store.id}
-                    className="p-3.5 sm:p-4 rounded-2xl border bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-xs transition hover:border-slate-300 dark:hover:border-slate-700 space-y-2.5"
+                    className="py-3.5 first:pt-1 space-y-2.5"
                   >
-                    {/* [namatoko] [nomormesin] */}
+                    {/* [nomormesin | namatoko] */}
                     <div className="space-y-0.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {store.name}
-                        </h3>
-                        <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 flex-shrink-0">
-                          {displayMachineCode(store.machine?.machine_code)}
-                        </span>
-                      </div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        <span className="font-mono font-black">{machineCode}</span>
+                        <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
+                        <span>{store.name}</span>
+                      </h3>
                       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                         {visitSubtext}
                       </p>
                     </div>
 
-                    {/* [tombol aksi]: [WA] + [Maps] + [Info] + [status flex-1 di kanan] */}
-                    <div className="flex items-center gap-1.5 sm:gap-2">
-                      {/* Tombol WhatsApp */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenWhatsApp(store)}
-                        title="Chat WhatsApp Toko"
-                        aria-label="Chat WhatsApp Toko"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
-                      >
-                        <img src="/whatsapp.png" alt="WhatsApp" className="w-5 h-5 object-contain" />
-                      </button>
-
-                      {/* Tombol Google Maps */}
-                      <button
-                        type="button"
-                        onClick={() => handleOpenMaps(store)}
-                        title="Petunjuk Arah Google Maps"
-                        aria-label="Petunjuk Arah Google Maps"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
-                      >
-                        <img src="/maps.png" alt="Google Maps" className="w-5 h-5 object-contain" />
-                      </button>
-
+                    {/* [tombol aksi]: [Info] + [status flex-1 di kanan] */}
+                    <div className="flex items-center gap-2">
                       {/* Tombol Info Toko */}
                       <button
                         type="button"
                         onClick={() => setDetailModalStore(store)}
                         title="Informasi Detail Toko"
                         aria-label="Informasi Detail Toko"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
+                        className="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 flex-shrink-0 cursor-pointer shadow-xs"
                       >
-                        <Info className="w-4 h-4" />
+                        <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                       </button>
 
                       {/* Tombol Action Status (Di Kanan) */}
@@ -1230,8 +1207,8 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               })}
 
               {filteredStores.length === 0 && (
-                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 space-y-2">
-                  <StoreIcon className="w-8 h-8 text-slate-400 mx-auto" />
+                <div className="p-8 text-center text-slate-400 dark:text-slate-500 space-y-2">
+                  <StoreIcon className="w-8 h-8 mx-auto opacity-50" />
                   <p className="text-xs font-semibold">Tidak ada toko mitra yang cocok dengan pencarian "{searchQuery}"</p>
                 </div>
               )}
@@ -2144,16 +2121,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
                 {/* 1. Profil Toko & Kontak */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Outlet Mitra
-                      </span>
-                      <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
-                    </div>
-                    <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 flex-shrink-0">
-                      {displayMachineCode(store.machine?.machine_code)}
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Outlet Mitra
                     </span>
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                      <span className="font-mono font-black">{displayMachineCode(store.machine?.machine_code)}</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
+                      <span>{store.name}</span>
+                    </h4>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 space-y-1">

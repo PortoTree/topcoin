@@ -1660,16 +1660,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
                 {/* 1. Profil Toko & Kontak */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                        Outlet Mitra
-                      </span>
-                      <h4 className="text-lg font-black text-slate-900 dark:text-white">{store.name}</h4>
-                    </div>
-                    <span className="text-[11px] font-extrabold font-mono px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 flex-shrink-0">
-                      {machineCode}
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                      Outlet Mitra
                     </span>
+                    <h4 className="text-lg font-bold text-slate-900 dark:text-white">
+                      <span className="font-mono font-black">{machineCode}</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
+                      <span>{store.name}</span>
+                    </h4>
                   </div>
 
                   <div className="p-3 rounded-xl bg-white dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700/60 space-y-1">
