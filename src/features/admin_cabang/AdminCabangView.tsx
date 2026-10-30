@@ -905,42 +905,43 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       {(activeTab === 'schedule' || activeTab === 'employees') && (
         <div className="space-y-3.5 animate-in fade-in duration-150">
           {/* Hero Section dengan Garis Pembatas Bawah Kontras */}
-          <div className="flex items-center justify-between pb-3 border-b-2 border-slate-300 dark:border-slate-700">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Kelola Petugas</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Total {branchStaff.length} akun di {currentBranch?.name}
-              </p>
+          <div className="pb-3 border-b-2 border-slate-300 dark:border-slate-700">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Kelola Petugas</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Total {branchStaff.length} petugas aktif di {currentBranch?.name}.
+            </p>
+          </div>
+
+          {/* Searchbox & Tombol Tambah Petugas di bawah garis pembatas */}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={staffSearchQuery}
+                onChange={(e) => setStaffSearchQuery(e.target.value)}
+                placeholder="Cari nama, role, atau nomor WhatsApp..."
+                className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition shadow-xs"
+              />
+              <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3 pointer-events-none" />
+              {staffSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setStaffSearchQuery('')}
+                  className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center absolute right-2.5 top-2.5 cursor-pointer text-xs transition"
+                >
+                  ×
+                </button>
+              )}
             </div>
+
             <button
               type="button"
               onClick={() => setShowAddStaffModal(true)}
-              className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
+              className="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer flex-shrink-0"
             >
               <PlusCircle className="w-4 h-4" />
               <span>Petugas</span>
             </button>
-          </div>
-
-          {/* Searchbox di bawah garis pembatas */}
-          <div className="relative">
-            <input
-              type="text"
-              value={staffSearchQuery}
-              onChange={(e) => setStaffSearchQuery(e.target.value)}
-              placeholder="Cari nama, role, atau nomor WhatsApp..."
-              className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition shadow-xs"
-            />
-            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3 pointer-events-none" />
-            {staffSearchQuery && (
-              <button
-                type="button"
-                onClick={() => setStaffSearchQuery('')}
-                className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center absolute right-2.5 top-2.5 cursor-pointer text-xs transition"
-              >
-                ×
-              </button>
-            )}
           </div>
 
           {/* List Langsung Menempel di Body (Tanpa Wrapper Card) */}
@@ -954,9 +955,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 return (
                   <div
                     key={staff.id}
-                    className={`py-3 px-1 transition-colors ${
-                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20 rounded-xl px-2 my-0.5' : ''
-                    }`}
+                    className={`py-3 px-1 transition-colors ${isBM ? 'bg-purple-50/40 dark:bg-purple-950/20 rounded-xl px-2 my-0.5' : ''
+                      }`}
                   >
                     {/* Baris 1: [nama lengkap] • [role teks biasa dengan opacity warna dasar] */}
                     <div className="flex items-center gap-2 flex-wrap">
