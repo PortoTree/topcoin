@@ -10,6 +10,7 @@ import {
   X,
   Maximize2,
   Store as StoreIcon,
+  Eye,
 } from 'lucide-react';
 import type { Store, Machine, UserProfile } from '../../../types';
 import type { StoreMapItem } from '../types';
@@ -50,6 +51,7 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
 
   const [activeFilter, setActiveFilter] = useState<string>(initialFilter);
   const [selectedItem, setSelectedItem] = useState<StoreMapItem | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
   const [isLocatingUser, setIsLocatingUser] = useState<boolean>(false);
   const [tileMode, setTileMode] = useState<'auto' | 'satellite'>('auto');
 
@@ -58,11 +60,13 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
     ? document.documentElement.classList.contains('dark')
     : false;
 
-  // Tombol Back bawaan HP: tutup card info toko jika terbuka, atau kembali ke list toko
+  // Tombol Back bawaan HP: tutup preview foto, tutup card info toko, atau kembali ke list toko
   useMobileBackHandler({
     enabled: true,
     onBack: () => {
-      if (selectedItem) {
+      if (previewPhotoUrl) {
+        setPreviewPhotoUrl(null);
+      } else if (selectedItem) {
         setSelectedItem(null);
       } else {
         onClose();
@@ -416,14 +420,22 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
               </button>
             </div>
 
-            {/* Foto Toko (jika ada) */}
+            {/* Foto Toko (dapat diklik untuk preview perbesar) */}
             {selectedItem.store.photo_store_url && (
-              <div className="relative w-full h-28 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+              <div
+                onClick={() => setPreviewPhotoUrl(selectedItem.store.photo_store_url)}
+                className="relative w-full h-28 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer group active:scale-[0.99] transition shadow-2xs"
+                title="Klik untuk memperbesar foto toko"
+              >
                 <img
                   src={selectedItem.store.photo_store_url}
                   alt={selectedItem.store.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                 />
+                <div className="absolute bottom-1.5 right-1.5 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 shadow-xs pointer-events-none">
+                  <Eye className="w-3 h-3" />
+                  <span>Lihat Foto</span>
+                </div>
               </div>
             )}
 
@@ -466,7 +478,7 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
                 className="flex-1 py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
               >
                 <Navigation className="w-3.5 h-3.5" />
-                <span>Navigasi Maps</span>
+                <span>Buka maps</span>
               </a>
 
               {/* Tombol Detail Lengkap (jika handler disediakan) */}
@@ -484,6 +496,50 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal Preview Foto Toko */}
+      {previewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/85 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewPhotoUrl(null)}
+        >
+          {/* Header Bar */}
+          <div className="w-full max-w-md flex items-center justify-between pb-3 text-white">
+            <div className="min-w-0 pr-2">
+              <span className="text-xs font-black block truncate">{selectedItem?.store.name}</span>
+              {selectedItem?.store.owner_name && (
+                <span className="text-[10px] text-white/70 block truncate">
+                  Pemilik: {selectedItem.store.owner_name}
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setPreviewPhotoUrl(null)}
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer active:scale-90 flex-shrink-0"
+              title="Tutup Preview"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Container Image */}
+          <div
+            className="relative max-w-md w-full max-h-[75vh] flex items-center justify-center overflow-hidden rounded-2xl bg-black/40 border border-white/10 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={previewPhotoUrl}
+              alt={selectedItem?.store.name || 'Preview Foto Toko'}
+              className="w-full h-auto max-h-[75vh] object-contain rounded-2xl"
+            />
+          </div>
+
+          <p className="mt-3 text-[11px] text-white/60 text-center">
+            Ketuk area luar atau tombol silang untuk menutup
+          </p>
         </div>
       )}
     </div>
