@@ -212,35 +212,6 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
             </div>
           </div>
 
-          {/* 2. Username Login (Auto-Generated dari Nama Depan tapi Bisa Diedit) */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="font-bold text-slate-700 dark:text-slate-300">
-                Username Login <span className="text-rose-500 font-bold ml-0.5">*</span>
-              </label>
-
-            </div>
-            <div className="relative">
-              <span className="text-slate-400 font-bold absolute left-3.5 top-2.5 text-xs pointer-events-none">
-                @
-              </span>
-              <input
-                type="text"
-                required
-                placeholder="andi"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
-                  setIsUsernameEdited(true);
-                }}
-                className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
-              />
-            </div>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-              Digunakan saat login aplikasi (bisa diedit jika ingin disesuaikan).
-            </p>
-          </div>
-
           {/* 3. Nomor WhatsApp / Telepon */}
           <div>
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -303,6 +274,35 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
               </p>
             </div>
           )}
+
+          {/* 2. Username Login (Auto-Generated dari Nama Depan tapi Bisa Diedit) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700 dark:text-slate-300">
+                Username Login <span className="text-rose-500 font-bold ml-0.5">*</span>
+              </label>
+
+            </div>
+            <div className="relative">
+              <span className="text-slate-400 font-bold absolute left-3.5 top-2.5 text-xs pointer-events-none">
+                @
+              </span>
+              <input
+                type="text"
+                required
+                placeholder="andi"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+                  setIsUsernameEdited(true);
+                }}
+                className="w-full pl-8 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+              />
+            </div>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Digunakan saat login aplikasi.
+            </p>
+          </div>
 
           {/* 6. PIN Keamanan 6-Digit */}
           <div>

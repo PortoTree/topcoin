@@ -28,6 +28,9 @@ import {
   Camera,
   Clock,
   History,
+  Search,
+  Pencil,
+  Phone,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
@@ -38,7 +41,9 @@ import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
 import { MachineManagerMobile } from './components/MachineManagerMobile';
 import { AddStaffModalMobile } from './components/AddStaffModalMobile';
+import { EditStaffModalMobile } from './components/EditStaffModalMobile';
 import { displayMachineCode } from '../../lib/machineCodeLogic';
+import { compareStaff, filterStaff } from '../../lib/staffLogic';
 
 interface AdminCabangViewProps {
   activeTab: string;
@@ -68,6 +73,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   // Staff Management State
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
+  const [staffSearchQuery, setStaffSearchQuery] = useState('');
+  const [selectedStaffForEdit, setSelectedStaffForEdit] = useState<UserProfile | null>(null);
 
   // Image Preview Modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
@@ -664,11 +671,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       {/* Baris 3: [omset bersih] (rata kanan) */}
                       <div className="flex items-center justify-end">
                         <span
-                          className={`font-mono font-black text-sm ${
-                            (d.net_deposit_amount || 0) > 0
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-black/40 dark:text-white/40'
-                          }`}
+                          className={`font-mono font-black text-sm ${(d.net_deposit_amount || 0) > 0
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-black/40 dark:text-white/40'
+                            }`}
                         >
                           {formatIDR(d.net_deposit_amount || 0)}
                         </span>
@@ -898,12 +904,13 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       {/* Tab: Jadwal (Karyawan Cabang & Pengajuan Hapus Akun) */}
       {(activeTab === 'schedule' || activeTab === 'employees') && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
+        <div className="space-y-3.5 animate-in fade-in duration-150">
+          {/* Hero Section dengan Garis Pembatas Bawah */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Jadwal & Karyawan Cabang</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Kelola Petugas</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Total {branchStaff.length} akun staf di {currentBranch?.name}
+                Total {branchStaff.length} akun di {currentBranch?.name}
               </p>
             </div>
             <button
@@ -912,22 +919,35 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               className="py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Tambah Karyawan</span>
+              <span>Petugas</span>
             </button>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800 shadow-xs overflow-hidden">
-            {[...branchStaff]
-              .sort((a, b) => {
-                // 1. Branch Manager always on top
-                if (a.role === 'branch_manager') return -1;
-                if (b.role === 'branch_manager') return 1;
-                // 2. Admin Cabang next
-                if (a.role === 'admin_cabang' || a.role === 'admin') return -1;
-                if (b.role === 'admin_cabang' || b.role === 'admin') return 1;
-                // 3. Alphabetical
-                return a.full_name.localeCompare(b.full_name);
-              })
+          {/* Searchbox di bawah garis pembatas */}
+          <div className="relative">
+            <input
+              type="text"
+              value={staffSearchQuery}
+              onChange={(e) => setStaffSearchQuery(e.target.value)}
+              placeholder="Cari nama, role, atau nomor WhatsApp..."
+              className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-medium placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-hidden transition shadow-xs"
+            />
+            <Search className="w-4 h-4 text-slate-400 dark:text-slate-500 absolute left-3 top-3 pointer-events-none" />
+            {staffSearchQuery && (
+              <button
+                type="button"
+                onClick={() => setStaffSearchQuery('')}
+                className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 flex items-center justify-center absolute right-2.5 top-2.5 cursor-pointer text-xs transition"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* List Langsung Menempel di Body (Tanpa Wrapper Card) */}
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filterStaff(branchStaff, staffSearchQuery)
+              .sort(compareStaff)
               .map((staff) => {
                 const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
                 const isBM = staff.role === 'branch_manager';
@@ -935,47 +955,48 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 return (
                   <div
                     key={staff.id}
-                    className={`p-3 sm:p-3.5 transition-colors ${isBM ? 'bg-purple-50/40 dark:bg-purple-950/20' : 'hover:bg-slate-50/70 dark:hover:bg-slate-800/40'
-                      }`}
+                    className={`py-3 px-1 transition-colors ${
+                      isBM ? 'bg-purple-50/40 dark:bg-purple-950/20 rounded-xl px-2 my-0.5' : ''
+                    }`}
                   >
-                    {/* Baris 1: Full Name */}
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                      {staff.full_name}
-                    </h4>
-
-                    {/* Baris 2: Sejajar antara Badge Role & Status (kiri) dan Tombol Aksi (kanan) */}
-                    <div className="flex items-center justify-between gap-2 mt-1.5">
-                      {/* Kiri: Badge Role (semua role ada badge) + Status */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {(() => {
-                          const badge = getStaffBadge(staff);
-                          return (
-                            <span
-                              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
-                            >
-                              {badge.label}
-                            </span>
-                          );
-                        })()}
-
-                        <span
-                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${staff.is_active
-                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60'
-                            : 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60'
-                            }`}
-                        >
-                          {staff.is_active ? 'Aktif' : 'Terkunci'}
-                        </span>
-
-                        {isPendingDelete && (
-                          <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
-                            <ShieldAlert className="w-3 h-3 flex-shrink-0" />
-                            Pending Hapus
+                    {/* Baris 1: [nama lengkap] | [role] */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                        {staff.full_name}
+                      </span>
+                      <span className="text-slate-300 dark:text-slate-600 font-light">|</span>
+                      {(() => {
+                        const badge = getStaffBadge(staff);
+                        return (
+                          <span
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
+                          >
+                            {badge.label}
                           </span>
-                        )}
+                        );
+                      })()}
+
+                      {!staff.is_active && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
+                          Terkunci
+                        </span>
+                      )}
+
+                      {isPendingDelete && (
+                        <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-0.5">
+                          <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+                          Pending Hapus
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Baris 2: [nomor whatsapp]                  [icon] [icon] */}
+                    <div className="flex items-center justify-between gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                        <span>{staff.phone || '-'}</span>
                       </div>
 
-                      {/* Kanan: Tombol Arrow Down (Role) + Tombol Titik 3 (Opsi) */}
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {isBM ? (
                           <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
@@ -983,7 +1004,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                           </span>
                         ) : (
                           <>
-                            {/* Tombol Arrow Down: Buka Modal Pemilihan Role (Diluar List) */}
+                            {/* Tombol Arrow Down: Buka Modal Pemilihan Role */}
                             <button
                               type="button"
                               onClick={() => {
@@ -996,7 +1017,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                               <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </button>
 
-                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan (Diluar List) */}
+                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan */}
                             <button
                               type="button"
                               onClick={() => {
@@ -1015,6 +1036,12 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                   </div>
                 );
               })}
+
+            {filterStaff(branchStaff, staffSearchQuery).length === 0 && (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                Tidak ada petugas yang cocok dengan kata kunci &quot;{staffSearchQuery}&quot;.
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1054,6 +1081,24 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           setBranchStaff((prev) => [newStaff, ...prev]);
           if (newStaff.role === 'dropping') {
             setDroppingUsers((prev) => [newStaff, ...prev]);
+          }
+          fetchBranchData();
+        }}
+      />
+
+      {/* Edit Staff Modal Mobile */}
+      <EditStaffModalMobile
+        isOpen={!!selectedStaffForEdit}
+        onClose={() => setSelectedStaffForEdit(null)}
+        staff={selectedStaffForEdit}
+        onSuccess={(updatedStaff) => {
+          setBranchStaff((prev) =>
+            prev.map((s) => (s.id === updatedStaff.id ? { ...s, ...updatedStaff } : s))
+          );
+          if (updatedStaff.role === 'dropping') {
+            setDroppingUsers((prev) =>
+              prev.map((s) => (s.id === updatedStaff.id ? { ...s, ...updatedStaff } : s))
+            );
           }
           fetchBranchData();
         }}
@@ -1289,6 +1334,27 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                 type="button"
                 onClick={() => {
                   close();
+                  setSelectedStaffForEdit(staff);
+                }}
+                className="w-full p-3.5 rounded-2xl bg-indigo-50/70 hover:bg-indigo-100/70 dark:bg-indigo-950/30 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-left flex items-center gap-3.5 transition-all active:scale-98 cursor-pointer"
+              >
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center flex-shrink-0">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white block">
+                    Edit Petugas
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Perbarui nama lengkap, nomor WhatsApp, PIN, atau prefix mesin
+                  </span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  close();
                   handleStaffAction(staff, 'cuti');
                 }}
                 className="w-full p-3.5 rounded-2xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/60 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60 text-left flex items-center gap-3.5 transition-all active:scale-98 cursor-pointer"
@@ -1438,8 +1504,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       onClick={() => handleOpenWhatsApp(store)}
                       disabled={!store.phone}
                       className={`w-full py-2.5 px-3 rounded-xl border flex items-center justify-center gap-2 text-xs font-bold transition shadow-2xs ${store.phone
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
+                        ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 cursor-pointer active:scale-95'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 opacity-60 cursor-not-allowed'
                         }`}
                     >
                       <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
@@ -1519,14 +1585,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                               <div className="flex items-center justify-between gap-2">
                                 <span
                                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold ${tx.coins_collected
-                                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                      : tx.optional_notes?.includes('Toko Tutup')
-                                        ? 'border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent'
-                                        : tx.optional_notes?.includes('Minimal Koin')
-                                          ? 'border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent'
-                                          : (tx.photo_optional_url || tx.optional_notes)
-                                            ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
-                                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                    : tx.optional_notes?.includes('Toko Tutup')
+                                      ? 'border border-slate-900 text-slate-900 dark:border-white dark:text-white bg-transparent'
+                                      : tx.optional_notes?.includes('Minimal Koin')
+                                        ? 'border border-orange-500 text-orange-600 dark:text-orange-400 bg-transparent'
+                                        : (tx.photo_optional_url || tx.optional_notes)
+                                          ? 'border border-rose-500 text-rose-600 dark:text-rose-400 bg-transparent'
+                                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
                                     }`}
                                 >
                                   {tx.coins_collected ? (

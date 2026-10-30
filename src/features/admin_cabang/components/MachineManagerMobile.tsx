@@ -187,7 +187,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
         const targetPrefix = targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name);
         const targetMachines = machines.filter((m) => m.assigned_dropping_id === targetDroppingId);
-        
+
         if (targetMachines.length >= 20) {
           toast.error(`${targetStaff.full_name} sudah memegang batas maksimal 20 unit mesin.`);
           setIsSavingTransfer(false);
@@ -416,7 +416,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                     {/* [Unit: total yang di pegang]   [tombol edit] */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        Unit: <strong className="text-slate-800 dark:text-slate-200 font-bold">{staffMachines.length} yang di pegang</strong>
+                        Total mesin yang di pegang: <strong className="text-slate-800 dark:text-slate-200 font-bold">{staffMachines.length}</strong>
                       </span>
 
                       <button
@@ -851,19 +851,16 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 );
 
                 return (
-                  <div className={`p-3 rounded-xl border ${
-                    isExisting
-                      ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80'
-                      : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/80'
-                  }`}>
-                    <span className={`text-[10px] uppercase font-bold block ${
-                      isExisting ? 'text-rose-700 dark:text-rose-400' : 'text-indigo-700 dark:text-indigo-400'
+                  <div className={`p-3 rounded-xl border ${isExisting
+                    ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80'
+                    : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/80'
                     }`}>
+                    <span className={`text-[10px] uppercase font-bold block ${isExisting ? 'text-rose-700 dark:text-rose-400' : 'text-indigo-700 dark:text-indigo-400'
+                      }`}>
                       {isExisting ? 'Kode Mesin Sudah Terpakai:' : 'Kode Mesin yang Dibuat:'}
                     </span>
-                    <span className={`font-mono font-black text-base block mt-0.5 ${
-                      isExisting ? 'text-rose-900 dark:text-rose-200' : 'text-indigo-900 dark:text-indigo-200'
-                    }`}>
+                    <span className={`font-mono font-black text-base block mt-0.5 ${isExisting ? 'text-rose-900 dark:text-rose-200' : 'text-indigo-900 dark:text-indigo-200'
+                      }`}>
                       {code}
                     </span>
                     {isExisting && (
