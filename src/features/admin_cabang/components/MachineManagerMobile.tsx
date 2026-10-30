@@ -227,9 +227,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
   // Buka Modal Tambah 1 Mesin
   const handleOpenAddMachine = () => {
-    const defaultStaff = droppingStaff[0];
-    const staffId = defaultStaff?.id || '';
-    setAddDroppingId(staffId);
+    setAddDroppingId(''); // Default: Tanpa Dropping (Simpan di Gudang)
     setAddMachineNumber(''); // Dibiarkan kosong agar placeholder tampil
     setAddStoreId('');
     setIsAddMachineModalOpen(true);

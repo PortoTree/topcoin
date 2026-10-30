@@ -259,7 +259,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       if (uData) {
         const staffList = uData as UserProfile[];
         setBranchStaff(staffList);
-        setDroppingUsers(staffList.filter((u) => u.role === 'dropping'));
+        // Sync seluruh staf dengan role dropping (termasuk admin_cabang dengan tugas dropping) yang aktif
+        setDroppingUsers(
+          staffList.filter(
+            (u) =>
+              (u.role === 'dropping' || (u.role === 'admin_cabang' && u.assigned_task === 'dropping')) &&
+              u.is_active !== false &&
+              u.deletion_status !== 'pending_deletion'
+          )
+        );
       }
 
       // 3. Machines in this branch
