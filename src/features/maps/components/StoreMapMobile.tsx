@@ -177,20 +177,14 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
       }
     });
 
-    let tileUrl = '';
-    let maxZoom = 19;
-
-    if (tileMode === 'satellite') {
-      tileUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-    } else if (isDarkMode) {
-      tileUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
-    } else {
-      tileUrl = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-    }
+    const isSatellite = tileMode === 'satellite';
+    const tileUrl = isSatellite
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     L.tileLayer(tileUrl, {
-      maxZoom,
-      subdomains: 'abcd',
+      maxZoom: 19,
+      className: isSatellite ? 'map-tile-satellite' : 'map-tile-osm',
     }).addTo(map);
 
   }, [isDarkMode, tileMode]);

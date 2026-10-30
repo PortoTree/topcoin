@@ -176,3 +176,14 @@ html.dark .mobile-container {
   will-change: opacity;
 }
 
+/* ==========================================================================
+   LEAFLET MAP DARK MODE FILTER (100% Free OSM, Tanpa Watermark API Key)
+   ========================================================================== */
+html.dark .leaflet-tile-pane .map-tile-osm {
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+}
+
+.leaflet-container {
+  background-color: #020617 !important;
+}
+
