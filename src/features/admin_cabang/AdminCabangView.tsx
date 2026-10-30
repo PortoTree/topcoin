@@ -40,6 +40,7 @@ import { DroppingView } from '../dropping/DroppingView';
 import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
 import { MachineManagerMobile } from './components/MachineManagerMobile';
+import { RouteManagerMobile } from './components/RouteManagerMobile';
 import { AddStaffModalMobile } from './components/AddStaffModalMobile';
 import { EditStaffModalMobile } from './components/EditStaffModalMobile';
 import { displayMachineCode } from '../../lib/machineCodeLogic';
@@ -1116,7 +1117,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           droppingStaff={droppingUsers}
           stores={branchStores}
           onRefresh={fetchBranchData}
-          viewMode="machines"
         />
       )}
 
@@ -1160,15 +1160,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Tab: Rute (Petugas Dropping & Pengaturan Rute Mesin) */}
+      {/* Tab: Rute (Petugas Dropping, Logistik, Marketing) */}
       {activeTab === 'route' && (
-        <MachineManagerMobile
+        <RouteManagerMobile
           branchId={activeBranchId}
           machines={machines}
           droppingStaff={droppingUsers}
           stores={branchStores}
           onRefresh={fetchBranchData}
-          viewMode="route"
         />
       )}
 

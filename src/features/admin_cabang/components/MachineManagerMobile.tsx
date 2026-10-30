@@ -11,8 +11,6 @@ import {
   Warehouse,
   Search,
   CheckCircle2,
-  Info,
-  Route,
 } from 'lucide-react';
 import type { Machine, UserProfile, Store } from '../../../types';
 import {
@@ -30,7 +28,6 @@ interface MachineManagerMobileProps {
   droppingStaff: UserProfile[];
   stores: Store[];
   onRefresh: () => Promise<void> | void;
-  viewMode?: 'machines' | 'route';
 }
 
 export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
@@ -39,15 +36,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   droppingStaff,
   stores,
   onRefresh,
-  viewMode,
 }) => {
-  // Sub-Tab Switcher: 'dropping' (Petugas Dropping) vs 'all_machines' (Semua Mesin)
-  const [activeSubTab, setActiveSubTab] = useState<'dropping' | 'all_machines'>(
-    viewMode === 'route' ? 'dropping' : 'all_machines'
-  );
-
-  const currentTab = viewMode === 'machines' ? 'all_machines' : viewMode === 'route' ? 'dropping' : activeSubTab;
-
   // State Filter & Pencarian
   const [selectedDroppingFilter, setSelectedDroppingFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -493,110 +482,28 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            {viewMode === 'route' ? (
-              <>
-                <Route className="w-5 h-5 text-indigo-500" />
-                <span>Petugas Dropping & Rute ({droppingStaff.length})</span>
-              </>
-            ) : (
-              <>
-                <Cpu className="w-5 h-5 text-indigo-500" />
-                <span>Kelola Mesin ({machines.length})</span>
-              </>
-            )}
+            <Cpu className="w-5 h-5 text-indigo-500" />
+            <span>Kelola Mesin ({machines.length})</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {viewMode === 'route'
-              ? 'Pilih petugas untuk mengatur rute urutan toko dan target kunjungan.'
-              : 'Daftar seluruh mesin yang ada di cabang.'}
+            Daftar seluruh mesin yang ada di cabang.
           </p>
         </div>
 
-        {viewMode !== 'route' && (
-          <button
-            type="button"
-            onClick={handleOpenAddMachine}
-            className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleOpenAddMachine}
+          className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Tambah</span>
+        </button>
       </div>
 
-      {/* Navigasi Sub-Tab jika tidak dalam mode khusus viewMode */}
-      {!viewMode && (
-        <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('dropping')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentTab === 'dropping'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-          >
-            Petugas Dropping ({droppingStaff.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveSubTab('all_machines')}
-            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentTab === 'all_machines'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-          >
-            Semua Mesin ({machines.length})
-          </button>
-        </div>
-      )}
-
-      {/* KONTEN TAB 1: DAFTAR PETUGAS DROPPING */}
-      {currentTab === 'dropping' && (
-        <div className="space-y-1 pt-1">
-          {droppingStaff.length === 0 ? (
-            <p className="text-xs text-slate-400 italic py-4 text-center">
-              Belum ada staf dengan role Dropping di cabang ini.
-            </p>
-          ) : (
-            <div className="divide-y divide-slate-200 dark:divide-slate-800">
-              {droppingStaff.map((staff) => {
-                const staffMachines = machines.filter((m) => m.assigned_dropping_id === staff.id);
-
-                return (
-                  <div key={staff.id} className="py-3 first:pt-1 space-y-1">
-                    {/* [nama petugas] */}
-                    <h4 className="font-black text-sm text-slate-900 dark:text-white">
-                      {staff.full_name}
-                    </h4>
-
-                    {/* [Unit: total yang di pegang]   [tombol edit] */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                        Total mesin yang di pegang: <strong className="text-slate-800 dark:text-slate-200 font-bold">{staffMachines.length}</strong>
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDroppingForDetail(staff)}
-                        className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-xs"
-                        title="Detail Mesin Petugas"
-                      >
-                        <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* KONTEN TAB 2: SEMUA MESIN */}
-      {currentTab === 'all_machines' && (
-        <div className="space-y-3">
-          {/* Filter Horizontal Tab & Search Mesin */}
-          <div className="space-y-2">
+      {/* KONTEN: SEMUA MESIN */}
+      <div className="space-y-3">
+        {/* Filter Horizontal Tab & Search Mesin */}
+        <div className="space-y-2">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
               <input
@@ -738,7 +645,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             )}
           </div>
         </div>
-      )}
 
       {/* ========================================================================= */}
       {/* MODAL 1: SETTING PREFIX KODE MESIN DROPPING                               */}
