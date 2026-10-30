@@ -4,6 +4,7 @@ import { offlineDb } from '../lib/db';
 import { toast } from '../context/ToastContext';
 import { BottomSheetModal } from './BottomSheetModal';
 import { displayMachineCode } from '../lib/machineCodeLogic';
+import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import type { Store, DroppingTransaction } from '../types';
 import {
   Store as StoreIcon,
@@ -35,6 +36,14 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
   const [storeHistory, setStoreHistory] = useState<DroppingTransaction[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
   const [activePreviewImage, setActivePreviewImage] = useState<{ url: string; title: string } | null>(null);
+
+  // Navigasi Back bawaan HP: Jika Lightbox Foto terbuka, tutup lightbox terlebih dahulu
+  useMobileBackHandler({
+    enabled: Boolean(activePreviewImage),
+    onBack: () => {
+      setActivePreviewImage(null);
+    },
+  });
 
   // Fetch riwayat dropping dari Supabase & Dexie offline saat modal terbuka
   useEffect(() => {
@@ -247,17 +256,30 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-lg mx-auto w-full pb-8">
               {/* 1. Profil Toko & Kontak */}
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
-                {/* Foto Toko (jika ada) */}
+                {/* Foto Toko (jika ada, dapat diklik untuk preview perbesar) */}
                 {store.photo_store_url && (
-                  <div className="relative w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs mb-1">
+                  <div
+                    onClick={() =>
+                      setActivePreviewImage({
+                        url: store.photo_store_url!,
+                        title: `Foto Depan Toko - ${store.name}`,
+                      })
+                    }
+                    className="relative w-full h-40 sm:h-48 rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs mb-1 cursor-pointer group active:scale-[0.99] transition hover:border-indigo-500"
+                    title="Klik untuk memperbesar Foto Depan Toko"
+                  >
                     <img
                       src={store.photo_store_url}
                       alt={store.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                     />
                     <div className="absolute bottom-2 left-2 px-2.5 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1">
                       <Camera className="w-3 h-3 text-indigo-400" />
                       Foto Depan Toko
+                    </div>
+                    <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-xs text-white text-[10px] font-bold flex items-center gap-1 shadow-xs pointer-events-none">
+                      <Eye className="w-3 h-3" />
+                      <span>Lihat Foto</span>
                     </div>
                   </div>
                 )}
@@ -501,7 +523,7 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
       {/* Lightbox Zoom Foto */}
       {activePreviewImage && (
         <div
-          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4"
+          className="fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setActivePreviewImage(null)}
         >
           <div className="w-full max-w-md flex items-center justify-between pb-3 text-white">
@@ -509,18 +531,25 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
             <button
               type="button"
               onClick={() => setActivePreviewImage(null)}
-              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white"
+              className="p-2 rounded-full bg-white/20 hover:bg-white/30 text-white transition cursor-pointer active:scale-90 flex-shrink-0"
+              title="Tutup Preview"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="max-w-md max-h-[75vh] rounded-2xl overflow-hidden border border-white/20 shadow-2xl">
+          <div
+            className="max-w-md w-full max-h-[75vh] flex items-center justify-center rounded-2xl overflow-hidden border border-white/20 bg-black/40 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <img
               src={activePreviewImage.url}
               alt={activePreviewImage.title}
-              className="w-full h-full object-contain"
+              className="w-full h-auto max-h-[75vh] object-contain rounded-2xl"
             />
           </div>
+          <p className="mt-3 text-[11px] text-white/60 text-center">
+            Ketuk area luar atau tombol silang untuk menutup
+          </p>
         </div>
       )}
     </>
