@@ -388,24 +388,13 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={fetchData}
-                  disabled={isLoadingData}
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer active:scale-90"
-                  title="Refresh data"
-                >
-                  <RefreshCw className={`w-4 h-4 ${isLoadingData ? 'animate-spin' : ''}`} />
-                </button>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer active:scale-90"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={close}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer active:scale-90"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             {/* 1. Pilih Petugas Logistik */}
@@ -448,15 +437,18 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
 
               <button
                 type="button"
+                disabled={isLoadingData}
                 onClick={() => {
                   setShowStaffPicker(true);
                   setStaffSearch('');
                 }}
-                className="w-full py-3 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 shadow-2xs"
+                className="w-full py-3 px-3.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer active:scale-98 shadow-2xs disabled:opacity-60"
               >
                 <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>
-                  {selectedOfficerIds.length > 0
+                  {isLoadingData
+                    ? 'Memuat data...'
+                    : selectedOfficerIds.length > 0
                     ? `Ubah / Tambah Petugas (${selectedOfficerIds.length} Terpilih)`
                     : 'Pilih Petugas'}
                 </span>
@@ -585,7 +577,7 @@ export const CreateRelocationModalMobile: React.FC<CreateRelocationModalMobilePr
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting || selectedOfficerIds.length === 0}
+                disabled={isSubmitting || selectedOfficerIds.length === 0 || isLoadingData}
                 className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-600/25 active:scale-98 transition disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
