@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { toast } from '../context/ToastContext';
 
 export interface UseMobileBackHandlerOptions {
   /**
@@ -23,6 +24,7 @@ let globalBackId = 0;
 const activeHandlers: HandlerItem[] = [];
 let isInternalBack = false;
 let isGlobalListenerAttached = false;
+let lastRootBackPressTime = 0;
 
 function ensureGlobalPopstateListener() {
   if (isGlobalListenerAttached || typeof window === 'undefined') return;
@@ -42,10 +44,52 @@ function ensureGlobalPopstateListener() {
       topHandler.closedByPopstate = true;
       topHandler.isPushed = false;
       topHandler.onBack();
+      return;
+    }
+
+    // 3. JIKA activeHandlers kosong (user berada di halaman utama atau semua modal sudah tertutup):
+    // Cegah keluar aplikasi secara tidak sengaja dengan pola proteksi "Tekan sekali lagi untuk keluar"
+    const now = Date.now();
+    if (now - lastRootBackPressTime < 2000) {
+      // Ditekan 2x dalam 2 detik di halaman utama -> Izinkan browser keluar secara normal
+      try {
+        window.history.back();
+      } catch {
+        // ignore
+      }
+    } else {
+      // Tekanan pertama di halaman utama
+      lastRootBackPressTime = now;
+      try {
+        window.history.pushState({ topcoin_root: true }, '');
+      } catch {
+        // ignore
+      }
+      toast.info('Tekan sekali lagi untuk keluar dari aplikasi');
     }
   });
 
   isGlobalListenerAttached = true;
+}
+
+/**
+ * Hook penjaga halaman utama (root guard)
+ * Memastikan selalu ada 1 entri penahan di browser history agar saat tombol Back
+ * ditekan di halaman utama, user tidak langsung terlempar keluar tanpa konfirmasi.
+ */
+export function useRootBackGuard() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    ensureGlobalPopstateListener();
+
+    try {
+      if (!window.history.state?.topcoin_root) {
+        window.history.pushState({ topcoin_root: true }, '');
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 }
 
 /**

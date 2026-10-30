@@ -67,7 +67,7 @@ export function BottomSheetModal<T = any>({
 
   // Navigasi Back bawaan HP otomatis menutup modal
   useMobileBackHandler({
-    enabled: Boolean(renderedItem && !isClosing),
+    enabled: Boolean(renderedItem),
     onBack: handleClose,
   });
 

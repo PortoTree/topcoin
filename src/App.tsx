@@ -12,9 +12,11 @@ import { AdminCabangView } from './features/admin_cabang/AdminCabangView';
 import { MarketingView } from './features/marketing/MarketingView';
 import { DriverView } from './features/driver/DriverView';
 import { DroppingView } from './features/dropping/DroppingView';
+import { useRootBackGuard } from './hooks/useMobileBackHandler';
 
 const MainAppContent: React.FC = () => {
   const { profile, role, activeRole, isLoading } = useAuth();
+  useRootBackGuard();
   const [activeTab, setActiveTab] = useState<string>('');
   const [tabClickTick, setTabClickTick] = useState<number>(0);
 
