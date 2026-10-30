@@ -59,7 +59,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   // State Modal Tambah Mesin Satuan
   const [isAddMachineModalOpen, setIsAddMachineModalOpen] = useState(false);
   const [addDroppingId, setAddDroppingId] = useState<string>('');
-  const [addMachineNumber, setAddMachineNumber] = useState<number | ''>(1);
+  const [addMachineNumber, setAddMachineNumber] = useState<number | ''>('');
   const [addStoreId, setAddStoreId] = useState<string>('');
   const [isSavingAdd, setIsSavingAdd] = useState(false);
 
@@ -230,25 +230,24 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
     const defaultStaff = droppingStaff[0];
     const staffId = defaultStaff?.id || '';
     setAddDroppingId(staffId);
-    if (staffId) {
-      const existing = machines.filter((m) => m.assigned_dropping_id === staffId);
-      const nextNum = getNextAvailableMachineNumber(existing.map((m) => m.machine_number || 0));
-      setAddMachineNumber(Math.min(20, nextNum));
-    } else {
-      setAddMachineNumber(1);
-    }
+    setAddMachineNumber(''); // Dibiarkan kosong agar placeholder tampil
     setAddStoreId('');
     setIsAddMachineModalOpen(true);
   };
 
   // Simpan Tambah 1 Mesin
   const handleSaveAddMachine = async () => {
+    if (addMachineNumber === '' || typeof addMachineNumber !== 'number' || isNaN(addMachineNumber)) {
+      toast.error('Silakan masukkan nomor mesin antara 1 sampai 20.');
+      return;
+    }
+
     const targetStaff = droppingStaff.find((s) => s.id === addDroppingId);
     const prefix = targetStaff
       ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
       : 'MESIN';
 
-    const numToSave = typeof addMachineNumber === 'number' ? addMachineNumber : 1;
+    const numToSave = addMachineNumber;
 
     // 1. Validasi Input, Duplikasi Kode, dan Kuota 20 Unit
     const validation = validateNewMachineInput({
@@ -793,14 +792,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 </label>
                 <select
                   value={addDroppingId}
-                  onChange={(e) => {
-                    const sId = e.target.value;
-                    setAddDroppingId(sId);
-                    if (sId) {
-                      const existing = machines.filter((m) => m.assigned_dropping_id === sId);
-                      setAddMachineNumber(getNextAvailableMachineNumber(existing.map((m) => m.machine_number || 0)));
-                    }
-                  }}
+                  onChange={(e) => setAddDroppingId(e.target.value)}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Simpan di Gudang (Tanpa Dropping) --</option>
@@ -825,7 +817,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   type="number"
                   min={1}
                   max={20}
-                  placeholder="Ketik nomor (1-20)..."
+                  placeholder="Ketik nomor (1 - 20)..."
                   value={addMachineNumber}
                   onChange={(e) => {
                     const raw = e.target.value;
@@ -839,10 +831,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                     }
                   }}
                   onBlur={() => {
-                    if (addMachineNumber === '' || addMachineNumber < 1) {
-                      setAddMachineNumber(1);
-                    } else if (addMachineNumber > 20) {
-                      setAddMachineNumber(20);
+                    if (typeof addMachineNumber === 'number') {
+                      if (addMachineNumber < 1) setAddMachineNumber(1);
+                      else if (addMachineNumber > 20) setAddMachineNumber(20);
                     }
                   }}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
@@ -855,9 +846,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 const prefix = targetStaff
                   ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
                   : 'MESIN';
-                const numPreview = typeof addMachineNumber === 'number' ? addMachineNumber : 1;
-                const code = formatMachineCode(prefix, numPreview);
-                const isExisting = machines.some(
+                const hasNum = typeof addMachineNumber === 'number' && !isNaN(addMachineNumber);
+                const code = hasNum ? formatMachineCode(prefix, addMachineNumber) : `${prefix}-..`;
+                const isExisting = hasNum && machines.some(
                   (m) => displayMachineCode(m.machine_code).toUpperCase() === code.toUpperCase()
                 );
 
