@@ -187,6 +187,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   // 2. Checklist "Total Koin Terambil / Ambil Omset" Toggle (Default false: hanya pencocokan meteran)
   const [hasOmset, setHasOmset] = useState<boolean>(false);
+  const [isHasOmsetLocked, setIsHasOmsetLocked] = useState<boolean>(false);
 
   // Daftar langkah foto wajib dinamis: jika Tarik Omset DICENTANG, Foto Koin diganti dengan Foto Nota
   const mandatoryPhotoSteps: PhotoStepItem[] = useMemo(() => {
@@ -617,6 +618,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
     setSelectedStoreId('');
     setSubmitAttempted(false);
     setHasOmset(false);
+    setIsHasOmsetLocked(false);
     setCoinsCollectedStr('');
     setHasMismatch(false);
     setActualPhysicalMeterStr('');
@@ -1191,6 +1193,13 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                           } else {
                             setSelectedStoreId(store.id);
                             setNoOmsetMeterStr(store.machine?.last_counter_meter?.toString() || '0');
+                            if (statusLabel === 'Belum Ambil Omset') {
+                              setHasOmset(true);
+                              setIsHasOmsetLocked(true);
+                            } else {
+                              setHasOmset(false);
+                              setIsHasOmsetLocked(false);
+                            }
                           }
                         }}
                         className={`flex-1 py-2.5 px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-between transition active:scale-[0.98] cursor-pointer shadow-xs min-w-0 ${buttonStyle}`}
@@ -1528,27 +1537,41 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                 )}
 
                 {/* 2. Checklist Toggle Card (Diletakkan di bawah) */}
-                <label className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition cursor-pointer select-none ${hasOmset
-                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/70 shadow-xs'
-                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                <label className={`flex items-start gap-3.5 p-3.5 rounded-xl border transition select-none ${isHasOmsetLocked
+                  ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/70 shadow-xs cursor-default'
+                  : hasOmset
+                    ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-700/70 shadow-xs cursor-pointer'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 cursor-pointer'
                   }`}>
                   <input
                     type="checkbox"
                     checked={hasOmset}
-                    onChange={(e) => setHasOmset(e.target.checked)}
-                    className="mt-0.5 w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer accent-emerald-600 flex-shrink-0"
+                    disabled={isHasOmsetLocked}
+                    onChange={(e) => {
+                      if (!isHasOmsetLocked) {
+                        setHasOmset(e.target.checked);
+                      }
+                    }}
+                    className={`mt-0.5 w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-600 flex-shrink-0 ${isHasOmsetLocked ? 'cursor-not-allowed opacity-90' : 'cursor-pointer'
+                      }`}
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-slate-900 dark:text-white">
                         Tarik omset
                       </span>
-
+                      {isHasOmsetLocked && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">
+                          Wajib pada kunjungan ini
+                        </span>
+                      )}
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block mt-1 leading-relaxed">
-                      {hasOmset
-                        ? 'Lanjutkan dengan mengisi kolom koin yang sudah dihitung.'
-                        : 'Klik untuk tarik omset (Pastikan sudah menghitung koin).'}
+                      {isHasOmsetLocked
+                        ? 'Opsi tarik omset terkunci wajib karena toko berada dalam status belum ambil omset.'
+                        : hasOmset
+                          ? 'Lanjutkan dengan mengisi kolom koin yang sudah dihitung.'
+                          : 'Klik untuk tarik omset (Pastikan sudah menghitung koin).'}
                     </span>
                   </div>
                 </label>
