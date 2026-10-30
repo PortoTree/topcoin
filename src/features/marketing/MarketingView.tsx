@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import type { Store } from '../../types';
 import { toast } from '../../context/ToastContext';
+import { getDeviceLocation } from '../../lib/geolocation';
+import { parseGmapsCoordinates } from '../admin_cabang/components/StoreListMobile';
 
 interface MarketingViewProps {
   activeTab: string;
@@ -38,6 +40,8 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [isGettingGps, setIsGettingGps] = useState(false);
+  const [showManualCoord, setShowManualCoord] = useState(false);
+  const [manualInput, setManualInput] = useState('');
   const [photoBlob, setPhotoBlob] = useState<Blob | string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -81,28 +85,36 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
     fetchMyStores();
   }, [profile?.id, activeBranchId]);
 
-  // GPS Auto-detect
-  const handleGetLocation = () => {
-    if (!navigator.geolocation) {
-      toast.warning('Perangkat Anda tidak mendukung pendeteksi GPS.');
-      return;
-    }
-
+  // GPS Auto-detect / Kunci GPS dengan dukungan multi-stage fallback & pesan error akurat
+  const handleGetLocation = async () => {
     setIsGettingGps(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        setGpsAccuracy(Math.round(position.coords.accuracy));
-        setIsGettingGps(false);
-      },
-      (error) => {
-        console.error('GPS error:', error);
-        toast.error('Gagal mendeteksi lokasi GPS. Pastikan izin lokasi diaktifkan di browser HP Anda.');
-        setIsGettingGps(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    try {
+      const pos = await getDeviceLocation();
+      setLatitude(pos.latitude);
+      setLongitude(pos.longitude);
+      setGpsAccuracy(pos.accuracy);
+      setManualInput(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`);
+      toast.success(`Titik GPS toko berhasil dikunci (±${pos.accuracy}m).`);
+    } catch (errMsg: any) {
+      console.warn('GPS location error:', errMsg);
+      toast.error(typeof errMsg === 'string' ? errMsg : 'Gagal mendeteksi lokasi GPS.');
+    } finally {
+      setIsGettingGps(false);
+    }
+  };
+
+  const handleManualInputChange = (val: string) => {
+    setManualInput(val);
+    const parsed = parseGmapsCoordinates(val);
+    if (parsed) {
+      setLatitude(parsed.latitude);
+      setLongitude(parsed.longitude);
+      setGpsAccuracy(null);
+    } else if (!val.trim()) {
+      setLatitude(null);
+      setLongitude(null);
+      setGpsAccuracy(null);
+    }
   };
 
   // Submit Store
@@ -172,6 +184,8 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
       setLongitude(null);
       setGpsAccuracy(null);
       setPhotoBlob(null);
+      setManualInput('');
+      setShowManualCoord(false);
 
       fetchMyStores();
     } catch (err: any) {
@@ -272,29 +286,96 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
               </div>
             </div>
 
-            {/* GPS Geolocation Button */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    Titik Koordinat GPS Toko
-                  </span>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-                    {latitude && longitude
-                      ? `Koordinat: ${latitude.toFixed(6)}, ${longitude.toFixed(6)} (±${gpsAccuracy}m)`
-                      : 'Ambil titik lokasi langsung saat berada di toko mitra.'}
-                  </p>
+            {/* Titik Koordinat GPS Toko (1 Kolom Stacked - Tombol di Bawah) */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5">
+              <div>
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  Titik Koordinat GPS Toko
+                </span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-snug">
+                  {latitude && longitude
+                    ? `Koordinat: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}${gpsAccuracy ? ` (±${gpsAccuracy}m)` : ''}`
+                    : 'Ambil titik lokasi langsung saat berada di toko mitra.'}
+                </p>
+              </div>
+
+              {/* Tombol Kunci GPS Full Width di Bawah */}
+              <button
+                type="button"
+                onClick={handleGetLocation}
+                disabled={isGettingGps}
+                className="w-full py-2.5 px-3 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center justify-center gap-2 active:scale-98 transition cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isGettingGps ? 'animate-spin' : ''}`} />
+                {latitude ? 'Perbarui Titik GPS' : 'Kunci GPS Sekarang'}
+              </button>
+
+              {/* Status dan Tindakan Tambahan jika Koordinat Ada */}
+              {latitude && longitude && (
+                <div className="flex items-center justify-between pt-1.5 border-t border-slate-200/60 dark:border-slate-800/60 text-[11px]">
+                  <a
+                    href={`https://maps.google.com/?q=${latitude},${longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" /> Cek di Google Maps
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLatitude(null);
+                      setLongitude(null);
+                      setGpsAccuracy(null);
+                      setManualInput('');
+                      toast.info('Titik koordinat dihapus.');
+                    }}
+                    className="text-rose-500 hover:text-rose-600 font-semibold cursor-pointer"
+                  >
+                    Hapus Titik
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isGettingGps}
-                  className="px-3 py-2 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isGettingGps ? 'animate-spin' : ''}`} />
-                  {latitude ? 'Perbarui GPS' : 'Kunci GPS'}
-                </button>
+              )}
+
+              {/* Opsi alternatif input manual jika marketing mendaftar tidak di lokasi toko */}
+              <div className="pt-0.5">
+                {!showManualCoord ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowManualCoord(true)}
+                    className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium underline cursor-pointer"
+                  >
+                    + Masukkan koordinat / link Maps manual
+                  </button>
+                ) : (
+                  <div className="space-y-1.5 mt-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-800/60">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                        Input Koordinat / Link Manual:
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowManualCoord(false)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        Tutup
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={manualInput}
+                      onChange={(e) => handleManualInputChange(e.target.value)}
+                      placeholder="Contoh: -8.153713, 112.583569 atau paste link Google Maps..."
+                      className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
+                    />
+                    {manualInput.trim() && !latitude && (
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                        Format koordinat belum valid. Masukkan angka (misal: -8.153713, 112.583569) atau link Maps.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

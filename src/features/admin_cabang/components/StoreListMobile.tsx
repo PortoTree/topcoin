@@ -443,30 +443,30 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
               />
             </div>
 
-            {/* 5. Titik Koordinat GPS Toko (Fitur persis seperti di Akun Marketing) */}
-            <div className="p-3 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    Titik Koordinat GPS Toko
-                  </span>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5 truncate">
-                    {latitude && longitude
-                      ? `Koordinat: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}${gpsAccuracy ? ` (±${gpsAccuracy}m)` : ''}`
-                      : 'Ambil titik lokasi langsung saat berada di toko mitra.'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleGetLocation}
-                  disabled={isGettingGps}
-                  className="px-3 py-2 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center gap-1.5 active:scale-95 transition cursor-pointer flex-shrink-0 shadow-2xs"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isGettingGps ? 'animate-spin' : ''}`} />
-                  {latitude ? 'Perbarui GPS' : 'Kunci GPS'}
-                </button>
+            {/* 5. Titik Koordinat GPS Toko (1 Kolom Stacked - Tombol di Bawah) */}
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2.5">
+              <div>
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                  <Navigation className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  Titik Koordinat GPS Toko
+                </span>
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 leading-snug">
+                  {latitude && longitude
+                    ? `Koordinat: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}${gpsAccuracy ? ` (±${gpsAccuracy}m)` : ''}`
+                    : 'Ambil titik lokasi langsung saat berada di toko mitra.'}
+                </p>
               </div>
+
+              {/* Tombol Kunci GPS Full Width di Bawah */}
+              <button
+                type="button"
+                onClick={handleGetLocation}
+                disabled={isGettingGps}
+                className="w-full py-2.5 px-3 bg-blue-50 dark:bg-blue-600/20 hover:bg-blue-100 dark:hover:bg-blue-600/30 border border-blue-200 dark:border-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold flex items-center justify-center gap-2 active:scale-98 transition cursor-pointer shadow-2xs disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isGettingGps ? 'animate-spin' : ''}`} />
+                {latitude ? 'Perbarui Titik GPS' : 'Kunci GPS'}
+              </button>
 
               {/* Status dan Tindakan Tambahan jika Koordinat Ada */}
               {latitude && longitude && (
