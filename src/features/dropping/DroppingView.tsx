@@ -302,7 +302,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
   const missingFields = useMemo(() => {
     const list: string[] = [];
 
-    // 1. JALUR KENDALA / OPSIONAL (Bypass Foto Wajib)
+    // 1. JALUR KENDALA / OPSIONAL (Bypass seluruh foto wajib & bypass kolom omset/koin/nota)
     if (hasOptional) {
       const hasAnyOptionalContent = Boolean(
         isStoreClosed ||
@@ -315,15 +315,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         list.push('Pilihan Kendala / Foto / Catatan');
       }
 
-      if (hasOmset) {
-        if (coinsCollected <= 0) list.push('Total Koin');
-        if (!photoNota) list.push('Foto Nota');
-        if (hasMismatch) {
-          if (actualPhysicalMeter === null) list.push('Meteran Fisik');
-          if (!discrepancyReason.trim()) list.push('Alasan Selisih');
-        }
-      }
-
+      // Jika ada kendala, petugas tidak dipaksa mengisi koin ataupun nota
       return list;
     }
 
