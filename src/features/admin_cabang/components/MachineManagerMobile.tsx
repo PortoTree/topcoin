@@ -206,6 +206,22 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             .eq('id', targetStoreId);
         }
 
+        // Sinkronkan riwayat transaksi dropping hari ini agar mengikuti toko baru mesin ini
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (targetStoreId) {
+          await supabase
+            .from('droppings')
+            .update({ store_id: targetStoreId })
+            .eq('machine_id', selectedMachineForTransfer.id)
+            .eq('transaction_date', todayStr);
+        } else {
+          await supabase
+            .from('droppings')
+            .update({ store_id: null })
+            .eq('machine_id', selectedMachineForTransfer.id)
+            .eq('transaction_date', todayStr);
+        }
+
         toast.success(`Mesin ${displayMachineCode(selectedMachineForTransfer.machine_code)} disimpan tanpa dropping.`);
       } else {
         // Pindah ke Dropping Lain atau dropping yang sama
@@ -268,6 +284,22 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             .from('stores')
             .update({ current_machine_id: selectedMachineForTransfer.id })
             .eq('id', targetStoreId);
+        }
+
+        // Sinkronkan riwayat transaksi dropping hari ini agar mengikuti toko baru mesin ini
+        const todayStr = new Date().toISOString().split('T')[0];
+        if (targetStoreId) {
+          await supabase
+            .from('droppings')
+            .update({ store_id: targetStoreId })
+            .eq('machine_id', selectedMachineForTransfer.id)
+            .eq('transaction_date', todayStr);
+        } else {
+          await supabase
+            .from('droppings')
+            .update({ store_id: null })
+            .eq('machine_id', selectedMachineForTransfer.id)
+            .eq('transaction_date', todayStr);
         }
 
         toast.success(`Mesin ${displayMachineCode(newMachineCode)} berhasil diperbarui!`);

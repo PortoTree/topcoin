@@ -281,7 +281,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
 
   // Selected store and machine metrics
   const selectedStore = activeStores.find((s) => s.id === selectedStoreId);
-  const storeTodayDropping = todayDroppings.find((d) => d.store_id === selectedStoreId);
+  const storeTodayDropping = todayDroppings.find((d) =>
+    (selectedStore?.current_machine_id && d.machine_id && d.machine_id === selectedStore.current_machine_id) ||
+    (!selectedStore?.current_machine_id && d.store_id === selectedStoreId && !d.machine_id) ||
+    (d.store_id === selectedStoreId && !d.machine_id)
+  );
   const prevMeter = storeTodayDropping?.actual_physical_meter ?? selectedStore?.machine?.last_counter_meter ?? 0;
   const coinsCollected = hasOmset ? (parseInt(coinsCollectedStr.replace(/[^0-9]/g, ''), 10) || 0) : 0;
   const grossOmset = coinsCollected * 1000;
@@ -1064,9 +1068,17 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
             {/* Stores List (Nempel ke body dengan border divider) */}
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {filteredStores.map((store) => {
-                const storeTxs = todayDroppings.filter(
-                  (t) => t.store_id === store.id || (t.store && t.store.name === store.name)
-                );
+                const storeTxs = todayDroppings.filter((t) => {
+                  // Utamakan pencocokan berdasarkan mesin yang sedang terpasang di toko ini
+                  if (store.current_machine_id && t.machine_id) {
+                    return t.machine_id === store.current_machine_id;
+                  }
+                  // Jika toko tidak memiliki mesin terpasang, jangan kaitkan transaksi yang memiliki ID mesin lain
+                  if (!store.current_machine_id && t.machine_id) {
+                    return false;
+                  }
+                  return t.store_id === store.id || (t.store && t.store.name === store.name);
+                });
                 // Transaksi terbaru
                 const todayTx = storeTxs[0];
 
@@ -2112,7 +2124,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         {(store, close) => {
           // Gabungkan riwayat: pastikan transaksi hari ini muncul di urutan paling atas jika belum ada di list
           const combinedHistory: DroppingTransaction[] = [...storeHistoryDroppings];
-          const todayTx = todayDroppings.find(t => t.store_id === store.id || (t.store && t.store.name === store.name));
+          const todayTx = todayDroppings.find((t) => {
+            if (store.current_machine_id && t.machine_id) {
+              return t.machine_id === store.current_machine_id;
+            }
+            if (!store.current_machine_id && t.machine_id) {
+              return false;
+            }
+            return t.store_id === store.id || (t.store && t.store.name === store.name);
+          });
           if (todayTx && !combinedHistory.some(h => h.id === todayTx.id)) {
             combinedHistory.unshift(todayTx);
           }
