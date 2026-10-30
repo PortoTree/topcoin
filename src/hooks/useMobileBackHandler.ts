@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { toast } from '../context/ToastContext';
 
 export interface UseMobileBackHandlerOptions {
   /**
@@ -24,7 +23,7 @@ let globalBackId = 0;
 const activeHandlers: HandlerItem[] = [];
 let isInternalBack = false;
 let isGlobalListenerAttached = false;
-let lastRootBackPressTime = 0;
+let rootBackCallback: (() => void) | null = null;
 
 function ensureGlobalPopstateListener() {
   if (isGlobalListenerAttached || typeof window === 'undefined') return;
@@ -37,10 +36,10 @@ function ensureGlobalPopstateListener() {
       return;
     }
 
-    // 2. Jika user benar-benar menekan tombol Back HP (hardware button atau gesture swipe):
-    // Eksekusi HANYA handler teratas di stack (top of stack)
+    // 2. Jika user menekan tombol Back HP dan ada modal/sub-view di stack:
+    // POP handler teratas seketika agar stack sinkron dengan history browser yang sudah mundur 1 langkah!
     if (activeHandlers.length > 0) {
-      const topHandler = activeHandlers[activeHandlers.length - 1];
+      const topHandler = activeHandlers.pop()!;
       topHandler.closedByPopstate = true;
       topHandler.isPushed = false;
       topHandler.onBack();
@@ -48,24 +47,16 @@ function ensureGlobalPopstateListener() {
     }
 
     // 3. JIKA activeHandlers kosong (user berada di halaman utama atau semua modal sudah tertutup):
-    // Cegah keluar aplikasi secara tidak sengaja dengan pola proteksi "Tekan sekali lagi untuk keluar"
-    const now = Date.now();
-    if (now - lastRootBackPressTime < 2000) {
-      // Ditekan 2x dalam 2 detik di halaman utama -> Izinkan browser keluar secara normal
-      try {
-        window.history.back();
-      } catch {
-        // ignore
-      }
-    } else {
-      // Tekanan pertama di halaman utama
-      lastRootBackPressTime = now;
-      try {
-        window.history.pushState({ topcoin_root: true }, '');
-      } catch {
-        // ignore
-      }
-      toast.info('Tekan sekali lagi untuk keluar dari aplikasi');
+    // PUSH KEMBALI guard state seketika agar browser TIDAK AKAN PERNAH keluar dari aplikasi ke blank page!
+    try {
+      window.history.pushState({ topcoin_root: true }, '');
+    } catch {
+      // ignore
+    }
+
+    // Panggil callback konfirmasi keluar (membuka Modal Konfirmasi Keluar)
+    if (rootBackCallback) {
+      rootBackCallback();
     }
   });
 
@@ -74,12 +65,23 @@ function ensureGlobalPopstateListener() {
 
 /**
  * Hook penjaga halaman utama (root guard)
- * Memastikan selalu ada 1 entri penahan di browser history agar saat tombol Back
- * ditekan di halaman utama, user tidak langsung terlempar keluar tanpa konfirmasi.
+ * Memastikan selalu ada 1 entri penahan di browser history. Ketika tombol Back HP ditekan
+ * di halaman utama (atau setelah semua modal tertutup), sistem akan memicu callback onRootBack
+ * (misal memunculkan modal konfirmasi keluar) dan TIDAK AKAN PERNAH langsung melempar user keluar aplikasi.
  */
-export function useRootBackGuard() {
+export function useRootBackGuard(onRootBack?: () => void) {
+  const onRootBackRef = useRef(onRootBack);
+  onRootBackRef.current = onRootBack;
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    rootBackCallback = () => {
+      if (onRootBackRef.current) {
+        onRootBackRef.current();
+      }
+    };
+
     ensureGlobalPopstateListener();
 
     try {
@@ -89,6 +91,10 @@ export function useRootBackGuard() {
     } catch {
       // ignore
     }
+
+    return () => {
+      rootBackCallback = null;
+    };
   }, []);
 }
 

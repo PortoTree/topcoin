@@ -109,4 +109,30 @@ assert.strictEqual(globalThis.history.currentIndex, historyLenBefore2, 'History 
 assert.strictEqual(modalClosedViaUI, false, 'onBack tidak boleh terpanggil jika ditutup via UI');
 console.log('✅ Test 2 Passed: Penutupan via UI tombol (X) otomatis membersihkan history dummy');
 
+// TEST 3: User menekan tombol Back cepat pada nested modals & root
+console.log('Test 3: User menekan tombol Back cepat pada nested modal & root guard...');
+let rootTriggered = false;
+let modal1Closed = false;
+let modal2Closed = false;
+
+// Register nested modal 1 dan modal 2
+const cleanupModal1 = simulateHookLifecycle(true, () => {
+  modal1Closed = true;
+});
+const cleanupModal2 = simulateHookLifecycle(true, () => {
+  modal2Closed = true;
+});
+
+// Back pertama menutup modal 2
+globalThis.history.back();
+assert.strictEqual(modal2Closed, true, 'Modal 2 harus tertutup pada Back pertama');
+cleanupModal2();
+
+// Back kedua menutup modal 1
+globalThis.history.back();
+assert.strictEqual(modal1Closed, true, 'Modal 1 harus tertutup pada Back kedua');
+cleanupModal1();
+
+console.log('✅ Test 3 Passed: Nested modal tertutup berurutan dari atas ke bawah tanpa bentrok');
+
 console.log('\n🎉 SEMUA PENGUJIAN LOGIKA BACK HANDLER LULUS 100%!');

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth, isManagementRole } from './context/AuthContext';
 import { BranchProvider } from './context/BranchContext';
@@ -6,6 +6,7 @@ import { LoginView } from './features/auth/LoginView';
 import { AttendanceHomeView } from './features/attendance/AttendanceHomeView';
 import { MobileHeader } from './components/MobileHeader';
 import { BottomNavBar } from './components/BottomNavBar';
+import { ActionPromptModal } from './components/ActionPromptModal';
 import { OwnerView } from './features/owner/OwnerView';
 import { BranchManagerView } from './features/branch_manager/BranchManagerView';
 import { AdminCabangView } from './features/admin_cabang/AdminCabangView';
@@ -15,8 +16,15 @@ import { DroppingView } from './features/dropping/DroppingView';
 import { useRootBackGuard } from './hooks/useMobileBackHandler';
 
 const MainAppContent: React.FC = () => {
-  const { profile, role, activeRole, isLoading } = useAuth();
-  useRootBackGuard();
+  const { profile, role, activeRole, isLoading, logout } = useAuth();
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+
+  useRootBackGuard(
+    useCallback(() => {
+      setShowExitConfirmModal(true);
+    }, [])
+  );
+
   const [activeTab, setActiveTab] = useState<string>('');
   const [tabClickTick, setTabClickTick] = useState<number>(0);
 
@@ -102,6 +110,29 @@ const MainAppContent: React.FC = () => {
 
       {/* Mobile Ergonomic Bottom Navigation */}
       <BottomNavBar activeTab={activeTab} onTabChange={handleTabChange} />
+
+      {/* Modal Konfirmasi Keluar saat tombol Back ditekan di halaman utama */}
+      <ActionPromptModal
+        config={
+          showExitConfirmModal
+            ? {
+                type: 'confirm',
+                variant: 'danger',
+                title: 'Keluar dari Aplikasi?',
+                subtitle: 'Konfirmasi Keluar',
+                message: 'Apakah Anda yakin ingin keluar dari sesi aplikasi TOP COIN?',
+                confirmLabel: 'Ya, Keluar',
+                cancelLabel: 'Batal',
+                onConfirm: async () => {
+                  setShowExitConfirmModal(false);
+                  await logout();
+                },
+                onCancel: () => setShowExitConfirmModal(false),
+              }
+            : null
+        }
+        onClose={() => setShowExitConfirmModal(false)}
+      />
     </div>
   );
 };
