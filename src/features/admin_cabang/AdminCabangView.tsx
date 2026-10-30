@@ -37,6 +37,7 @@ import { DroppingView } from '../dropping/DroppingView';
 import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
 import { MachineManagerMobile } from './components/MachineManagerMobile';
+import { AddStaffModalMobile } from './components/AddStaffModalMobile';
 import { displayMachineCode } from '../../lib/machineCodeLogic';
 
 interface AdminCabangViewProps {
@@ -67,11 +68,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
   // Staff Management State
   const [showAddStaffModal, setShowAddStaffModal] = useState(false);
-  const [newStaffUsername, setNewStaffUsername] = useState('');
-  const [newStaffFullName, setNewStaffFullName] = useState('');
-  const [newStaffRole, setNewStaffRole] = useState<'marketing' | 'dropping' | 'logistik' | 'driver'>('dropping');
-  const [newStaffPin, setNewStaffPin] = useState('123456');
-  const [isAddingStaff, setIsAddingStaff] = useState(false);
 
   // Image Preview Modal
   const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
@@ -525,44 +521,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       }
     } catch (err: any) {
       toast.error(err.message || 'Terjadi kesalahan saat mengubah penugasan admin.');
-    }
-  };
-
-  // Add new branch staff
-  const handleAddStaff = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newStaffUsername.trim() || !newStaffFullName.trim()) {
-      toast.warning('Isi username dan nama lengkap.');
-      return;
-    }
-
-    setIsAddingStaff(true);
-    try {
-      const newStaffId = 'user-' + Date.now();
-      const payload: Partial<UserProfile> = {
-        id: newStaffId,
-        username: newStaffUsername.trim().toLowerCase(),
-        full_name: newStaffFullName.trim(),
-        role: newStaffRole,
-        branch_id: activeBranchId,
-        pin: newStaffPin.trim() || '123456',
-        is_active: true,
-        deletion_status: 'active',
-      };
-
-      const { error } = await supabase.from('profiles').insert(payload);
-      if (error) console.warn('DB add staff fallback:', error);
-
-      setBranchStaff((prev) => [payload as UserProfile, ...prev]);
-      setShowAddStaffModal(false);
-      setNewStaffUsername('');
-      setNewStaffFullName('');
-      toast.success(`Karyawan "${newStaffFullName}" (${newStaffRole}) berhasil didaftarkan!`);
-    } catch (err: any) {
-      console.error('Add staff error:', err);
-      toast.error(err.message || 'Gagal menambah karyawan.');
-    } finally {
-      setIsAddingStaff(false);
     }
   };
 
@@ -1087,106 +1045,19 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         </div>
       )}
 
-      {/* Add Staff Modal */}
-      <BottomSheetModal
+      {/* Add Staff Modal Mobile */}
+      <AddStaffModalMobile
         isOpen={showAddStaffModal}
         onClose={() => setShowAddStaffModal(false)}
-      >
-        {(_, close) => (
-          <>
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                Tambah Karyawan Cabang Baru
-              </h3>
-              <button
-                type="button"
-                onClick={close}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddStaff} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Nama Lengkap *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: Andi Prasetyo"
-                  value={newStaffFullName}
-                  onChange={(e) => setNewStaffFullName(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Username Login *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: andi"
-                  value={newStaffUsername}
-                  onChange={(e) => setNewStaffUsername(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Peran Tugas *
-                </label>
-                <select
-                  value={newStaffRole}
-                  onChange={(e) => setNewStaffRole(e.target.value as any)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white cursor-pointer"
-                >
-                  <option value="dropping">Dropping (Koleksi Omset)</option>
-                  <option value="marketing">Marketing (Pendaftaran Toko)</option>
-                  <option value="logistik">Logistik (Armada & Mesin)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  PIN Keamanan 6-Digit *
-                </label>
-                <input
-                  type="password"
-                  inputMode="numeric"
-                  maxLength={6}
-                  required
-                  placeholder="123456"
-                  value={newStaffPin}
-                  onChange={(e) => setNewStaffPin(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white font-mono"
-                />
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={close}
-                  className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isAddingStaff}
-                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 active:scale-95 transition cursor-pointer"
-                >
-                  {isAddingStaff ? 'Menyimpan...' : 'Simpan Karyawan'}
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-      </BottomSheetModal>
+        branchId={activeBranchId}
+        onSuccess={(newStaff) => {
+          setBranchStaff((prev) => [newStaff, ...prev]);
+          if (newStaff.role === 'dropping') {
+            setDroppingUsers((prev) => [newStaff, ...prev]);
+          }
+          fetchBranchData();
+        }}
+      />
 
       {/* Photo Preview Modal */}
       <BottomSheetModal
