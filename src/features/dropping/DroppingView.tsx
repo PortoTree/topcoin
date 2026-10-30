@@ -539,11 +539,12 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
         const offlinePending = await offlineDb.offlineDroppings.toArray();
 
         if (offlinePending && offlinePending.length > 0) {
-          const existingStoreIds = new Set(list.map((t) => t.store_id));
+          const existingIds = new Set(list.map((t) => t.id));
           for (const off of offlinePending) {
-            if (!existingStoreIds.has(off.store_id)) {
+            const offId = off.id || `offline-${off.store_id}-${off.created_at || Date.now()}`;
+            if (!existingIds.has(offId)) {
               list.push({
-                id: off.id || `offline-${off.store_id}`,
+                id: offId,
                 branch_id: off.branch_id || activeBranchId,
                 dropping_user_id: off.dropping_user_id,
                 store_id: off.store_id,
@@ -1059,9 +1060,11 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
             {/* Stores List (Nempel ke body dengan border divider) */}
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {filteredStores.map((store) => {
-                const todayTx = todayDroppings.find(
+                const storeTxs = todayDroppings.filter(
                   (t) => t.store_id === store.id || (t.store && t.store.name === store.name)
                 );
+                // Transaksi terbaru
+                const todayTx = storeTxs[0];
 
                 const hasOmsetTaken = Boolean(
                   todayTx && (
@@ -1134,11 +1137,15 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                   if (!todayTx) {
                     visitSubtext = 'Perlu 2x kunjungan: Belum di kunjungi';
                   } else if (hasOmsetTaken) {
-                    visitSubtext = 'Perlu 2x Kunjungan: Kunjungan kedua selesai.';
+                    visitSubtext = 'Perlu 2x kunjungan: Kunjungan kedua selesai.';
                   } else if (isStoreClosedTx || isMinimalCoinTx || isCustomKendalaTx) {
-                    visitSubtext = 'Perlu 2x Kunjungan: Kendala kunjungan pertama / kedua.';
+                    // Cek apakah kendala terjadi pada kunjungan pertama atau kunjungan kedua
+                    const isSecondVisitKendala = storeTxs.length >= 2;
+                    visitSubtext = isSecondVisitKendala
+                      ? 'Perlu 2x kunjungan: Kendala kunjungan kedua.'
+                      : 'Perlu 2x kunjungan: Kendala kunjungan pertama.';
                   } else {
-                    visitSubtext = 'Perlu 2x Kunjungan: Kunjungan pertama selesai.';
+                    visitSubtext = 'Perlu 2x kunjungan: Kunjungan pertama selesai.';
                   }
                 } else {
                   if (!todayTx) {
@@ -1560,11 +1567,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       <span className="text-xs font-black text-slate-900 dark:text-white">
                         Tarik omset
                       </span>
-                      {isHasOmsetLocked && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800/60">
-                          Wajib pada kunjungan ini
-                        </span>
-                      )}
+
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block mt-1 leading-relaxed">
                       {isHasOmsetLocked
@@ -2053,14 +2056,14 @@ export const DroppingView: React.FC<DroppingViewProps> = ({ activeTab, tabClickT
                       </p>
                     </div>
                     <span className={`text-xs font-extrabold font-mono ${item.has_omset !== false
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : item.optional_notes?.includes('Toko Tutup')
-                          ? 'text-slate-900 dark:text-white'
-                          : item.optional_notes?.includes('Minimal Koin')
-                            ? 'text-orange-600 dark:text-orange-400'
-                            : (item.photo_optional_url || item.optional_notes)
-                              ? 'text-rose-600 dark:text-rose-400'
-                              : 'text-amber-600 dark:text-amber-400'
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : item.optional_notes?.includes('Toko Tutup')
+                        ? 'text-slate-900 dark:text-white'
+                        : item.optional_notes?.includes('Minimal Koin')
+                          ? 'text-orange-600 dark:text-orange-400'
+                          : (item.photo_optional_url || item.optional_notes)
+                            ? 'text-rose-600 dark:text-rose-400'
+                            : 'text-amber-600 dark:text-amber-400'
                       }`}>
                       {item.has_omset !== false
                         ? `+${item.coins_collected} Koin`
