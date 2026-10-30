@@ -177,13 +177,21 @@ html.dark .mobile-container {
 }
 
 /* ==========================================================================
-   LEAFLET MAP DARK MODE FILTER (100% Free OSM, Tanpa Watermark API Key)
+   GOOGLE MAPS THEME (Leaflet - Light & Dark Mode)
    ========================================================================== */
-html.dark .leaflet-tile-pane .map-tile-osm {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+.map-tile-google {
+  transition: filter 0.2s ease-in-out;
+}
+
+html.dark .leaflet-tile-pane .map-tile-google {
+  filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(110%);
 }
 
 .leaflet-container {
+  background-color: #f1f5f9 !important;
+}
+
+html.dark .leaflet-container {
   background-color: #020617 !important;
 }
 

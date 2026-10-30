@@ -179,12 +179,13 @@ export const StoreMapMobile: React.FC<StoreMapMobileProps> = ({
 
     const isSatellite = tileMode === 'satellite';
     const tileUrl = isSatellite
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
-      : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      ? 'https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'
+      : 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
 
     L.tileLayer(tileUrl, {
-      maxZoom: 19,
-      className: isSatellite ? 'map-tile-satellite' : 'map-tile-osm',
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      className: isSatellite ? 'map-tile-satellite' : 'map-tile-google',
     }).addTo(map);
 
   }, [isDarkMode, tileMode]);
