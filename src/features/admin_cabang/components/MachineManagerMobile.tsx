@@ -1014,9 +1014,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                             </div>
                           </div>
 
-                          <div className="shrink-0">
-                            {isInstalled ? (
-                              m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan') ? (
+                          {isInstalled && (
+                            <div className="shrink-0">
+                              {m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan') ? (
                                 <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800/80">
                                   2x Kunjungan
                                 </span>
@@ -1024,13 +1024,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                                 <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80">
                                   1x Kunjungan
                                 </span>
-                              )
-                            ) : (
-                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                                Di Gudang
-                              </span>
-                            )}
-                          </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
