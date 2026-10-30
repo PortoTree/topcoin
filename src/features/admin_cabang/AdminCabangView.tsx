@@ -951,6 +951,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               .map((staff) => {
                 const isPendingDelete = staff.deletion_status === 'pending_deletion' || !staff.is_active;
                 const isBM = staff.role === 'branch_manager';
+                const isAdminStaff = staff.role === 'admin_cabang' || staff.role === 'admin';
+                const isCurrentUserAdmin = profile?.role === 'admin_cabang' || profile?.role === 'admin';
 
                 return (
                   <div
@@ -1014,9 +1016,6 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                                 />
                               </a>
                             )}
-                            <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
-                              Atasan Cabang
-                            </span>
                           </>
                         ) : (
                           <>
@@ -1064,18 +1063,33 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                               <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                             </button>
 
-                            {/* Tombol Opsi Titik 3: Buka Modal Tindakan Karyawan */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedStaffForOption(staff);
-                                setSelectedStaffForRole(null);
-                              }}
-                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
-                              title="Opsi Tindakan Karyawan"
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
+                            {/* Tombol Opsi: Khusus Petugas Admin Cabang jika dibuka oleh akun Admin, gunakan icon Pensil untuk langsung membuka modal Edit */}
+                            {isAdminStaff && isCurrentUserAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffForEdit(staff);
+                                  setSelectedStaffForRole(null);
+                                  setSelectedStaffForOption(null);
+                                }}
+                                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                title="Edit Petugas"
+                              >
+                                <Pencil className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStaffForOption(staff);
+                                  setSelectedStaffForRole(null);
+                                }}
+                                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                title="Opsi Tindakan Karyawan"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
