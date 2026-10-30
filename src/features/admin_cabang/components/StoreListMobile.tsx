@@ -970,15 +970,6 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onRefresh}
-            disabled={isLoading}
-            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 cursor-pointer active:scale-90 transition"
-            title="Segarkan data"
-          >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            type="button"
             onClick={() => setShowAddForm(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition"
           >
