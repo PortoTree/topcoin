@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { offlineDb } from '../lib/db';
 import { toast } from '../context/ToastContext';
 import { BottomSheetModal } from './BottomSheetModal';
 import { displayMachineCode } from '../lib/machineCodeLogic';
@@ -33,7 +34,7 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
   const [activePreviewImage, setActivePreviewImage] = useState<{ url: string; title: string } | null>(null);
 
-  // Fetch riwayat dropping dari Supabase saat modal terbuka
+  // Fetch riwayat dropping dari Supabase & Dexie offline saat modal terbuka
   useEffect(() => {
     if (!store) {
       setStoreHistory([]);
@@ -44,23 +45,106 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       try {
-        const { data, error } = await supabase
+        const targetMachineId = store.current_machine_id || store.machine?.id;
+
+        // 1. Ambil data dari Supabase (filter store_id ATAU machine_id)
+        let query = supabase
           .from('droppings')
           .select(`
             *,
-            machine:machines(machine_code),
-            dropping_user:user_profiles(full_name)
-          `)
-          .eq('store_id', store.id)
+            machine:machines(machine_code)
+          `);
+
+        if (targetMachineId && store.id) {
+          query = query.or(`store_id.eq.${store.id},machine_id.eq.${targetMachineId}`);
+        } else if (store.id) {
+          query = query.eq('store_id', store.id);
+        } else if (targetMachineId) {
+          query = query.eq('machine_id', targetMachineId);
+        }
+
+        const { data: serverData, error } = await query
           .order('created_at', { ascending: false })
-          .limit(5);
+          .limit(10);
+
+        if (error) {
+          console.warn('Supabase droppings fetch warning:', error);
+        }
+
+        const listFromDb: DroppingTransaction[] = (!error && serverData) ? (serverData as DroppingTransaction[]) : [];
+
+        // 2. Ambil data lokal dari offlineDb (Dexie.js) agar sinkron dengan input hari ini
+        let offlineList: DroppingTransaction[] = [];
+        try {
+          const offlineRecords = await offlineDb.offlineDroppings.toArray();
+          const matched = offlineRecords.filter((off) => {
+            if (targetMachineId && off.machine_id === targetMachineId) return true;
+            if (store.id && off.store_id === store.id) return true;
+            return false;
+          });
+
+          const getBlobUrl = (blob?: Blob | string | null): string => {
+            if (!blob) return '';
+            if (typeof blob === 'string') return blob;
+            try {
+              return URL.createObjectURL(blob);
+            } catch {
+              return '';
+            }
+          };
+
+          offlineList = matched.map((off) => {
+            const gross = off.gross_omset || (off.coins_collected ? off.coins_collected * 1000 : 0);
+            const share = off.store_share_amount || 0;
+            const net = Math.max(0, gross - share);
+
+            return {
+              id: off.id || `offline-${off.store_id}-${off.created_at || Date.now()}`,
+              branch_id: off.branch_id || store.branch_id || '',
+              dropping_user_id: off.dropping_user_id,
+              store_id: off.store_id || store.id,
+              machine_id: off.machine_id || targetMachineId,
+              has_omset: Boolean(off.has_omset),
+              coins_collected: off.coins_collected || 0,
+              gross_omset: gross,
+              previous_counter_meter: off.previous_counter_meter || 0,
+              actual_physical_meter: off.actual_physical_meter,
+              store_share_pct: off.store_cut_percentage,
+              store_share_amount: share,
+              net_deposit_amount: net,
+              photo_machine_url: getBlobUrl(off.photo_machine_blob),
+              photo_machine_number_url: getBlobUrl(off.photo_machine_number_blob),
+              photo_coin_url: getBlobUrl(off.photo_coin_blob),
+              photo_nota_url: getBlobUrl(off.photo_nota_blob),
+              photo_optional_url: getBlobUrl(off.photo_optional_blob),
+              optional_notes: off.optional_notes || null,
+              latitude: off.latitude,
+              longitude: off.longitude,
+              transaction_date: off.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+              created_at: off.created_at || new Date().toISOString(),
+              updated_at: off.created_at || new Date().toISOString(),
+            } as DroppingTransaction;
+          });
+        } catch (dexieErr) {
+          console.warn('Error reading offline droppings in StoreInfoModal:', dexieErr);
+        }
 
         if (isMounted) {
-          if (!error && data && data.length > 0) {
-            setStoreHistory(data as DroppingTransaction[]);
-          } else {
-            setStoreHistory([]);
-          }
+          // Gabungkan & deduplikasi berdasarkan ID
+          const combined = [...offlineList, ...listFromDb];
+          const seen = new Set<string>();
+          const uniqueList = combined.filter((item) => {
+            if (seen.has(item.id)) return false;
+            seen.add(item.id);
+            return true;
+          });
+
+          // Urutkan transaksi terbaru di atas
+          uniqueList.sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+
+          setStoreHistory(uniqueList);
         }
       } catch (err) {
         console.warn('Error fetching store history:', err);
@@ -204,7 +288,7 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
                   <span className="text-[11px] text-slate-500 dark:text-slate-400">Counter meter fisik mesin</span>
                 </div>
                 <span className="font-mono font-black text-base text-indigo-600 dark:text-indigo-400 px-3 py-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xs">
-                  {store.machine?.last_counter_meter ?? 0}
+                  {storeHistory[0]?.actual_physical_meter ?? storeHistory[0]?.previous_counter_meter ?? store.machine?.last_counter_meter ?? 0}
                 </span>
               </div>
 

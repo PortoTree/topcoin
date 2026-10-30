@@ -274,6 +274,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
     setSelectedStoreForInfo({
       store: {
         ...storeMitra,
+        current_machine_id: storeMitra.current_machine_id || m.id,
         machine: m,
       },
       machineCode: m.machine_code,
