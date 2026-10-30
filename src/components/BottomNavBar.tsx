@@ -143,8 +143,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
       {/* Backdrop saat Drawer Ter-expand dengan Transisi Halus Fade */}
       {isAdmin && (
         <div
-          className={`fixed inset-0 z-30 bg-black/50 backdrop-blur-xs transition-opacity duration-200 ease-out ${isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}
+          className={`fixed inset-0 z-30 bg-black/40 backdrop-blur-2xs transition-opacity duration-200 ease-out ${
+            isExpanded ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+          }`}
           onClick={() => setIsExpanded(false)}
         />
       )}
@@ -154,72 +155,84 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${hasRoundedNav
+        className={`fixed bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg pb-[env(safe-area-inset-bottom)] max-w-[480px] mx-auto transition-all duration-200 ease-out ${
+          hasRoundedNav
             ? 'rounded-t-3xl border-t border-x border-slate-200 dark:border-slate-800 shadow-2xl'
             : 'rounded-none border-t border-slate-200 dark:border-slate-800 shadow-lg'
-          }`}
+        }`}
       >
         {/* Drag Pill Handle Minimalis (Khusus Akun Admin - Tanpa Teks) */}
         {isAdmin && (
           <div
             onClick={() => setIsExpanded((prev) => !prev)}
-            className="w-full pt-3 pb-2 flex items-center justify-center cursor-pointer select-none active:opacity-60 group"
+            className="w-full pt-2.5 pb-1.5 flex items-center justify-center cursor-pointer select-none active:opacity-60 group"
             title="Geser atau klik untuk buka/tutup menu tambahan"
           >
             {/* Visual Drag Bar */}
-            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 group-hover:bg-indigo-500 rounded-full transition-colors" />
+            <div
+              className={`h-1 rounded-full transition-all duration-200 ${
+                isExpanded
+                  ? 'bg-indigo-500 w-12 h-1.5 shadow-xs shadow-indigo-500/50'
+                  : 'bg-slate-300 dark:bg-slate-700 w-10 group-hover:bg-slate-400 dark:group-hover:bg-slate-500'
+              }`}
+            />
           </div>
         )}
 
-        {/* Drawer Menu Tambahan dengan Tampilan Icon + Label di Bawahnya (Persis Mirip Navigasi Bar) */}
+        {/* Drawer Menu Tambahan: Animasi CSS Grid yang Halus & Responsif (Tanpa Delay Max-Height) */}
         {isAdmin && (
           <div
-            className={`overflow-hidden transition-all duration-200 ease-out ${isExpanded
-                ? 'max-h-[140px] opacity-100 border-b border-slate-200 dark:border-slate-800 mb-1'
-                : 'max-h-0 opacity-0 pointer-events-none border-b-0 mb-0'
-              }`}
+            className={`grid transition-[grid-template-rows,opacity] duration-220 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+              isExpanded
+                ? 'grid-rows-[1fr] opacity-100 mb-1 border-b border-slate-200 dark:border-slate-800'
+                : 'grid-rows-[0fr] opacity-0 mb-0 border-b-0 pointer-events-none'
+            }`}
           >
-            <div className="px-1 pt-0.5 pb-2">
-              <div className="flex items-center justify-center gap-1.5 py-1 mb-1">
-                <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                  MENU TAMBAHAN
-                </span>
-              </div>
+            <div className="overflow-hidden">
+              <div className="px-1 pt-0.5 pb-2">
+                <div className="flex items-center justify-center gap-1.5 py-1 mb-0.5">
+                  <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    MENU TAMBAHAN
+                  </span>
+                </div>
 
-              {/* Baris 5 Icon Menu Tambahan (Persis Mirip Navigasi Bar) */}
-              <div className="flex items-center justify-around px-1 py-0.5">
-                {adminExpandedMenus.map((menu) => {
-                  const Icon = menu.icon;
-                  const isCurrentActive = activeTab === menu.id;
+                {/* Baris 5 Icon Menu Tambahan (Persis Mirip Navigasi Bar) */}
+                <div className="flex items-center justify-around px-1 py-0.5">
+                  {adminExpandedMenus.map((menu) => {
+                    const Icon = menu.icon;
+                    const isCurrentActive = activeTab === menu.id;
 
-                  return (
-                    <button
-                      key={menu.id}
-                      type="button"
-                      onClick={() => {
-                        onTabChange(menu.id);
-                        setIsExpanded(false);
-                      }}
-                      className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isCurrentActive
-                          ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
+                    return (
+                      <button
+                        key={menu.id}
+                        type="button"
+                        onClick={() => {
+                          onTabChange(menu.id);
+                          setIsExpanded(false);
+                        }}
+                        className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                          isCurrentActive
+                            ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
+                            : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
                         }`}
-                    >
-                      <div
-                        className={`p-1 rounded-lg transition-colors ${isCurrentActive
-                            ? 'bg-indigo-100 dark:bg-indigo-500/15'
-                            : 'bg-transparent'
-                          }`}
                       >
-                        <Icon className={`w-5 h-5 ${isCurrentActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
-                      </div>
-                      <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[68px] text-center">
-                        {menu.label}
-                      </span>
-                    </button>
-                  );
-                })}
+                        <div
+                          className={`p-1 rounded-lg transition-colors ${
+                            isCurrentActive
+                              ? 'bg-indigo-100 dark:bg-indigo-500/15'
+                              : 'bg-transparent'
+                          }`}
+                        >
+                          <Icon className={`w-5 h-5 ${isCurrentActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
+                        </div>
+                        <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[68px] text-center">
+                          {menu.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
