@@ -734,28 +734,20 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                       <div key={m.id} className="pt-3.5 first:pt-0 flex items-center justify-between gap-2 text-xs">
                         {/* Kolom Kiri: Kode Mesin & Lokasi Toko */}
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono font-black text-slate-900 dark:text-white px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
                               {displayMachineCode(m.machine_code)}
                             </span>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isInstalled
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                                }`}
-                            >
-                              {isInstalled ? 'Terpasang' : 'Gudang'}
-                            </span>
-                          </div>
 
-                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-1.5 text-sm">
-                            {storeMitra?.name || 'Di Gudang Cabang'}
-                          </span>
+                            {!isInstalled && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                Gudang
+                              </span>
+                            )}
 
-                          {/* Pengaturan Nomor Rute Kunjungan */}
-                          {isInstalled && (
-                            <div className="mt-1 flex items-center gap-1.5">
-                              {editingStoreRouteId === m.current_store_id ? (
+                            {/* Pengaturan Nomor Rute Kunjungan di samping nomor mesin */}
+                            {isInstalled && (
+                              editingStoreRouteId === m.current_store_id ? (
                                 <div className="flex items-center gap-1">
                                   <input
                                     type="number"
@@ -796,9 +788,13 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                                   </span>
                                   <Edit2 className="w-2.5 h-2.5" />
                                 </button>
-                              )}
-                            </div>
-                          )}
+                              )
+                            )}
+                          </div>
+
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-1.5 text-sm">
+                            {storeMitra?.name || 'Di Gudang Cabang'}
+                          </span>
                         </div>
 
                         {/* Kolom Kanan: Toggle 1x / 2x Kunjungan */}
