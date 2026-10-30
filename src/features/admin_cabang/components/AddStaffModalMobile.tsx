@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, UserPlus, Phone, User, KeyRound, Sparkles, Cpu } from 'lucide-react';
+import { X, UserPlus, Phone, User, KeyRound, Cpu } from 'lucide-react';
 import { toast } from '../../../context/ToastContext';
 import { supabase } from '../../../lib/supabase';
 import {
@@ -218,10 +218,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
               <label className="font-bold text-slate-700 dark:text-slate-300">
                 Username Login <span className="text-rose-500 font-bold ml-0.5">*</span>
               </label>
-              <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-0.5">
-                <Sparkles className="w-2.5 h-2.5" />
-                Auto dari nama depan
-              </span>
+
             </div>
             <div className="relative">
               <span className="text-slate-400 font-bold absolute left-3.5 top-2.5 text-xs pointer-events-none">
@@ -272,9 +269,9 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
               onChange={(e) => handleRoleChange(e.target.value as any)}
               className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
             >
-              <option value="dropping">Dropping (Koleksi Omset & Mesin)</option>
-              <option value="marketing">Marketing (Pendaftaran Toko)</option>
-              <option value="logistik">Logistik (Armada & Pengiriman)</option>
+              <option value="dropping">Dropping</option>
+              <option value="marketing">Marketing</option>
+              <option value="logistik">Logistik</option>
             </select>
           </div>
 
@@ -284,16 +281,16 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
               <div className="flex items-center justify-between">
                 <label className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-indigo-500" />
-                  Prefix Kode Mesin Dropping <span className="text-rose-500 font-bold ml-0.5">*</span>
+                  Kode Mesin <span className="text-rose-500 font-bold ml-0.5">*</span>
                 </label>
                 <span className="text-[10px] font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                  Format: {machinePrefix || 'MESIN'}-01
+                  Contoh: {machinePrefix || 'MSN'}-01
                 </span>
               </div>
               <input
                 type="text"
                 required
-                placeholder="ANDI"
+                placeholder="NAMA"
                 value={machinePrefix}
                 onChange={(e) => {
                   setMachinePrefix(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''));
@@ -302,7 +299,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
                 className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white uppercase outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
               />
               <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                Prefix kode mesin rute dropping ({machinePrefix || 'MESIN'}-01 s/d {machinePrefix || 'MESIN'}-20).
+                kode mesin untuk petugas dropping.
               </p>
             </div>
           )}
@@ -312,8 +309,8 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
             <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
               PIN Login (6-Digit) <span className="text-rose-500 font-bold ml-0.5">*</span>
             </label>
-            <div className="relative">
-              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+            <div className="relative flex items-center">
+              <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none z-10" />
               <input
                 type="password"
                 inputMode="numeric"
@@ -321,7 +318,7 @@ export const AddStaffModalMobile: React.FC<AddStaffModalMobileProps> = ({
                 placeholder="••••••"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors placeholder:text-slate-400 placeholder:text-lg"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors placeholder:text-slate-400 placeholder:text-xs placeholder:font-sans placeholder:tracking-[0.3em]"
               />
             </div>
             <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
