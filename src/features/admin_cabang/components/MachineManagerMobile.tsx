@@ -11,6 +11,7 @@ import {
   Warehouse,
   Search,
   CheckCircle2,
+  Info,
 } from 'lucide-react';
 import type { Machine, UserProfile, Store } from '../../../types';
 import {
@@ -43,6 +44,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   // State Filter & Pencarian
   const [selectedDroppingFilter, setSelectedDroppingFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // State Modal Fullscreen Detail Dropping (Info & List Mesin)
+  const [selectedDroppingForDetail, setSelectedDroppingForDetail] = useState<UserProfile | null>(null);
 
   // State Modal Setting Prefix Dropping
   const [isPrefixModalOpen, setIsPrefixModalOpen] = useState(false);
@@ -391,12 +395,11 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
                       <button
                         type="button"
-                        onClick={() => handleOpenPrefixModal(staff)}
-                        className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
-                        title="Edit Prefix Dropping"
+                        onClick={() => setSelectedDroppingForDetail(staff)}
+                        className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition active:scale-90 cursor-pointer shadow-xs"
+                        title="Detail Mesin Petugas"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Edit</span>
+                        <Info className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                       </button>
                     </div>
                   </div>
@@ -565,7 +568,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       {/* MODAL 1: SETTING PREFIX KODE MESIN DROPPING                               */}
       {/* ========================================================================= */}
       {isPrefixModalOpen && selectedStaffForPrefix && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -639,7 +642,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       {/* MODAL 2: TRANSFER / TUKAR DROPPING PEMEGANG MESIN                        */}
       {/* ========================================================================= */}
       {isTransferModalOpen && selectedMachineForTransfer && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -733,7 +736,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       {/* MODAL 3: TAMBAH 1 UNIT MESIN MANUAL                                       */}
       {/* ========================================================================= */}
       {isAddMachineModalOpen && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -885,6 +888,155 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         </div>,
         document.body
       )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 4: DETAIL FULL SCREEN PETUGAS DROPPING & LIST KODE MESIN            */}
+      {/* ========================================================================= */}
+      {selectedDroppingForDetail && (() => {
+        const activeStaff = droppingStaff.find((s) => s.id === selectedDroppingForDetail.id) || selectedDroppingForDetail;
+        const prefix = activeStaff.machine_prefix || sanitizeMachinePrefix(activeStaff.username || activeStaff.full_name);
+        const assignedMachines = machines
+          .filter((m) => m.assigned_dropping_id === activeStaff.id)
+          .sort((a, b) => {
+            const numA = a.machine_number ?? 999;
+            const numB = b.machine_number ?? 999;
+            if (numA !== numB) return numA - numB;
+            return a.machine_code.localeCompare(b.machine_code);
+          });
+
+        return createPortal(
+          <div className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-950 flex flex-col overflow-hidden animate-in fade-in duration-200">
+            {/* Header Fixed At Top */}
+            <div className="sticky top-0 z-10 px-4 py-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-xs">
+              <div className="min-w-0 pr-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 block">
+                  Detail Petugas Dropping
+                </span>
+                <h3 className="text-base font-black text-slate-900 dark:text-white truncate">
+                  {activeStaff.full_name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDroppingForDetail(null)}
+                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
+                title="Tutup"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Card Prefix & Tombol Edit Prefix */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
+                      Prefix Kode Mesin
+                    </span>
+                    <span className="font-mono font-black text-lg text-indigo-600 dark:text-indigo-400">
+                      {prefix}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 block tracking-wider">
+                      Total Dipegang
+                    </span>
+                    <span className="font-mono font-black text-base text-slate-900 dark:text-white">
+                      {assignedMachines.length}{' '}
+                      <span className="text-xs font-normal text-slate-400 dark:text-slate-500">/ 20 Unit</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 1 Tombol Edit Prefix */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenPrefixModal(activeStaff)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm shadow-indigo-500/20 active:scale-98 transition cursor-pointer"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  <span>Edit Prefix Kode Mesin</span>
+                </button>
+              </div>
+
+              {/* Section: List Kode Mesin */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-400">
+                    Daftar Kode Mesin ({assignedMachines.length})
+                  </h4>
+                </div>
+
+                {assignedMachines.length === 0 ? (
+                  <div className="p-8 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                    <Cpu className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Belum ada mesin yang dipegang
+                    </p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                      Petugas ini belum ditugaskan mesin apapun di cabang ini.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {assignedMachines.map((m) => {
+                      const isInstalled = !!m.current_store_id;
+                      const storeName = m.store?.name || stores.find((s) => s.id === m.current_store_id)?.name;
+
+                      return (
+                        <div
+                          key={m.id}
+                          className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between gap-3"
+                        >
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-black text-sm text-slate-900 dark:text-white tracking-wide">
+                                {displayMachineCode(m.machine_code)}
+                              </span>
+                              {m.machine_number && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">
+                                  Slot #{String(m.machine_number).padStart(2, '0')}
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="text-xs">
+                              {isInstalled ? (
+                                <div className="text-slate-600 dark:text-slate-300 truncate">
+                                  Toko Mitra: <strong className="font-bold text-slate-900 dark:text-white">{storeName || 'Toko Mitra'}</strong>
+                                </div>
+                              ) : (
+                                <div className="text-slate-400 dark:text-slate-500 italic text-[11px]">
+                                  Tersimpan di gudang (belum dipasang ke toko)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="shrink-0">
+                            {isInstalled ? (
+                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/80">
+                                Terpasang
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                Di Gudang
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        );
+      })()}
     </div>
   );
 };
