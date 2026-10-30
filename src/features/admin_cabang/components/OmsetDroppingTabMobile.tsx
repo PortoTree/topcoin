@@ -239,7 +239,7 @@ export const OmsetDroppingTabMobile: React.FC<OmsetDroppingTabMobileProps> = ({
 
       {/* 2 Card Metrik: Total Omset & Total Bersih (Langsung Nempel ke Body) */}
       <div className="grid grid-cols-2 gap-3">
-        {/* Card 1: Total Omset (Kotor) */}
+        {/* Card 1: Total Omset (Uang yang dibawa dropping / sudah kepotong jatah toko) */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition">
           <div className="bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-black py-2 text-center border-b border-slate-200 dark:border-slate-700/80 tracking-tight">
             Total Omset
@@ -252,13 +252,13 @@ export const OmsetDroppingTabMobile: React.FC<OmsetDroppingTabMobileProps> = ({
               {isLoadingData ? (
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-600 inline-block" />
               ) : (
-                new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totals.totalGross)
+                new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totals.totalBroughtByDropping)
               )}
             </span>
           </div>
         </div>
 
-        {/* Card 2: Total Bersih */}
+        {/* Card 2: Total Bersih (Setelah potongan biaya operasional) */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-xs hover:border-slate-300 dark:hover:border-slate-700 transition">
           <div className="bg-slate-100 dark:bg-slate-800/80 text-slate-800 dark:text-slate-100 text-xs sm:text-sm font-black py-2 text-center border-b border-slate-200 dark:border-slate-700/80 tracking-tight">
             Total bersih
@@ -271,7 +271,7 @@ export const OmsetDroppingTabMobile: React.FC<OmsetDroppingTabMobileProps> = ({
               {isLoadingData ? (
                 <Loader2 className="w-4 h-4 animate-spin text-indigo-600 inline-block" />
               ) : (
-                new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totals.totalNet)
+                new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 }).format(totals.totalNetProfit)
               )}
             </span>
           </div>
@@ -310,10 +310,10 @@ export const OmsetDroppingTabMobile: React.FC<OmsetDroppingTabMobileProps> = ({
                   )}
                 </div>
 
-                {/* Nilai Omset di Kanan dengan Pewarnaan Khusus */}
+                {/* Nilai Omset di Kanan dengan Pewarnaan Khusus (Uang dibawa dropping) */}
                 <div className="flex-shrink-0 text-right">
                   <span className={`text-sm font-black tracking-tight ${item.statusColor.colorClass}`}>
-                    {formatRupiahSimple(item.totalGross)}
+                    {formatRupiahSimple(item.totalNet)}
                   </span>
                 </div>
               </div>

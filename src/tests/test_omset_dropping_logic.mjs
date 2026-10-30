@@ -7,7 +7,7 @@ import {
   formatRupiahSimple,
 } from '../lib/omsetDroppingLogic.js';
 
-console.log('🧪 Memulai Pengujian TDD: Logika Omset Dropping & Agregasi Petugas...');
+console.log('🧪 Memulai Pengujian TDD: Logika Omset Dropping (Uang Bawaan & Potongan Operasional)...');
 
 // Test 1: Format Rupiah Simple sesuai tampilan gambar (e.g. "Rp 10.000.000", "Rp 0")
 console.log('--- Test 1: Format Rupiah Simple ---');
@@ -20,7 +20,7 @@ assert.strictEqual(formatRupiahSimple(null), 'Rp 0');
 assert.strictEqual(formatRupiahSimple(undefined), 'Rp 0');
 console.log('✓ Test 1: Format Rupiah Simple lulus');
 
-// Test 2: Logika Pewarnaan Tier Omset (Hijau, Kuning/Oranye, Merah, Abu-abu)
+// Test 2: Logika Pewarnaan Tier Omset (Berdasarkan uang dibawa dropping)
 console.log('--- Test 2: Logika Pewarnaan Tier Omset ---');
 const tierHigh = getStaffOmsetTierColor(1000000);
 assert.strictEqual(tierHigh.tier, 'high');
@@ -39,21 +39,34 @@ assert.strictEqual(tierZero.tier, 'zero');
 assert.ok(tierZero.colorClass.includes('slate'));
 console.log('✓ Test 2: Logika Pewarnaan Tier Omset lulus');
 
-// Test 3: Logika Perhitungan Total Omset (Gross & Net)
-console.log('--- Test 3: Perhitungan Total Omset ---');
+// Test 3: Logika Perhitungan Total Omset (Uang dibawa dropping & Total Bersih setelah Operasional)
+console.log('--- Test 3: Perhitungan Total Omset & Total Bersih ---');
 const dummyDroppings = [
+  // Toko A: kotor 6.000.000, jatah toko 600.000, uang dibawa dropping 5.400.000
   { id: 'd1', dropping_user_id: 'user-1', gross_omset: 6000000, store_share_amount: 600000, net_deposit_amount: 5400000 },
+  // Toko B: kotor 4.000.000, jatah toko 400.000, uang dibawa dropping 3.600.000
   { id: 'd2', dropping_user_id: 'user-2', gross_omset: 4000000, store_share_amount: 400000, net_deposit_amount: 3600000 },
+  // Toko C: 0
   { id: 'd3', dropping_user_id: 'user-1', gross_omset: 0, store_share_amount: 0, net_deposit_amount: 0 },
 ];
 
-const totals = calculateDroppingTotals(dummyDroppings);
-assert.strictEqual(totals.totalGross, 10000000);
-assert.strictEqual(totals.totalNet, 9000000);
-assert.strictEqual(totals.totalShare, 1000000);
-console.log('✓ Test 3: Perhitungan Total Omset lulus');
+// Kasus 3A: Tanpa potongan operasional (operasional = 0)
+const totalsNoExpense = calculateDroppingTotals(dummyDroppings, 0);
+// Total Omset adalah uang yang dibawa dropping (5.400.000 + 3.600.000 = 9.000.000)
+assert.strictEqual(totalsNoExpense.totalBroughtByDropping, 9000000);
+// Total Bersih = 9.000.000 - 0 = 9.000.000
+assert.strictEqual(totalsNoExpense.totalNetProfit, 9000000);
+assert.strictEqual(totalsNoExpense.totalGross, 10000000); // kotor mesin
 
-// Test 4: Agregasi Omset per Petugas Dropping (termasuk petugas yang 0 transaksi)
+// Kasus 3B: Dengan potongan operasional (misal operasional = 500.000)
+const totalsWithExpense = calculateDroppingTotals(dummyDroppings, 500000);
+assert.strictEqual(totalsWithExpense.totalBroughtByDropping, 9000000);
+// Total Bersih = 9.000.000 - 500.000 = 8.500.000
+assert.strictEqual(totalsWithExpense.totalNetProfit, 8500000);
+assert.strictEqual(totalsWithExpense.operationalExpense, 500000);
+console.log('✓ Test 3: Perhitungan Total Omset & Total Bersih lulus');
+
+// Test 4: Agregasi Omset per Petugas Dropping (Uang Bawaan / net_deposit_amount)
 console.log('--- Test 4: Agregasi Omset per Petugas Dropping ---');
 const dummyStaff = [
   { id: 'user-1', full_name: 'Budi Dropping', role: 'dropping' },
@@ -64,20 +77,17 @@ const dummyStaff = [
 const aggregated = aggregateDroppingByStaff(dummyStaff, dummyDroppings);
 assert.strictEqual(aggregated.length, 3);
 
-// Urutan default: omset terbesar di atas
+// Urutan default: uang dibawa dropping (totalNet) terbesar di atas
 assert.strictEqual(aggregated[0].staffId, 'user-1');
-assert.strictEqual(aggregated[0].totalGross, 6000000);
-assert.strictEqual(aggregated[0].totalNet, 5400000);
+assert.strictEqual(aggregated[0].totalNet, 5400000); // uang dibawa Budi
 assert.strictEqual(aggregated[0].statusColor.tier, 'high');
 
 assert.strictEqual(aggregated[1].staffId, 'user-2');
-assert.strictEqual(aggregated[1].totalGross, 4000000);
-assert.strictEqual(aggregated[1].totalNet, 3600000);
+assert.strictEqual(aggregated[1].totalNet, 3600000); // uang dibawa Andi
 assert.strictEqual(aggregated[1].statusColor.tier, 'high');
 
 assert.strictEqual(aggregated[2].staffId, 'user-3');
-assert.strictEqual(aggregated[2].totalGross, 0);
-assert.strictEqual(aggregated[2].totalNet, 0);
+assert.strictEqual(aggregated[2].totalNet, 0); // uang dibawa Citra
 assert.strictEqual(aggregated[2].statusColor.tier, 'zero');
 console.log('✓ Test 4: Agregasi Omset per Petugas Dropping lulus');
 
@@ -90,7 +100,6 @@ assert.strictEqual(rangeToday.endDate, todayStr);
 
 const range7Days = getDateRangeForFilter('7days', todayStr);
 assert.strictEqual(range7Days.endDate, todayStr);
-// 7 hari ke belakang dari 31 Okt 2026 adalah 25 Okt 2026
 assert.strictEqual(range7Days.startDate, '2026-10-25');
 
 const rangeCustom = getDateRangeForFilter('custom', todayStr, '2026-10-28');
@@ -99,4 +108,3 @@ assert.strictEqual(rangeCustom.endDate, '2026-10-28');
 console.log('✓ Test 5: Penentuan Rentang Tanggal Filter lulus');
 
 console.log('🎉 SEMUA PENGUJIAN TDD OMSET DROPPING BERHASIL!');
-

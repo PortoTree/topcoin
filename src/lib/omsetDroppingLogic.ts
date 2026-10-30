@@ -1,7 +1,9 @@
 /**
  * Business logic untuk modul Tab Omset Dropping
- * Berisi kalkulasi total omset, agregasi omset per petugas dropping,
- * pewarnaan status tier omset, dan penentuan rentang tanggal filter.
+ * Berisi kalkulasi total omset (uang yang dibawa oleh dropping setelah dipotong toko),
+ * potongan biaya operasional untuk menghasilkan total bersih,
+ * agregasi omset per petugas dropping, pewarnaan status tier omset,
+ * dan penentuan rentang tanggal filter.
  */
 
 export interface DroppingTransactionItem {
@@ -39,6 +41,15 @@ export interface StaffAggregatedOmset {
   statusColor: OmsetTierResult;
 }
 
+export interface DroppingTotalsResult {
+  totalGross: number;
+  totalBroughtByDropping: number;
+  totalNet: number;
+  operationalExpense: number;
+  totalNetProfit: number;
+  totalShare: number;
+}
+
 /**
  * Format angka ke dalam representasi Rupiah ringkas dan rapi sesuai mockup:
  * e.g. "Rp 10.000.000", "Rp 9.000.000", "Rp 0"
@@ -53,14 +64,14 @@ export function formatRupiahSimple(amount: number | null | undefined): string {
 }
 
 /**
- * Menentukan warna nominal berdasarkan nominal omset:
+ * Menentukan warna nominal berdasarkan nominal omset uang yang dibawa:
  * - >= Rp 500.000 : Hijau (High / Tercapai)
  * - >= Rp 200.000 s/d < Rp 500.000 : Kuning / Oranye (Medium / Sedang)
  * - > Rp 0 s/d < Rp 200.000 : Merah (Low / Minim)
  * - Rp 0 : Abu-abu netral (Zero / Nihil)
  */
-export function getStaffOmsetTierColor(grossAmount: number | null | undefined): OmsetTierResult {
-  const amount = typeof grossAmount === 'number' && !Number.isNaN(grossAmount) ? grossAmount : 0;
+export function getStaffOmsetTierColor(amountBrought: number | null | undefined): OmsetTierResult {
+  const amount = typeof amountBrought === 'number' && !Number.isNaN(amountBrought) ? amountBrought : 0;
 
   if (amount <= 0) {
     return {
@@ -94,18 +105,18 @@ export function getStaffOmsetTierColor(grossAmount: number | null | undefined): 
 }
 
 /**
- * Menghitung akumulasi Total Omset Kotor (Gross), Total Bersih (Net), dan Bagi Hasil Toko (Share)
+ * Menghitung akumulasi:
+ * - totalGross: Kotor koin di mesin
+ * - totalBroughtByDropping / totalNet: Total uang yang dibawa oleh dropping (sudah kepotong toko)
+ * - operationalExpense: Potongan biaya operasional
+ * - totalNetProfit: Total bersih setelah potongan operasional (totalBroughtByDropping - operationalExpense)
+ * - totalShare: Jatah bagi hasil toko mitra
  */
-export function calculateDroppingTotals(droppings: DroppingTransactionItem[]): {
-  totalGross: number;
-  totalNet: number;
-  totalShare: number;
-} {
-  return droppings.reduce<{
-    totalGross: number;
-    totalNet: number;
-    totalShare: number;
-  }>(
+export function calculateDroppingTotals(
+  droppings: DroppingTransactionItem[],
+  operationalExpense: number = 0
+): DroppingTotalsResult {
+  const accumulated = droppings.reduce(
     (acc, d) => {
       acc.totalGross += d.gross_omset || 0;
       acc.totalNet += d.net_deposit_amount || 0;
@@ -114,11 +125,24 @@ export function calculateDroppingTotals(droppings: DroppingTransactionItem[]): {
     },
     { totalGross: 0, totalNet: 0, totalShare: 0 }
   );
+
+  const totalBroughtByDropping = accumulated.totalNet;
+  const safeOperationalExpense = Math.max(0, operationalExpense || 0);
+  const totalNetProfit = Math.max(0, totalBroughtByDropping - safeOperationalExpense);
+
+  return {
+    totalGross: accumulated.totalGross,
+    totalBroughtByDropping,
+    totalNet: totalBroughtByDropping,
+    operationalExpense: safeOperationalExpense,
+    totalNetProfit,
+    totalShare: accumulated.totalShare,
+  };
 }
 
 /**
  * Mengelompokkan dan merekap total omset dropping per petugas dropping
- * Mengembalikan list terurut dari omset terbesar ke terkecil
+ * Menggunakan totalNet (uang yang dibawa oleh dropping) sebagai acuan nilai & ranking
  */
 export function aggregateDroppingByStaff(
   staffList: DroppingStaffItem[],
@@ -164,14 +188,14 @@ export function aggregateDroppingByStaff(
     item.transactionCount += 1;
   });
 
-  // Hitung status color akhir dan konversi ke array
+  // Hitung status color akhir berdasarkan totalNet (uang yang dibawa oleh dropping)
   const result: StaffAggregatedOmset[] = Array.from(staffMap.values()).map((item) => ({
     ...item,
-    statusColor: getStaffOmsetTierColor(item.totalGross),
+    statusColor: getStaffOmsetTierColor(item.totalNet),
   }));
 
-  // Urutkan omset tertinggi di atas
-  result.sort((a, b) => b.totalGross - a.totalGross);
+  // Urutkan uang bawaan tertinggi di atas
+  result.sort((a, b) => b.totalNet - a.totalNet);
 
   return result;
 }
