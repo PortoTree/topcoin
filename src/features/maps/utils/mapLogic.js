@@ -84,3 +84,4 @@ export function getStoreMapCategory(store, machines = [], droppingUsers = [], re
     machineCode: undefined,
   };
 }
+

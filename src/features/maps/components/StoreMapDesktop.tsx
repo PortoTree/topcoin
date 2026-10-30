@@ -159,11 +159,11 @@ export const StoreMapDesktop: React.FC<StoreMapDesktopProps> = ({
 
       const customIcon = L.divIcon({
         className: 'custom-store-pin',
-        iconSize: [80, 52],
-        iconAnchor: [40, 46],
+        iconSize: [80, 54],
+        iconAnchor: [40, 54],
         html: `
-          <div class="flex flex-col items-center cursor-pointer transition-transform duration-200 ${pinScale}">
-            <div style="background-color: ${item.color}; color: #ffffff;" class="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide shadow-md whitespace-nowrap mb-0.5 uppercase border border-white/80 max-w-[85px] truncate">
+          <div style="width: 80px; height: 54px; transform-origin: bottom center;" class="flex flex-col items-center justify-end cursor-pointer transition-transform duration-200 ${pinScale}">
+            <div style="background-color: ${item.color}; color: #ffffff;" class="px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide shadow-md whitespace-nowrap mb-0.5 uppercase border border-white/80 max-w-[80px] truncate leading-tight">
               ${item.badgeText}
             </div>
             <div style="background-color: ${item.color}; border: 2.5px solid #ffffff;" class="w-7 h-7 rounded-full shadow-lg flex items-center justify-center text-white ${ringStyle}">

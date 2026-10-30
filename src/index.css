@@ -195,3 +195,10 @@ html.dark .leaflet-container {
   background-color: #020617 !important;
 }
 
+/* Custom Store Pin & User Marker Reset */
+.custom-store-pin.leaflet-div-icon,
+.user-location-marker.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+

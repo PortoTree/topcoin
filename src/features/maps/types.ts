@@ -18,3 +18,4 @@ export interface MapNavigationUrls {
   googleMaps: string;
   waze: string;
 }
+
