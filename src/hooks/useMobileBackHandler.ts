@@ -17,67 +17,98 @@ interface HandlerItem {
   onBack: () => void;
 }
 
+// ===========================================================================
+// GLOBAL STATE (dipertahankan antar render, bukan per-komponen)
+// ===========================================================================
 let globalBackId = 0;
 const activeHandlers: HandlerItem[] = [];
 let isGlobalListenerAttached = false;
 let rootBackCallback: (() => void) | null = null;
 let lastRootBackTriggerTime = 0;
 
-/**
- * Memaksa penambahan 1 entri penahan di browser history.
- * Menjamin browser selalu memiliki minimal 1 langkah riwayat untuk di-pop,
- * bahkan setelah halaman di-reload.
- */
-export function pushGuard() {
-  if (typeof window === 'undefined') return;
-  try {
-    window.history.pushState({ topcoin_guard: true, t: Date.now() }, '', window.location.href);
-  } catch {
-    // Abaikan jika browser membatasi pushState
-  }
-}
+// Berapa kali sudah dipush (guard depth). Dijaga selalu >= 2 agar ada buffer
+// untuk rapid back presses.
+const GUARD_DEPTH = 3;
+
+// ===========================================================================
+// HELPERS
+// ===========================================================================
 
 /**
- * Memastikan selalu ada history state penahan (guard) di browser jika belum ada.
- * Dipanggil saat ada interaksi user (touch/pointerdown/click).
+ * Push GUARD_DEPTH dummy states sekaligus.
+ * Alasan perlu lebih dari 1: Jika user tekan Back cepat 2x, browser Android
+ * mungkin pop 2 state sebelum JS sempat pushState lagi (race condition).
+ * Dengan buffer depth 3, kita punya ruang gerak yang aman.
  */
-export function ensureHistoryGuard() {
+function pushDeepGuard() {
   if (typeof window === 'undefined') return;
-  try {
-    if (!window.history.state || !window.history.state.topcoin_guard) {
-      pushGuard();
+  for (let i = 0; i < GUARD_DEPTH; i++) {
+    try {
+      window.history.pushState(
+        { topcoin_guard: true, depth: i, t: Date.now() },
+        '',
+        window.location.href
+      );
+    } catch {
+      // ignore
     }
-  } catch {
-    // Abaikan jika browser membatasi pushState
   }
 }
 
 /**
- * Memasang global popstate listener satu kali saja di window.
- * Menjamin riwayat browser tidak pernah mundur melewati batas aman (tidak keluar aplikasi).
+ * Push SATU guard state (dipakai setelah modal handler sudah dijalankan).
+ * Dipanggil via setTimeout(fn, 0) agar tidak terjadi race condition dengan
+ * Chrome's internal navigation queue pada saat popstate.
  */
+function scheduleGuardReplenish() {
+  if (typeof window === 'undefined') return;
+  // Pakai setTimeout agar eksekusi terjadi SETELAH Chrome selesai settle
+  // popstate event-nya. Ini kunci utama menghindari Chrome silently ignoring pushState.
+  setTimeout(() => {
+    try {
+      window.history.pushState(
+        { topcoin_guard: true, t: Date.now() },
+        '',
+        window.location.href
+      );
+    } catch {
+      // ignore
+    }
+  }, 0);
+}
+
+// ===========================================================================
+// GLOBAL POPSTATE LISTENER (hanya dipasang SEKALI seumur hidup tab)
+// ===========================================================================
+
 function ensureGlobalPopstateListener() {
   if (isGlobalListenerAttached || typeof window === 'undefined') return;
 
-  // 1. Tangani event popstate (saat user menekan tombol hardware / gesture Back di HP)
   window.addEventListener('popstate', () => {
-    // KUNCI UTAMA: Seketika re-push guard state agar browser history TIDAK AKAN PERNAH
-    // mencapai index 0 / keluar dari tab atau aplikasi, berapapun kali tombol back ditekan cepat!
-    pushGuard();
+    // ------------------------------------------------------------------
+    // STRATEGI UTAMA:
+    // 1. Segera schedule replenish SEBELUM mengeksekusi handler, agar buffer
+    //    dipastikan terisi kembali meskipun handler berikutnya lambat.
+    // 2. Eksekusi handler LIFO.
+    // 3. Jika root, trigger exit confirmation modal.
+    //
+    // Chrome's race condition: pushState yang dipanggil SYNCHRONOUS di dalam
+    // popstate handler kadang diabaikan. setTimeout(0) menyelesaikan ini dengan
+    // menangguhkan pushState ke event loop berikutnya, setelah Chrome selesai
+    // settle navigasinya.
+    // ------------------------------------------------------------------
 
-    // 2. Jika ada modal / sheet / subview yang sedang aktif di stack:
-    // Tutup elemen teratas (LIFO - Last In First Out)
+    scheduleGuardReplenish();
+
     if (activeHandlers.length > 0) {
       const topHandler = activeHandlers.pop()!;
       topHandler.onBack();
       return;
     }
 
-    // 3. JIKA activeHandlers KOSONG (berada di halaman utama / root):
-    // Panggil rootBackCallback untuk membuka Modal Konfirmasi Keluar.
-    // Beri jeda debounce 300ms agar penekanan beruntun tidak memicu flicker.
+    // Di root: trigger exit confirmation modal dengan debounce 400ms
     const now = Date.now();
-    if (now - lastRootBackTriggerTime > 300) {
+    if (now - lastRootBackTriggerTime > 400) {
       lastRootBackTriggerTime = now;
       if (rootBackCallback) {
         rootBackCallback();
@@ -85,26 +116,40 @@ function ensureGlobalPopstateListener() {
     }
   });
 
-  // 4. Perkuat penjagaan dengan User Gesture:
-  // Browser Chromium/Android membutuhkan interaksi nyata user agar pushState tidak diabaikan
-  // oleh 'History Manipulation Intervention'.
-  const handleUserInteraction = () => {
-    ensureHistoryGuard();
+  // Perkuat dengan user gesture listeners: setiap kali ada interaksi user,
+  // pastikan guard state ada. Ini menggabungkan dua strategi secara bersamaan:
+  // (1) guard from page load, (2) guard replenished on interaction.
+  const replenishOnInteraction = () => {
+    // Hanya replenish jika state saat ini bukan guard (artinya guard sudah di-pop)
+    if (
+      typeof window !== 'undefined' &&
+      (!window.history.state || !window.history.state.topcoin_guard)
+    ) {
+      scheduleGuardReplenish();
+    }
   };
 
-  window.addEventListener('pointerdown', handleUserInteraction, { passive: true, capture: true });
-  window.addEventListener('touchstart', handleUserInteraction, { passive: true, capture: true });
-  window.addEventListener('click', handleUserInteraction, { passive: true, capture: true });
-  window.addEventListener('keydown', handleUserInteraction, { passive: true, capture: true });
+  window.addEventListener('pointerdown', replenishOnInteraction, {
+    passive: true,
+    capture: true,
+  });
+  window.addEventListener('touchstart', replenishOnInteraction, {
+    passive: true,
+    capture: true,
+  });
 
   isGlobalListenerAttached = true;
 }
 
+// ===========================================================================
+// PUBLIC HOOKS
+// ===========================================================================
+
 /**
  * Hook penjaga halaman utama (root guard).
  * Dijalankan di komponen root (App.tsx).
- * Memastikan tombol Back bawaan HP di halaman utama menampilkan modal konfirmasi keluar,
- * dan TIDAK PERNAH keluar langsung tanpa konfirmasi dari user.
+ * Ketika tombol Back HP ditekan di halaman utama, trigger onRootBack
+ * (biasanya membuka modal konfirmasi keluar).
  */
 export function useRootBackGuard(onRootBack?: () => void) {
   const onRootBackRef = useRef(onRootBack);
@@ -120,7 +165,11 @@ export function useRootBackGuard(onRootBack?: () => void) {
     };
 
     ensureGlobalPopstateListener();
-    pushGuard();
+
+    // Push deep guard buffer saat pertama mount (termasuk setelah reload).
+    // Dipanggil unconditionally—tidak perlu cek state sebelumnya—karena kita
+    // SELALU butuh buffer yang fresh setelah halaman dimuat.
+    pushDeepGuard();
 
     return () => {
       rootBackCallback = null;
@@ -129,8 +178,15 @@ export function useRootBackGuard(onRootBack?: () => void) {
 }
 
 /**
- * Custom Hook untuk menangani navigasi tombol Back bawaan HP (hardware button atau gesture swipe)
- * agar modal / sub-view / drawer tertutup satu per satu secara native tanpa merusak browser history.
+ * Custom Hook untuk menangani navigasi tombol Back bawaan HP (hardware button
+ * atau gesture swipe) agar modal / sub-view / drawer tertutup satu per satu
+ * secara native tanpa merusak browser history.
+ *
+ * @example
+ * useMobileBackHandler({
+ *   enabled: isModalOpen,
+ *   onBack: () => setIsModalOpen(false),
+ * });
  */
 export function useMobileBackHandler({
   enabled = true,
@@ -143,7 +199,6 @@ export function useMobileBackHandler({
     if (!enabled || typeof window === 'undefined') return;
 
     ensureGlobalPopstateListener();
-    pushGuard();
 
     const id = ++globalBackId;
     const handlerItem: HandlerItem = {
@@ -154,7 +209,7 @@ export function useMobileBackHandler({
     activeHandlers.push(handlerItem);
 
     return () => {
-      // Keluarkan dari activeHandlers stack jika ditutup via UI (tombol X, batal, atau state)
+      // Lepas dari stack saat komponen unmount / enabled berubah false
       const idx = activeHandlers.findIndex((h) => h.id === id);
       if (idx !== -1) {
         activeHandlers.splice(idx, 1);
