@@ -58,6 +58,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedMachineForTransfer, setSelectedMachineForTransfer] = useState<Machine | null>(null);
   const [targetDroppingId, setTargetDroppingId] = useState<string>('');
+  const [targetStoreId, setTargetStoreId] = useState<string>('');
   const [isSavingTransfer, setIsSavingTransfer] = useState(false);
 
   // State Modal Tambah Mesin Satuan
@@ -157,72 +158,119 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   const handleOpenTransferModal = (m: Machine) => {
     setSelectedMachineForTransfer(m);
     setTargetDroppingId(m.assigned_dropping_id || '');
+    setTargetStoreId(m.current_store_id || '');
     setIsTransferModalOpen(true);
   };
 
-  // Eksekusi Transfer / Tukar Dropping
+  // Eksekusi Transfer / Tukar Dropping & Toko
   const handleSaveTransfer = async () => {
     if (!selectedMachineForTransfer) return;
 
     setIsSavingTransfer(true);
     try {
-      if (!targetDroppingId) {
-        // Pindah ke Gudang (lepas assignment & lepas dari toko jika ada)
-        const previousStoreId = selectedMachineForTransfer.current_store_id;
+      const previousStoreId = selectedMachineForTransfer.current_store_id;
 
+      if (!targetDroppingId) {
+        // Pindah ke Gudang (lepas assignment dropping & set toko jika dipilih)
         const { error } = await supabase
           .from('machines')
           .update({
             assigned_dropping_id: null,
-            status: 'gudang',
-            current_store_id: null,
+            status: targetStoreId ? 'terpasang' : 'gudang',
+            current_store_id: targetStoreId || null,
           })
           .eq('id', selectedMachineForTransfer.id);
 
         if (error) throw error;
 
-        // Sinkronkan tabel stores jika mesin sebelumnya terpasang di toko
-        if (previousStoreId) {
+        // Sinkronkan tabel stores jika toko lama berbeda dengan toko baru
+        if (previousStoreId && previousStoreId !== targetStoreId) {
           await supabase
             .from('stores')
             .update({ current_machine_id: null })
             .eq('id', previousStoreId);
         }
 
-        toast.success(`Mesin ${displayMachineCode(selectedMachineForTransfer.machine_code)} dikembalikan ke Gudang.`);
+        // Sinkronkan toko baru jika dipilih
+        if (targetStoreId) {
+          // Lepas mesin lain yang mungkin sebelumnya menempati toko baru ini
+          await supabase
+            .from('machines')
+            .update({ current_store_id: null, status: 'gudang' })
+            .eq('current_store_id', targetStoreId)
+            .neq('id', selectedMachineForTransfer.id);
+
+          await supabase
+            .from('stores')
+            .update({ current_machine_id: selectedMachineForTransfer.id })
+            .eq('id', targetStoreId);
+        }
+
+        toast.success(`Mesin ${displayMachineCode(selectedMachineForTransfer.machine_code)} disimpan tanpa dropping.`);
       } else {
-        // Pindah ke Dropping Lain
+        // Pindah ke Dropping Lain atau dropping yang sama
         const targetStaff = droppingStaff.find((s) => s.id === targetDroppingId);
         if (!targetStaff) throw new Error('Dropping tujuan tidak ditemukan');
 
+        const isSameDropping = targetDroppingId === selectedMachineForTransfer.assigned_dropping_id;
         const targetPrefix = targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name);
         const targetMachines = machines.filter((m) => m.assigned_dropping_id === targetDroppingId);
 
-        if (targetMachines.length >= 20) {
+        if (!isSameDropping && targetMachines.length >= 20) {
           toast.error(`${targetStaff.full_name} sudah memegang batas maksimal 20 unit mesin.`);
           setIsSavingTransfer(false);
           return;
         }
 
-        const existingNumbers = targetMachines
-          .map((m) => m.machine_number)
-          .filter((n): n is number => typeof n === 'number' && n > 0);
+        let newMachineNumber = selectedMachineForTransfer.machine_number;
+        let newMachineCode = selectedMachineForTransfer.machine_code;
 
-        // Cari nomor slot kosong berikutnya di rute dropping tujuan
-        const nextNum = getNextAvailableMachineNumber(existingNumbers);
-        const newMachineCode = formatMachineCode(targetPrefix, nextNum);
+        if (!isSameDropping) {
+          const existingNumbers = targetMachines
+            .map((m) => m.machine_number)
+            .filter((n): n is number => typeof n === 'number' && n > 0);
+
+          newMachineNumber = getNextAvailableMachineNumber(existingNumbers);
+          newMachineCode = formatMachineCode(targetPrefix, newMachineNumber);
+        }
 
         const { error } = await supabase
           .from('machines')
           .update({
             assigned_dropping_id: targetDroppingId,
-            machine_number: nextNum,
+            machine_number: newMachineNumber,
             machine_code: newMachineCode,
+            current_store_id: targetStoreId || null,
+            status: targetStoreId ? 'terpasang' : 'gudang',
           })
           .eq('id', selectedMachineForTransfer.id);
 
         if (error) throw error;
-        toast.success(`Mesin berhasil ditransfer ke ${targetStaff.full_name} sebagai ${newMachineCode}!`);
+
+        // Sinkronkan toko lama jika berbeda
+        if (previousStoreId && previousStoreId !== targetStoreId) {
+          await supabase
+            .from('stores')
+            .update({ current_machine_id: null })
+            .eq('id', previousStoreId);
+        }
+
+        // Sinkronkan toko baru jika dipilih
+        if (targetStoreId) {
+          // Lepas mesin lain yang sebelumnya menempati toko baru ini
+          await supabase
+            .from('machines')
+            .update({ current_store_id: null, status: 'gudang' })
+            .eq('current_store_id', targetStoreId)
+            .neq('id', selectedMachineForTransfer.id);
+
+          await supabase
+            .from('stores')
+            .update({ current_machine_id: selectedMachineForTransfer.id })
+            .eq('id', targetStoreId);
+        }
+
+        toast.success(`Mesin ${displayMachineCode(newMachineCode)} berhasil diperbarui!`);
       }
 
       setIsTransferModalOpen(false);
@@ -577,11 +625,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                         <span className="font-mono font-black text-sm px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700 tracking-wider">
                           {displayMachineCode(m.machine_code)}
                         </span>
-                        {typeof m.machine_number === 'number' && (
-                          <span className="text-[11px] font-mono text-slate-400 dark:text-slate-500">
-                            No. #{String(m.machine_number).padStart(2, '0')}
-                          </span>
-                        )}
                       </div>
 
                       <span
@@ -622,8 +665,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
                     {/* Baris 3: Pemegang Dropping & Tombol Pindah */}
                     <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-                      <div className="flex items-center gap-1.5 text-xs min-w-0">
-                        <span className="text-slate-400 font-medium shrink-0">Dropping:</span>
+                      <div className="flex items-center text-xs min-w-0">
                         <span className="font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap overflow-visible">
                           {assignedStaff?.full_name || 'Belum Ditugaskan'}
                         </span>
@@ -747,7 +789,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Pindahkan ke Personil Dropping:
+                  Ganti Petugas Dropping:
                 </label>
                 <select
                   value={targetDroppingId}
@@ -763,30 +805,54 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Pasang / Pindahkan ke Toko Mitra:
+                </label>
+                <select
+                  value={targetStoreId}
+                  onChange={(e) => setTargetStoreId(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
+                >
+                  <option value="">-- Simpan di Gudang (Belum Terpasang ke Toko) --</option>
+                  {stores.map((s) => {
+                    const occupiedMachine = machines.find(
+                      (m) => m.current_store_id === s.id && m.id !== selectedMachineForTransfer.id
+                    );
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {occupiedMachine ? `(Saat ini: ${displayMachineCode(occupiedMachine.machine_code)})` : '(Belum ada mesin)'}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
               {/* Preview Hasil Pindah */}
               {targetDroppingId ? (
                 (() => {
                   const targetStaff = droppingStaff.find((s) => s.id === targetDroppingId);
                   const prefix = targetStaff?.machine_prefix || sanitizeMachinePrefix(targetStaff?.username || targetStaff?.full_name);
+                  const isSameDropping = targetDroppingId === selectedMachineForTransfer.assigned_dropping_id;
                   const targetMachines = machines.filter((m) => m.assigned_dropping_id === targetDroppingId);
-                  const nextNum = getNextAvailableMachineNumber(targetMachines.map((m) => m.machine_number || 0));
+                  const nextNum = isSameDropping
+                    ? (selectedMachineForTransfer.machine_number || 1)
+                    : getNextAvailableMachineNumber(targetMachines.map((m) => m.machine_number || 0));
+                  const newCode = formatMachineCode(prefix, nextNum);
 
                   return (
                     <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-xs space-y-1">
                       <span className="text-[10px] uppercase font-bold text-emerald-700 dark:text-emerald-400 block">
-                        Hasil Kode Mesin Baru:
+                        Hasil Kode Mesin:
                       </span>
                       <span className="font-mono font-black text-sm text-emerald-900 dark:text-emerald-200 block">
-                        {formatMachineCode(prefix, nextNum)}
+                        {displayMachineCode(newCode)}
                       </span>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                        Mesin akan otomatis menempati slot nomor kosong pada rute {targetStaff?.full_name}.
-                      </p>
                     </div>
                   );
                 })()
               ) : (
-                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs">
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/80 text-xs font-medium text-amber-800 dark:text-amber-300">
                   Mesin akan dilepas dari penugasan dropping dan disimpan sebagai stok gudang cabang.
                 </div>
               )}
