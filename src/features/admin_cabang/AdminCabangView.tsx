@@ -41,6 +41,7 @@ import { LogisticsDispatchView } from '../logistics/LogisticsDispatchView';
 import { StaffAttendanceManager } from '../attendance/components/StaffAttendanceManager';
 import { MachineManagerMobile } from './components/MachineManagerMobile';
 import { RouteManagerMobile } from './components/RouteManagerMobile';
+import { StoreListMobile } from './components/StoreListMobile';
 import { AddStaffModalMobile } from './components/AddStaffModalMobile';
 import { EditStaffModalMobile } from './components/EditStaffModalMobile';
 import { displayMachineCode } from '../../lib/machineCodeLogic';
@@ -1198,46 +1199,15 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
 
       {/* Tab: Toko (Daftar Toko Cabang) */}
       {activeTab === 'stores' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Toko Mitra Cabang</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Total {branchStores.length} toko mitra di {currentBranch?.name}
-              </p>
-            </div>
-          </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-800">
-            {branchStores.map((st) => (
-              <div key={st.id} className="py-3 px-1 flex items-center justify-between gap-2">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-                    {st.name}
-                  </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">
-                    {st.address || 'Alamat belum diisi'}
-                  </p>
-                </div>
-                {st.phone && (
-                  <a
-                    href={`https://wa.me/${st.phone.replace(/[^0-9]/g, '').startsWith('0') ? '62' + st.phone.replace(/[^0-9]/g, '').slice(1) : st.phone.replace(/[^0-9]/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs flex-shrink-0"
-                    title={`Chat WA Toko (${st.name})`}
-                  >
-                    <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
-                  </a>
-                )}
-              </div>
-            ))}
-            {branchStores.length === 0 && (
-              <div className="py-8 text-center text-slate-400 text-xs">
-                Belum ada toko yang terdaftar di cabang ini.
-              </div>
-            )}
-          </div>
-        </div>
+        <StoreListMobile
+          stores={branchStores}
+          machines={machines}
+          droppingUsers={droppingUsers}
+          branchId={activeBranchId}
+          branchName={currentBranch?.name}
+          isLoading={isLoading}
+          onRefresh={fetchBranchData}
+        />
       )}
 
       {/* Add Staff Modal Mobile */}

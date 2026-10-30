@@ -287,6 +287,9 @@ export const DriverView: React.FC<DriverViewProps> = ({ activeTab }) => {
           await supabase.from('stores').update({ current_machine_id: null }).eq('id', activeTaskToExecute.store_id);
         }
       } else if (activeTaskToExecute.task_type === 'relokasi_mesin') {
+        if (activeTaskToExecute.store_id) {
+          await supabase.from('stores').update({ current_machine_id: null, status: 'nonaktif' }).eq('id', activeTaskToExecute.store_id);
+        }
         if (activeTaskToExecute.target_store_id && activeTaskToExecute.machine_id) {
           await supabase.from('machines').update({ current_store_id: activeTaskToExecute.target_store_id }).eq('id', activeTaskToExecute.machine_id);
           await supabase.from('stores').update({ current_machine_id: activeTaskToExecute.machine_id, status: 'terpasang' }).eq('id', activeTaskToExecute.target_store_id);

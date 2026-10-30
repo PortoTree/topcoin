@@ -23,12 +23,14 @@ interface StoreInfoModalProps {
   store: Store | null;
   onClose: () => void;
   machineCodeOverride?: string;
+  extraActions?: (store: Store, close: () => void) => React.ReactNode;
 }
 
 export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
   store,
   onClose,
   machineCodeOverride,
+  extraActions,
 }) => {
   const [storeHistory, setStoreHistory] = useState<DroppingTransaction[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState<boolean>(false);
@@ -469,6 +471,13 @@ export const StoreInfoModal: React.FC<StoreInfoModalProps> = ({
                   Buka Google Maps
                 </button>
               </div>
+
+              {/* 5. Aksi Tambahan (Edit / Hapus jika dibuka dari Admin / Manajemen) */}
+              {extraActions && (
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                  {extraActions(store, close)}
+                </div>
+              )}
             </div>
           </div>
         )}
