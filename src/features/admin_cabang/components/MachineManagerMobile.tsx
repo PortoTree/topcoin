@@ -87,8 +87,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
   // Statistik Ringkasan
   const totalCount = machines.length;
-  const installedCount = machines.filter((m) => m.status === 'terpasang').length;
-  const warehouseCount = machines.filter((m) => m.status === 'gudang' || !m.assigned_dropping_id).length;
 
   // Buka Modal Edit Prefix
   const handleOpenPrefixModal = (staff: UserProfile) => {
@@ -326,7 +324,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Cpu className="w-5 h-5 text-indigo-500" />
-            Kelola Mesin.
+            Kelola Mesin ({totalCount}).
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Kelola seluruh mesin untuk setiap dropping.
@@ -340,34 +338,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
           <Plus className="w-4 h-4" />
           <span>Tambah</span>
         </button>
-      </div>
-
-      {/* Ringkasan Status Unit Cabang */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-            Total Unit
-          </span>
-          <span className="text-xl font-black text-slate-900 dark:text-white mt-0.5 block font-mono">
-            {totalCount}
-          </span>
-        </div>
-        <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block">
-            Terpasang
-          </span>
-          <span className="text-xl font-black text-emerald-800 dark:text-emerald-200 mt-0.5 block font-mono">
-            {installedCount}
-          </span>
-        </div>
-        <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
-            Di Gudang
-          </span>
-          <span className="text-xl font-black text-slate-800 dark:text-slate-200 mt-0.5 block font-mono">
-            {warehouseCount}
-          </span>
-        </div>
       </div>
 
       {/* Navigasi Tab: Petugas Dropping vs Semua Mesin */}
