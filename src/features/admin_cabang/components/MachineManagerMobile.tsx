@@ -12,6 +12,7 @@ import {
   Search,
   CheckCircle2,
   Info,
+  Route,
 } from 'lucide-react';
 import type { Machine, UserProfile, Store } from '../../../types';
 import {
@@ -29,6 +30,7 @@ interface MachineManagerMobileProps {
   droppingStaff: UserProfile[];
   stores: Store[];
   onRefresh: () => Promise<void> | void;
+  viewMode?: 'machines' | 'route';
 }
 
 export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
@@ -37,9 +39,14 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   droppingStaff,
   stores,
   onRefresh,
+  viewMode,
 }) => {
   // Sub-Tab Switcher: 'dropping' (Petugas Dropping) vs 'all_machines' (Semua Mesin)
-  const [activeSubTab, setActiveSubTab] = useState<'dropping' | 'all_machines'>('dropping');
+  const [activeSubTab, setActiveSubTab] = useState<'dropping' | 'all_machines'>(
+    viewMode === 'route' ? 'dropping' : 'all_machines'
+  );
+
+  const currentTab = viewMode === 'machines' ? 'all_machines' : viewMode === 'route' ? 'dropping' : activeSubTab;
 
   // State Filter & Pencarian
   const [selectedDroppingFilter, setSelectedDroppingFilter] = useState<string>('all');
@@ -97,9 +104,6 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       return true;
     });
   }, [machines, selectedDroppingFilter, searchQuery]);
-
-  // Statistik Ringkasan
-  const totalCount = machines.length;
 
   // Buka Modal Edit Prefix
   const handleOpenPrefixModal = (staff: UserProfile) => {
@@ -489,49 +493,65 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-indigo-500" />
-            Kelola Mesin ({totalCount}).
+            {viewMode === 'route' ? (
+              <>
+                <Route className="w-5 h-5 text-indigo-500" />
+                <span>Petugas Dropping & Rute ({droppingStaff.length})</span>
+              </>
+            ) : (
+              <>
+                <Cpu className="w-5 h-5 text-indigo-500" />
+                <span>Kelola Mesin ({machines.length})</span>
+              </>
+            )}
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Kelola seluruh mesin untuk setiap dropping.
+            {viewMode === 'route'
+              ? 'Pilih petugas untuk mengatur rute urutan toko dan target kunjungan.'
+              : 'Daftar seluruh mesin yang ada di cabang.'}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleOpenAddMachine}
-          className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tambah</span>
-        </button>
+
+        {viewMode !== 'route' && (
+          <button
+            type="button"
+            onClick={handleOpenAddMachine}
+            className="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-indigo-500/20 active:scale-95 transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Tambah</span>
+          </button>
+        )}
       </div>
 
-      {/* Navigasi Tab: Petugas Dropping vs Semua Mesin */}
-      <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('dropping')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeSubTab === 'dropping'
-            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-        >
-          Petugas Dropping ({droppingStaff.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('all_machines')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeSubTab === 'all_machines'
-            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-        >
-          Semua Mesin ({machines.length})
-        </button>
-      </div>
+      {/* Navigasi Sub-Tab jika tidak dalam mode khusus viewMode */}
+      {!viewMode && (
+        <div className="flex rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('dropping')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentTab === 'dropping'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+          >
+            Petugas Dropping ({droppingStaff.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab('all_machines')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${currentTab === 'all_machines'
+              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+          >
+            Semua Mesin ({machines.length})
+          </button>
+        </div>
+      )}
 
       {/* KONTEN TAB 1: DAFTAR PETUGAS DROPPING */}
-      {activeSubTab === 'dropping' && (
+      {currentTab === 'dropping' && (
         <div className="space-y-1 pt-1">
           {droppingStaff.length === 0 ? (
             <p className="text-xs text-slate-400 italic py-4 text-center">
@@ -573,7 +593,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       )}
 
       {/* KONTEN TAB 2: SEMUA MESIN */}
-      {activeSubTab === 'all_machines' && (
+      {currentTab === 'all_machines' && (
         <div className="space-y-3">
           {/* Filter Horizontal Tab & Search Mesin */}
           <div className="space-y-2">
