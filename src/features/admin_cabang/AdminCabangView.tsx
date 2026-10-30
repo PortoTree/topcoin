@@ -2026,26 +2026,31 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             );
 
             return (
-              <div className="p-4 sm:p-5 space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <>
+                {/* Header Modal */}
+                <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">
+                      Tugas Pengganti
+                    </span>
+                    <h3 className="text-lg font-black text-slate-900 dark:text-white mt-0.5">
                       Pilih Petugas yang Digantikan
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Admin akan mewarisi rute & toko mitra petugas yang sedang libur
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                      Mewarisi rute & toko mitra milik petugas yang sedang libur
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={close}
-                    className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-white transition cursor-pointer"
+                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer transition active:scale-90 flex-shrink-0 ml-2"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                {/* List Staf Dropping */}
+                <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-0.5">
                   {pureDroppingStaff.map((staff) => {
                     const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
                     const staffMachinesCount = machines.filter((m) => m.assigned_dropping_id === staff.id).length;
@@ -2061,28 +2066,32 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                         }}
                         className={`w-full p-3.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-98 cursor-pointer ${
                           isCurrentSubstitute
-                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                            : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-400 dark:border-indigo-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 flex-shrink-0">
+                          <div className="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-black text-sm border border-indigo-200/80 dark:border-indigo-800/60 flex-shrink-0 shadow-2xs">
                             {staff.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <span className="text-sm font-bold text-slate-900 dark:text-white block truncate">
+                            <span className="text-sm font-black text-slate-900 dark:text-white block truncate leading-snug">
                               {staff.full_name}
                             </span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2 mt-0.5">
-                              <span className="font-mono text-indigo-600 dark:text-indigo-400 font-bold">Prefix: {prefix}</span>
-                              <span>•</span>
-                              <span>{staffMachinesCount} Unit Mesin</span>
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-1 text-xs">
+                              <span className="font-mono font-bold text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700">
+                                Prefix: {prefix}
+                              </span>
+                              <span className="text-slate-300 dark:text-slate-600 select-none">•</span>
+                              <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold">
+                                {staffMachinesCount} Unit Mesin
+                              </span>
+                            </div>
                           </div>
                         </div>
 
                         {isCurrentSubstitute && (
-                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs">
+                          <div className="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center flex-shrink-0 shadow-xs ml-2">
                             <Check className="w-3.5 h-3.5" />
                           </div>
                         )}
@@ -2090,19 +2099,24 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                     );
                   })}
 
-                  {/* Opsi Mandiri */}
+                  {/* Tombol Opsi Mandiri */}
                   <button
                     type="button"
                     onClick={() => {
                       close();
                       handleChangeAdminTask(targetAdminForDropping, 'dropping', null);
                     }}
-                    className="w-full p-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400 text-xs font-bold text-center transition cursor-pointer"
+                    className="w-full py-3 px-4 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer text-center group active:scale-98"
                   >
-                    Tugas Mandiri (Bawa Mesin Sendiri / Tanpa Menggantikan)
+                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white block">
+                      Tugas Mandiri (Bawa Mesin Sendiri)
+                    </span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-medium block mt-0.5">
+                      Tanpa mewarisi rute petugas lain
+                    </span>
                   </button>
                 </div>
-              </div>
+              </>
             );
           }}
         </BottomSheetModal>

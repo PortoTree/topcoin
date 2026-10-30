@@ -1120,7 +1120,7 @@ export const DroppingView: React.FC<DroppingViewProps> = ({
                       Tugas Pengganti Dropping
                     </span>
                     <p className="font-bold text-slate-900 dark:text-white truncate">
-                      Menggantikan: <span className="underline decoration-indigo-400">{substituteStaff.full_name}</span>
+                      <span className="underline decoration-indigo-400">{substituteStaff.full_name}</span>
                     </p>
                   </div>
                 </div>
@@ -1132,10 +1132,10 @@ export const DroppingView: React.FC<DroppingViewProps> = ({
                     <button
                       type="button"
                       onClick={onClearSubstitute}
-                      className="text-[10px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 underline font-medium cursor-pointer"
+                      className="text-[12px] text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 font-medium cursor-pointer"
                       title="Lepas Penugasan Pengganti"
                     >
-                      Batal
+                      X
                     </button>
                   )}
                 </div>
@@ -1284,9 +1284,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({
 
                 const machineCode = isSubstituting
                   ? formatVirtualMachineCode({
-                      originalMachineCode: store.machine?.machine_code,
-                      virtualPrefix: profile?.machine_prefix || 'ADMIN',
-                    })
+                    originalMachineCode: store.machine?.machine_code,
+                    virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                  })
                   : displayMachineCode(store.machine?.machine_code);
 
                 return (
@@ -1674,9 +1674,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({
                           <span>Unit: <strong className="font-mono text-slate-700 dark:text-slate-300">
                             {isSubstituting
                               ? formatVirtualMachineCode({
-                                  originalMachineCode: selectedStore.machine?.machine_code,
-                                  virtualPrefix: profile?.machine_prefix || 'ADMIN',
-                                })
+                                originalMachineCode: selectedStore.machine?.machine_code,
+                                virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                              })
                               : displayMachineCode(selectedStore.machine?.machine_code)}
                           </strong></span>
                         )}
@@ -2333,9 +2333,9 @@ export const DroppingView: React.FC<DroppingViewProps> = ({
                       <span className="font-mono font-black">
                         {isSubstituting
                           ? formatVirtualMachineCode({
-                              originalMachineCode: store.machine?.machine_code,
-                              virtualPrefix: profile?.machine_prefix || 'ADMIN',
-                            })
+                            originalMachineCode: store.machine?.machine_code,
+                            virtualPrefix: profile?.machine_prefix || 'ADMIN',
+                          })
                           : displayMachineCode(store.machine?.machine_code)}
                       </span>
                       <span className="text-slate-400 dark:text-slate-500 font-normal mx-2">|</span>
