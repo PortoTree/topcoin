@@ -13,10 +13,10 @@ import {
   Cpu,
   FileSpreadsheet,
   ClipboardCheck,
-  DollarSign,
-  Coins,
   Layers,
-  ArrowRight,
+  Route,
+  Clock,
+  CalendarOff,
 } from 'lucide-react';
 
 interface BottomNavBarProps {
@@ -87,26 +87,13 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         ];
       case 'admin_cabang':
       case 'admin': {
-        const assignedTask = profile.assigned_task;
-        const taskIcon =
-          assignedTask === 'logistik' || assignedTask === 'driver'
-            ? Truck
-            : assignedTask === 'marketing'
-              ? StoreIcon
-              : ClipboardList;
-
-        // 5 Navigasi Default Utama Sesuai Instruksi User:
-        // 1. Tugas (dynamic tugas admin)
-        // 2. Omset (placeholder)
-        // 3. Petugas (karyawan/staff)
-        // 4. Mesin (placeholder)
-        // 5. Laporan (absensi harian)
+        // 5 Navigasi Utama: omset | petugas | laporan | rute | absen
         return [
-          { id: 'admin_task', label: 'Tugas', icon: taskIcon },
           { id: 'omset', label: 'Omset', icon: TrendingUp },
           { id: 'schedule', label: 'Petugas', icon: Users },
-          { id: 'machines', label: 'Mesin', icon: Cpu },
           { id: 'reports', label: 'Laporan', icon: ClipboardCheck },
+          { id: 'route', label: 'Rute', icon: Route },
+          { id: 'attendance', label: 'Absen', icon: Clock },
         ];
       }
       case 'marketing':
@@ -134,32 +121,21 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
 
   const navItems = getNavItems();
 
-  // Menu Tambahan Admin dalam Drawer Expand
+  // 5 Navigasi Tambahan: libur | logistik | tugas | toko | mesin
+  const assignedTask = profile.assigned_task;
+  const taskIcon =
+    assignedTask === 'logistik' || assignedTask === 'driver'
+      ? Truck
+      : assignedTask === 'marketing'
+        ? StoreIcon
+        : ClipboardList;
+
   const adminExpandedMenus = [
-    {
-      id: 'reconciliation',
-      title: 'Rekonsiliasi Kas',
-      subtitle: 'Tutup kas & hitung uang fisik setoran dropping',
-      icon: DollarSign,
-      color: 'emerald',
-      bgClass: 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400',
-    },
-    {
-      id: 'driver_dispatch',
-      title: 'Tugas Logistik Dispatch',
-      subtitle: 'Penugasan distribusi & relokasi unit mesin armada',
-      icon: Truck,
-      color: 'amber',
-      bgClass: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400',
-    },
-    {
-      id: 'monitoring',
-      title: 'Monitoring Transaksi',
-      subtitle: 'Pantau koin dan omset dropping live hari ini',
-      icon: Coins,
-      color: 'blue',
-      bgClass: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400',
-    },
+    { id: 'leave', label: 'Libur', icon: CalendarOff },
+    { id: 'driver_dispatch', label: 'Logistik', icon: Truck },
+    { id: 'admin_task', label: 'Tugas', icon: taskIcon },
+    { id: 'stores', label: 'Toko', icon: StoreIcon },
+    { id: 'machines', label: 'Mesin', icon: Cpu },
   ];
 
   return (
@@ -195,24 +171,24 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
           </div>
         )}
 
-        {/* Drawer Menu Tambahan dengan Animasi Slide Up & Down yang Snappy & Smooth */}
+        {/* Drawer Menu Tambahan dengan Tampilan Icon + Label di Bawahnya (Persis Mirip Navigasi Bar) */}
         {isAdmin && (
           <div
             className={`overflow-hidden transition-all duration-200 ease-out ${isExpanded
-                ? 'max-h-[380px] opacity-100 border-b border-slate-200 dark:border-slate-800 mb-2'
+                ? 'max-h-[140px] opacity-100 border-b border-slate-200 dark:border-slate-800 mb-1'
                 : 'max-h-0 opacity-0 pointer-events-none border-b-0 mb-0'
               }`}
           >
-            <div className="px-4 pt-1 pb-3 space-y-2">
-              <div className="flex items-center gap-1.5 py-1">
-                <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="px-1 pt-0.5 pb-2">
+              <div className="flex items-center justify-center gap-1.5 py-1 mb-1">
+                <Layers className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                   MENU TAMBAHAN
                 </span>
               </div>
 
-              {/* List Kartu Menu Tambahan */}
-              <div className="space-y-1.5">
+              {/* Baris 5 Icon Menu Tambahan (Persis Mirip Navigasi Bar) */}
+              <div className="flex items-center justify-around px-1 py-0.5">
                 {adminExpandedMenus.map((menu) => {
                   const Icon = menu.icon;
                   const isCurrentActive = activeTab === menu.id;
@@ -225,28 +201,22 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
                         onTabChange(menu.id);
                         setIsExpanded(false);
                       }}
-                      className={`w-full p-2.5 rounded-2xl border text-left flex items-center justify-between transition-all active:scale-[0.98] cursor-pointer ${isCurrentActive
-                          ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-700/80 shadow-xs'
-                          : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60 hover:bg-slate-100 dark:hover:bg-slate-800'
+                      className={`flex-1 flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition-all active:scale-95 cursor-pointer ${isCurrentActive
+                          ? 'text-indigo-700 dark:text-indigo-400 font-extrabold'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 font-medium'
                         }`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        <div
-                          className={`w-9 h-9 rounded-xl border flex items-center justify-center flex-shrink-0 ${menu.bgClass}`}
-                        >
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-xs font-black text-slate-900 dark:text-white block">
-                            {menu.title}
-                          </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium line-clamp-1">
-                            {menu.subtitle}
-                          </span>
-                        </div>
+                      <div
+                        className={`p-1 rounded-lg transition-colors ${isCurrentActive
+                            ? 'bg-indigo-100 dark:bg-indigo-500/15'
+                            : 'bg-transparent'
+                          }`}
+                      >
+                        <Icon className={`w-5 h-5 ${isCurrentActive ? 'stroke-[2.5px]' : 'stroke-2'}`} />
                       </div>
-
-                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0 ml-2" />
+                      <span className="text-[10px] mt-0.5 tracking-tight truncate max-w-[68px] text-center">
+                        {menu.label}
+                      </span>
                     </button>
                   );
                 })}

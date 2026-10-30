@@ -30,6 +30,8 @@ import {
   History,
   Search,
   Pencil,
+  Route,
+  CalendarOff,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
@@ -1118,18 +1120,137 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         />
       )}
 
-      {/* Tab: Laporan (Absensi Harian Seluruh Karyawan Cabang) */}
+      {/* Tab: Laporan (Laporan & Rekapitulasi Operasional Cabang) */}
       {activeTab === 'reports' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Laporan Absensi Karyawan</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Laporan Operasional</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Rekapitulasi performa dan riwayat operasional cabang
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+          <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-2">
+            <ClipboardCheck className="w-10 h-10 text-indigo-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Laporan Eksekutif Cabang</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              Fitur unduh laporan PDF/Excel omset, absensi, dan performa mesin sedang dalam tahap finalisasi.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Absen (Absensi Harian Seluruh Karyawan Cabang) */}
+      {activeTab === 'attendance' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Absensi Petugas</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Pencatatan kehadiran seluruh staf cabang hari ini
               </p>
             </div>
           </div>
           <StaffAttendanceManager branchId={activeBranchId} />
+        </div>
+      )}
+
+      {/* Tab: Rute (Placeholder Segera Hadir) */}
+      {activeTab === 'route' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Rute & Wilayah Toko</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Pemetaan jalur kunjungan toko dan optimasi rute dropping
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+          <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-2">
+            <Route className="w-10 h-10 text-indigo-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Manajemen Rute Lapangan</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              Fitur pemetaan koordinat rute toko dan efisiensi jalur dropping sedang disiapkan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Libur (Placeholder Segera Hadir) */}
+      {activeTab === 'leave' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Jadwal Libur & Izin</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Pengaturan jadwal libur operasional dan pengajuan izin staf
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+              <Sparkles className="w-3 h-3" />
+              Segera Hadir
+            </span>
+          </div>
+          <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-2">
+            <CalendarOff className="w-10 h-10 text-indigo-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Pengaturan Hari Libur</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              Fitur kalender hari libur cabang dan cuti operasional sedang disiapkan.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab: Toko (Daftar Toko Cabang) */}
+      {activeTab === 'stores' && (
+        <div className="space-y-4 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Toko Mitra Cabang</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Total {branchStores.length} toko mitra di {currentBranch?.name}
+              </p>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
+            {branchStores.map((st) => (
+              <div key={st.id} className="py-3 px-1 flex items-center justify-between gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    {st.name}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                    {st.address || 'Alamat belum diisi'}
+                  </p>
+                </div>
+                {st.phone && (
+                  <a
+                    href={`https://wa.me/${st.phone.replace(/[^0-9]/g, '').startsWith('0') ? '62' + st.phone.replace(/[^0-9]/g, '').slice(1) : st.phone.replace(/[^0-9]/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs flex-shrink-0"
+                    title={`Chat WA Toko (${st.name})`}
+                  >
+                    <img src="/whatsapp.png" alt="WA" className="w-4 h-4 object-contain" />
+                  </a>
+                )}
+              </div>
+            ))}
+            {branchStores.length === 0 && (
+              <div className="py-8 text-center text-slate-400 text-xs">
+                Belum ada toko yang terdaftar di cabang ini.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
