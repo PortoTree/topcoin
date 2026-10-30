@@ -86,5 +86,13 @@ console.log('Test 4 (Direct):', res4);
 assert.strictEqual(res4.latitude, -7.257512);
 assert.strictEqual(res4.longitude, 112.752134);
 
+// Case 5: Exact user string from prompt
+const userIframe = '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15797.774405227756!2d112.58410744999999!3d-8.157981999999999!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd62b3ab53d097f%3A0x5521d8fc9664b4a0!2sCatfish%20Autodetail%20salon%20mobil%20malang!5e0!3m2!1sid!2sid!4v1793356078316!5m2!1sid!2sid" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
+const res5 = parseGmapsCoordinates(userIframe);
+console.log('Test 5 (User Iframe):', res5);
+assert.ok(res5 !== null);
+assert.strictEqual(res5.latitude, -8.157981999999999);
+assert.strictEqual(res5.longitude, 112.58410744999999);
+
 console.log('✅ Semua test gmaps parser sukses!');
 

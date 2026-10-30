@@ -118,3 +118,4 @@ assert.strictEqual(res4.hasMachineColumn, false, 'Nomor mesin wajib di-hide untu
 console.log('✅ Test 4 Passed: Toko relokasi otomatis masuk kategori BEKAS');
 
 console.log('\n🎉 SEMUA 4 PENGUJIAN LOGIKA KATEGORI TOKO LULUS 100%!');
+
