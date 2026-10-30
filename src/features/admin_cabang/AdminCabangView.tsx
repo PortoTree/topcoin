@@ -1120,14 +1120,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
         />
       )}
 
-      {/* Tab: Laporan (Laporan & Rekapitulasi Operasional Cabang) */}
+      {/* Tab: Laporan (Riwayat Seluruh Aktivitas Laporan Petugas: Dropping, Marketing, Logistik) */}
       {activeTab === 'reports' && (
         <div className="space-y-4 animate-in fade-in duration-150">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">Laporan Operasional</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Aktivitas & Laporan Petugas</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Rekapitulasi performa dan riwayat operasional cabang
+                Riwayat seluruh aktivitas laporan dropping, marketing, dan logistik
               </p>
             </div>
             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
@@ -1136,10 +1136,10 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
             </span>
           </div>
           <div className="p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl space-y-2">
-            <ClipboardCheck className="w-10 h-10 text-indigo-500 mx-auto" />
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Laporan Eksekutif Cabang</h3>
+            <Clock className="w-10 h-10 text-indigo-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Feed Riwayat Aktivitas Seluruh Petugas</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-              Fitur unduh laporan PDF/Excel omset, absensi, dan performa mesin sedang dalam tahap finalisasi.
+              Halaman ini akan merangkum seluruh linimasa laporan harian: setoran dropping mesin, kunjungan toko marketing, dan pengiriman armada logistik.
             </p>
           </div>
         </div>

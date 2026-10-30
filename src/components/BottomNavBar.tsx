@@ -12,7 +12,7 @@ import {
   ShieldCheck,
   Cpu,
   FileSpreadsheet,
-  ClipboardCheck,
+  CalendarDays,
   Layers,
   Route,
   Clock,
@@ -91,9 +91,9 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab, onTabChan
         return [
           { id: 'omset', label: 'Omset', icon: TrendingUp },
           { id: 'schedule', label: 'Petugas', icon: Users },
-          { id: 'reports', label: 'Laporan', icon: ClipboardCheck },
+          { id: 'reports', label: 'Laporan', icon: Clock },
           { id: 'route', label: 'Rute', icon: Route },
-          { id: 'attendance', label: 'Absen', icon: Clock },
+          { id: 'attendance', label: 'Absen', icon: CalendarDays },
         ];
       }
       case 'marketing':
