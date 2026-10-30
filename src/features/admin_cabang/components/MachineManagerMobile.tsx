@@ -470,7 +470,12 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       await onRefresh();
     } catch (err: any) {
       console.error('Error saving store route order:', err);
-      toast.error('Gagal menyimpan nomor rute: ' + err.message);
+      const isMissingColumn = err.message?.includes('route_order') || err.message?.includes('schema cache');
+      if (isMissingColumn) {
+        toast.error('Kolom route_order belum ada di Supabase. Jalankan query migrasi SQL di Supabase SQL Editor!');
+      } else {
+        toast.error('Gagal menyimpan nomor rute: ' + err.message);
+      }
     } finally {
       setIsSavingRouteOrder(false);
     }

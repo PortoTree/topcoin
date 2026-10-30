@@ -252,7 +252,12 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
       await onRefresh();
     } catch (err: any) {
       console.error('Error saving store route order:', err);
-      toast.error('Gagal menyimpan nomor rute: ' + err.message);
+      const isMissingColumn = err.message?.includes('route_order') || err.message?.includes('schema cache');
+      if (isMissingColumn) {
+        toast.error('Kolom route_order belum ada di Supabase. Jalankan query migrasi SQL di Supabase SQL Editor!');
+      } else {
+        toast.error('Gagal menyimpan nomor rute: ' + err.message);
+      }
     } finally {
       setIsSavingRouteOrder(false);
     }
@@ -278,11 +283,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
         <button
           type="button"
           onClick={() => setActiveSubTab('dropping')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'dropping'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeSubTab === 'dropping'
+            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <Route className="w-3.5 h-3.5" />
           <span>Dropping</span>
@@ -291,11 +295,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
         <button
           type="button"
           onClick={() => setActiveSubTab('logistik')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'logistik'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeSubTab === 'logistik'
+            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <Truck className="w-3.5 h-3.5" />
           <span>Logistik</span>
@@ -304,11 +307,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
         <button
           type="button"
           onClick={() => setActiveSubTab('marketing')}
-          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-            activeSubTab === 'marketing'
-              ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
+          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeSubTab === 'marketing'
+            ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
         >
           <StoreIcon className="w-3.5 h-3.5" />
           <span>Marketing</span>
@@ -386,44 +388,40 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
             <button
               type="button"
               onClick={() => setLogisticsFilter('all')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                logisticsFilter === 'all'
-                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
+              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'all'
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                }`}
             >
               Semua ({driverTasks.length})
             </button>
             <button
               type="button"
               onClick={() => setLogisticsFilter('in_progress')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                logisticsFilter === 'in_progress'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
+              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'in_progress'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                }`}
             >
               Proses / Antar ({driverTasks.filter((t) => t.status === 'in_progress').length})
             </button>
             <button
               type="button"
               onClick={() => setLogisticsFilter('completed')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                logisticsFilter === 'completed'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
+              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'completed'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                }`}
             >
               Selesai ({driverTasks.filter((t) => t.status === 'completed').length})
             </button>
             <button
               type="button"
               onClick={() => setLogisticsFilter('kendala')}
-              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                logisticsFilter === 'kendala'
-                  ? 'bg-rose-600 text-white shadow-xs'
-                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-              }`}
+              className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${logisticsFilter === 'kendala'
+                ? 'bg-rose-600 text-white shadow-xs'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                }`}
             >
               Kendala ({driverTasks.filter((t) => t.status === 'kendala').length})
             </button>
@@ -448,15 +446,14 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                   <div
                     key={t.id}
                     onClick={() => setSelectedTaskForSummary(t)}
-                    className={`p-3.5 rounded-2xl flex items-start justify-between gap-3 text-xs transition-all cursor-pointer active:scale-[0.99] group shadow-xs ${
-                      isCompleted
-                        ? 'border-2 border-emerald-400/90 dark:border-emerald-600/90 bg-emerald-50/20 dark:bg-emerald-950/25 hover:border-emerald-500'
-                        : isKendala
+                    className={`p-3.5 rounded-2xl flex items-start justify-between gap-3 text-xs transition-all cursor-pointer active:scale-[0.99] group shadow-xs ${isCompleted
+                      ? 'border-2 border-emerald-400/90 dark:border-emerald-600/90 bg-emerald-50/20 dark:bg-emerald-950/25 hover:border-emerald-500'
+                      : isKendala
                         ? 'border-2 border-rose-400/90 dark:border-rose-600/90 bg-rose-50/20 dark:bg-rose-950/25 hover:border-rose-500'
                         : isInProgress
-                        ? 'border-2 border-blue-400/90 dark:border-blue-600/90 bg-blue-50/20 dark:bg-blue-950/25 hover:border-blue-500'
-                        : 'border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-500'
-                    }`}
+                          ? 'border-2 border-blue-400/90 dark:border-blue-600/90 bg-blue-50/20 dark:bg-blue-950/25 hover:border-blue-500'
+                          : 'border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-slate-400 dark:hover:border-slate-500'
+                      }`}
                   >
                     <div className="min-w-0 flex-1 space-y-1.5">
                       {/* Toko Asal -> Toko Tujuan */}
@@ -493,23 +490,22 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     {/* Status & Jam */}
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0 pt-0.5">
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${
-                          t.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60'
-                            : t.status === 'kendala'
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${t.status === 'completed'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/60'
+                          : t.status === 'kendala'
                             ? 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300 border border-rose-300 dark:border-rose-700/60'
                             : t.status === 'in_progress'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60'
-                        }`}
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300 border border-blue-300 dark:border-blue-700/60'
+                              : 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-300 dark:border-amber-700/60'
+                          }`}
                       >
                         {t.status === 'kendala'
                           ? 'Kendala'
                           : t.status === 'in_progress'
-                          ? 'Diangkut / Kirim'
-                          : t.status === 'assigned'
-                          ? 'Ditugaskan'
-                          : 'Selesai'}
+                            ? 'Diangkut / Kirim'
+                            : t.status === 'assigned'
+                              ? 'Ditugaskan'
+                              : 'Selesai'}
                       </span>
                       <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                         {new Date(t.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
@@ -546,33 +542,30 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               <button
                 type="button"
                 onClick={() => setMarketingStatusFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                  marketingStatusFilter === 'all'
-                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${marketingStatusFilter === 'all'
+                  ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  }`}
               >
                 Semua Toko ({stores.length})
               </button>
               <button
                 type="button"
                 onClick={() => setMarketingStatusFilter('proses')}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                  marketingStatusFilter === 'proses'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${marketingStatusFilter === 'proses'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  }`}
               >
                 Menunggu Mesin ({stores.filter((s) => s.status !== 'terpasang').length})
               </button>
               <button
                 type="button"
                 onClick={() => setMarketingStatusFilter('terpasang')}
-                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${
-                  marketingStatusFilter === 'terpasang'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
-                }`}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition cursor-pointer ${marketingStatusFilter === 'terpasang'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+                  }`}
               >
                 Terpasang Mesin ({stores.filter((s) => s.status === 'terpasang').length})
               </button>
@@ -608,11 +601,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                       </div>
 
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${
-                          isInstalled
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                            : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
-                        }`}
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0 ${isInstalled
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                          }`}
                       >
                         {isInstalled ? 'Terpasang' : 'Menunggu Mesin'}
                       </span>
@@ -697,12 +689,12 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     {staff.full_name}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    <span>Prefix:</span>
-                    <strong className="font-mono text-indigo-600 dark:text-indigo-400">{prefix}</strong>
+                    <span>Contoh kode mesin:</span>
+                    <strong className="font-mono text-indigo-600 dark:text-indigo-400">{prefix}-00</strong>
                     <button
                       type="button"
                       onClick={() => handleOpenPrefixModal(staff)}
-                      className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-0.5 ml-1 cursor-pointer"
+                      className="text-[11px] font-bold text-gray-400 dark:text-gray-400 hover:underline flex items-center gap-0.5 ml-1 cursor-pointer"
                     >
                       <Edit2 className="w-3 h-3" />
                       <span>Ubah</span>
@@ -747,11 +739,10 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                               {displayMachineCode(m.machine_code)}
                             </span>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                isInstalled
-                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                                  : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                              }`}
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isInstalled
+                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                                : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                }`}
                             >
                               {isInstalled ? 'Terpasang' : 'Gudang'}
                             </span>
@@ -823,8 +814,8 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                               {togglingMachineId === m.id
                                 ? '...'
                                 : m.daily_visit_target === 2 || m.notes?.includes('2x Kunjungan')
-                                ? '2x Kunjungan'
-                                : '1x Kunjungan'}
+                                  ? '2x Kunjungan'
+                                  : '1x Kunjungan'}
                             </button>
                           </div>
                         )}
@@ -919,15 +910,14 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md">
                 <div className="flex items-center gap-2.5 min-w-0 pr-2">
                   <div
-                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                      isCompleted
-                        ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
-                        : isKendala
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${isCompleted
+                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400'
+                      : isKendala
                         ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400'
                         : isInProgress
-                        ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
-                        : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
-                    }`}
+                          ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+                          : 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                      }`}
                   >
                     {isCompleted ? (
                       <CheckCircle2 className="w-5 h-5" />
@@ -942,23 +932,22 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                       {isReloc ? 'Detail Relokasi Mesin' : 'Detail Tugas Logistik'}
                     </h3>
                     <span
-                      className={`text-xs font-bold block truncate ${
-                        isCompleted
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : isKendala
+                      className={`text-xs font-bold block truncate ${isCompleted
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : isKendala
                           ? 'text-rose-600 dark:text-rose-400'
                           : isInProgress
-                          ? 'text-blue-600 dark:text-blue-400'
-                          : 'text-amber-600 dark:text-amber-400'
-                      }`}
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-amber-600 dark:text-amber-400'
+                        }`}
                     >
                       {isCompleted
                         ? 'Status: Tugas Berhasil Selesai'
                         : isKendala
-                        ? 'Status: Terdapat Kendala di Lapangan'
-                        : isInProgress
-                        ? 'Status: Sedang Diangkut / Dalam Pengiriman'
-                        : 'Status: Ditugaskan ke Petugas'}
+                          ? 'Status: Terdapat Kendala di Lapangan'
+                          : isInProgress
+                            ? 'Status: Sedang Diangkut / Dalam Pengiriman'
+                            : 'Status: Ditugaskan ke Petugas'}
                     </span>
                   </div>
                 </div>
