@@ -6,7 +6,6 @@ import { BottomSheetModal } from '../../../components/BottomSheetModal';
 import {
   Route,
   Truck,
-  TrendingUp,
   Info,
   Edit2,
   X,
@@ -286,7 +285,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           }`}
         >
           <Route className="w-3.5 h-3.5" />
-          <span>Dropping ({droppingStaff.length})</span>
+          <span>Dropping</span>
         </button>
 
         <button
@@ -299,7 +298,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
           }`}
         >
           <Truck className="w-3.5 h-3.5" />
-          <span>Logistik ({driverTasks.length})</span>
+          <span>Logistik</span>
         </button>
 
         <button
@@ -311,8 +310,8 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
               : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <TrendingUp className="w-3.5 h-3.5" />
-          <span>Marketing ({stores.length})</span>
+          <StoreIcon className="w-3.5 h-3.5" />
+          <span>Marketing</span>
         </button>
       </div>
 
