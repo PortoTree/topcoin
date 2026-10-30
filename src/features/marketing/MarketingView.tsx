@@ -366,12 +366,12 @@ export const MarketingView: React.FC<MarketingViewProps> = ({ activeTab }) => {
                       type="text"
                       value={manualInput}
                       onChange={(e) => handleManualInputChange(e.target.value)}
-                      placeholder="Contoh: -8.153713, 112.583569 atau paste link Google Maps..."
+                      placeholder="Contoh: -8.153713, 112.583569"
                       className="w-full px-2.5 py-1.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500"
                     />
                     {manualInput.trim() && !latitude && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                        Format koordinat belum valid. Masukkan angka (misal: -8.153713, 112.583569) atau link Maps.
+                        Format koordinat belum valid. Masukkan angka (contoh: -8.153713, 112.583569).
                       </p>
                     )}
                   </div>

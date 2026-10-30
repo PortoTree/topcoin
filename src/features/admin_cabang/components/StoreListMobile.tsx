@@ -509,7 +509,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
                   <div className="space-y-1.5 mt-1 pt-1.5 border-t border-slate-200/60 dark:border-slate-800/60">
                     <div className="flex items-center justify-between">
                       <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
-                        Input Koordinat / Link Manual:
+                        Input Koordinat:
                       </label>
                       <button
                         type="button"
@@ -528,7 +528,7 @@ const StoreFormModal: React.FC<StoreFormModalProps> = ({
                     />
                     {manualInput.trim() && !latitude && (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                        Format koordinat belum valid. Masukkan angka (misal: -8.153713, 112.583569) atau link Maps.
+                        Format koordinat belum valid. Masukkan angka (misal: -8.153713, 112.583569).
                       </p>
                     )}
                   </div>
