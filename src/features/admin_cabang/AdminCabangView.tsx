@@ -987,44 +987,70 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       )}
                     </div>
 
-                    {/* Baris 2: [nomor whatsapp hijau & bisa diklik membuka WA]                  [icon] [icon] */}
+                    {/* Baris 2: [nomor whatsapp]                  [icon WA] [icon Ubah Role] [icon Opsi] */}
                     <div className="flex items-center justify-between gap-2 mt-1">
-                      {staff.phone ? (
-                        <a
-                          href={`https://wa.me/${(() => {
-                            const clean = staff.phone.replace(/[^0-9]/g, '');
-                            return clean.startsWith('0') ? '62' + clean.slice(1) : clean;
-                          })()}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-mono font-bold hover:underline active:scale-95 transition cursor-pointer"
-                          title={`Chat WhatsApp dengan ${staff.full_name}`}
-                        >
-                          <img
-                            src="/whatsapp.png"
-                            alt="WhatsApp"
-                            className="w-3.5 h-3.5 object-contain flex-shrink-0"
-                          />
-                          <span>{staff.phone}</span>
-                        </a>
-                      ) : (
-                        <div className="inline-flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-mono">
-                          <img
-                            src="/whatsapp.png"
-                            alt="WhatsApp"
-                            className="w-3.5 h-3.5 object-contain flex-shrink-0 opacity-40 grayscale"
-                          />
-                          <span>-</span>
-                        </div>
-                      )}
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono font-medium truncate">
+                        {staff.phone || '-'}
+                      </span>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {isBM ? (
-                          <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
-                            Atasan Cabang
-                          </span>
+                          <>
+                            {staff.phone && (
+                              <a
+                                href={`https://wa.me/${(() => {
+                                  const clean = staff.phone.replace(/[^0-9]/g, '');
+                                  return clean.startsWith('0') ? '62' + clean.slice(1) : clean;
+                                })()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                title={`Chat WhatsApp (${staff.phone})`}
+                              >
+                                <img
+                                  src="/whatsapp.png"
+                                  alt="WhatsApp"
+                                  className="w-4 h-4 object-contain"
+                                />
+                              </a>
+                            )}
+                            <span className="text-xs font-semibold text-purple-700 dark:text-purple-400 bg-purple-100/70 dark:bg-purple-900/40 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800/60">
+                              Atasan Cabang
+                            </span>
+                          </>
                         ) : (
                           <>
+                            {/* Tombol WhatsApp (Icon Saja di Kiri Tombol Ubah Role) */}
+                            {staff.phone ? (
+                              <a
+                                href={`https://wa.me/${(() => {
+                                  const clean = staff.phone.replace(/[^0-9]/g, '');
+                                  return clean.startsWith('0') ? '62' + clean.slice(1) : clean;
+                                })()}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-xs"
+                                title={`Chat WhatsApp (${staff.phone})`}
+                              >
+                                <img
+                                  src="/whatsapp.png"
+                                  alt="WhatsApp"
+                                  className="w-4 h-4 object-contain"
+                                />
+                              </a>
+                            ) : (
+                              <div
+                                className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center opacity-40 cursor-not-allowed shadow-xs"
+                                title="Nomor WhatsApp belum diisi"
+                              >
+                                <img
+                                  src="/whatsapp.png"
+                                  alt="WhatsApp"
+                                  className="w-4 h-4 object-contain grayscale"
+                                />
+                              </div>
+                            )}
+
                             {/* Tombol Arrow Down: Buka Modal Pemilihan Role */}
                             <button
                               type="button"
