@@ -59,7 +59,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
   // State Modal Tambah Mesin Satuan
   const [isAddMachineModalOpen, setIsAddMachineModalOpen] = useState(false);
   const [addDroppingId, setAddDroppingId] = useState<string>('');
-  const [addMachineNumber, setAddMachineNumber] = useState<number>(1);
+  const [addMachineNumber, setAddMachineNumber] = useState<number | ''>(1);
   const [addStoreId, setAddStoreId] = useState<string>('');
   const [isSavingAdd, setIsSavingAdd] = useState(false);
 
@@ -248,9 +248,11 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
       : 'MESIN';
 
+    const numToSave = typeof addMachineNumber === 'number' ? addMachineNumber : 1;
+
     // 1. Validasi Input, Duplikasi Kode, dan Kuota 20 Unit
     const validation = validateNewMachineInput({
-      machineNumber: addMachineNumber,
+      machineNumber: numToSave,
       prefix,
       existingMachines: machines,
       targetDroppingId: addDroppingId || null,
@@ -263,7 +265,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
       return;
     }
 
-    const finalCode = formatMachineCode(prefix, addMachineNumber);
+    const finalCode = formatMachineCode(prefix, numToSave);
 
     setIsSavingAdd(true);
     try {
@@ -273,7 +275,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
         .insert({
           branch_id: branchId,
           machine_code: finalCode,
-          machine_number: addMachineNumber,
+          machine_number: numToSave,
           assigned_dropping_id: addDroppingId || null,
           current_store_id: addStoreId || null,
           status: addStoreId ? 'terpasang' : 'gudang',
@@ -823,13 +825,24 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   type="number"
                   min={1}
                   max={20}
+                  placeholder="Ketik nomor (1-20)..."
                   value={addMachineNumber}
                   onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (isNaN(val)) {
+                    const raw = e.target.value;
+                    if (raw === '') {
+                      setAddMachineNumber('');
+                      return;
+                    }
+                    const val = parseInt(raw, 10);
+                    if (!isNaN(val)) {
+                      setAddMachineNumber(val);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (addMachineNumber === '' || addMachineNumber < 1) {
                       setAddMachineNumber(1);
-                    } else {
-                      setAddMachineNumber(Math.min(20, Math.max(1, val)));
+                    } else if (addMachineNumber > 20) {
+                      setAddMachineNumber(20);
                     }
                   }}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
@@ -842,7 +855,8 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                 const prefix = targetStaff
                   ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
                   : 'MESIN';
-                const code = formatMachineCode(prefix, addMachineNumber);
+                const numPreview = typeof addMachineNumber === 'number' ? addMachineNumber : 1;
+                const code = formatMachineCode(prefix, numPreview);
                 const isExisting = machines.some(
                   (m) => displayMachineCode(m.machine_code).toUpperCase() === code.toUpperCase()
                 );
