@@ -689,7 +689,7 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
                     {staff.full_name}
                   </h3>
                   <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    <span>Contoh kode mesin:</span>
+                    <span>Kode mesin:</span>
                     <strong className="font-mono text-indigo-600 dark:text-indigo-400">{prefix}-00</strong>
                     <button
                       type="button"
@@ -712,13 +712,13 @@ export const RouteManagerMobile: React.FC<RouteManagerMobileProps> = ({
 
               {/* Body: Daftar Mesin & Toko Dropping Scrollable */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80">
-                <div className="flex items-center justify-between pb-1">
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Daftar Mesin ({assignedMachines.length}/20 Unit):
+                <div className="pb-1.5">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                    Total mesin ({assignedMachines.length})
                   </span>
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    Atur urutan rute & target kunjungan
-                  </span>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                    Atur urutan rute & jumlah kunjungan
+                  </p>
                 </div>
 
                 {assignedMachines.length === 0 ? (
