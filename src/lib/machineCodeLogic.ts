@@ -8,6 +8,66 @@ export interface ParsedMachineCode {
   number: number;
 }
 
+export interface MachineValidationResult {
+  isValid: boolean;
+  error?: string;
+}
+
+/**
+ * Validasi nomor mesin, kuota personil, dan cek duplikasi kode mesin
+ */
+export function validateNewMachineInput(params: {
+  machineNumber: number;
+  prefix: string;
+  existingMachines: { machine_code: string; machine_number?: number | null; assigned_dropping_id?: string | null }[];
+  targetDroppingId?: string | null;
+  targetDroppingName?: string;
+  maxUnitsPerDropping?: number;
+}): MachineValidationResult {
+  const {
+    machineNumber,
+    prefix,
+    existingMachines,
+    targetDroppingId,
+    targetDroppingName = 'Dropping ini',
+    maxUnitsPerDropping = 20,
+  } = params;
+
+  // 1. Nomor harus angka antara 1 dan 20
+  if (isNaN(machineNumber) || machineNumber < 1 || machineNumber > 20) {
+    return {
+      isValid: false,
+      error: 'Nomor mesin harus berada dalam rentang 1 sampai 20 (01 - 20).',
+    };
+  }
+
+  // 2. Jika ditugaskan ke personil dropping, cek batas kuota maksimal 20 unit
+  if (targetDroppingId) {
+    const staffMachines = existingMachines.filter((m) => m.assigned_dropping_id === targetDroppingId);
+    if (staffMachines.length >= maxUnitsPerDropping) {
+      return {
+        isValid: false,
+        error: `${targetDroppingName} sudah memegang batas maksimal ${maxUnitsPerDropping} unit mesin.`,
+      };
+    }
+  }
+
+  // 3. Cek duplikasi kode mesin di cabang
+  const expectedCode = formatMachineCode(prefix, machineNumber);
+  const isDuplicate = existingMachines.some(
+    (m) => displayMachineCode(m.machine_code).toUpperCase() === expectedCode.toUpperCase()
+  );
+
+  if (isDuplicate) {
+    return {
+      isValid: false,
+      error: `Kode mesin ${expectedCode} sudah terdaftar di cabang ini. Silakan pilih nomor mesin lain.`,
+    };
+  }
+
+  return { isValid: true };
+}
+
 /**
  * Membersihkan string prefix (trim, hapus strip di ujung, jadikan UPPERCASE)
  * Contoh: "pampam-" -> "PAMPAM", "  budi  " -> "BUDI"

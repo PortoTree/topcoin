@@ -19,6 +19,7 @@ import {
   sanitizeMachinePrefix,
   getNextAvailableMachineNumber,
   recodeMachinesForDropping,
+  validateNewMachineInput,
 } from '../../../lib/machineCodeLogic';
 
 interface MachineManagerMobileProps {
@@ -156,7 +157,9 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
     setIsSavingTransfer(true);
     try {
       if (!targetDroppingId) {
-        // Pindah ke Gudang (lepas assignment)
+        // Pindah ke Gudang (lepas assignment & lepas dari toko jika ada)
+        const previousStoreId = selectedMachineForTransfer.current_store_id;
+
         const { error } = await supabase
           .from('machines')
           .update({
@@ -167,7 +170,16 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
           .eq('id', selectedMachineForTransfer.id);
 
         if (error) throw error;
-        toast.success(`Mesin ${selectedMachineForTransfer.machine_code} dikembalikan ke Gudang.`);
+
+        // Sinkronkan tabel stores jika mesin sebelumnya terpasang di toko
+        if (previousStoreId) {
+          await supabase
+            .from('stores')
+            .update({ current_machine_id: null })
+            .eq('id', previousStoreId);
+        }
+
+        toast.success(`Mesin ${displayMachineCode(selectedMachineForTransfer.machine_code)} dikembalikan ke Gudang.`);
       } else {
         // Pindah ke Dropping Lain
         const targetStaff = droppingStaff.find((s) => s.id === targetDroppingId);
@@ -175,6 +187,13 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
 
         const targetPrefix = targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name);
         const targetMachines = machines.filter((m) => m.assigned_dropping_id === targetDroppingId);
+        
+        if (targetMachines.length >= 20) {
+          toast.error(`${targetStaff.full_name} sudah memegang batas maksimal 20 unit mesin.`);
+          setIsSavingTransfer(false);
+          return;
+        }
+
         const existingNumbers = targetMachines
           .map((m) => m.machine_number)
           .filter((n): n is number => typeof n === 'number' && n > 0);
@@ -193,7 +212,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
           .eq('id', selectedMachineForTransfer.id);
 
         if (error) throw error;
-        toast.success(`Mesin berhasil ditransfer ke ${targetStaff.full_name} sebagai [${newMachineCode}]!`);
+        toast.success(`Mesin berhasil ditransfer ke ${targetStaff.full_name} sebagai ${newMachineCode}!`);
       }
 
       setIsTransferModalOpen(false);
@@ -214,7 +233,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
     if (staffId) {
       const existing = machines.filter((m) => m.assigned_dropping_id === staffId);
       const nextNum = getNextAvailableMachineNumber(existing.map((m) => m.machine_number || 0));
-      setAddMachineNumber(nextNum);
+      setAddMachineNumber(Math.min(20, nextNum));
     } else {
       setAddMachineNumber(1);
     }
@@ -228,22 +247,69 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
     const prefix = targetStaff
       ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
       : 'MESIN';
+
+    // 1. Validasi Input, Duplikasi Kode, dan Kuota 20 Unit
+    const validation = validateNewMachineInput({
+      machineNumber: addMachineNumber,
+      prefix,
+      existingMachines: machines,
+      targetDroppingId: addDroppingId || null,
+      targetDroppingName: targetStaff?.full_name,
+      maxUnitsPerDropping: 20,
+    });
+
+    if (!validation.isValid) {
+      toast.error(validation.error || 'Input mesin tidak valid.');
+      return;
+    }
+
     const finalCode = formatMachineCode(prefix, addMachineNumber);
 
     setIsSavingAdd(true);
     try {
-      const { error } = await supabase.from('machines').insert({
-        branch_id: branchId,
-        machine_code: finalCode,
-        machine_number: addMachineNumber,
-        assigned_dropping_id: addDroppingId || null,
-        current_store_id: addStoreId || null,
-        status: addStoreId ? 'terpasang' : 'gudang',
-        last_counter_meter: 0,
-      });
+      // 2. Insert Mesin Baru ke Database Supabase
+      const { data: newMachine, error: machineErr } = await supabase
+        .from('machines')
+        .insert({
+          branch_id: branchId,
+          machine_code: finalCode,
+          machine_number: addMachineNumber,
+          assigned_dropping_id: addDroppingId || null,
+          current_store_id: addStoreId || null,
+          status: addStoreId ? 'terpasang' : 'gudang',
+          last_counter_meter: 0,
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
-      toast.success(`Mesin [${finalCode}] berhasil ditambahkan!`);
+      if (machineErr) throw machineErr;
+
+      // 3. Sinkronisasi Dua Arah dengan Toko Mitra (stores table)
+      if (addStoreId && newMachine?.id) {
+        // Jika ada mesin lama yang sebelumnya terpasang di toko ini, lepaskan ke gudang
+        const existingStoreMachine = machines.find((m) => m.current_store_id === addStoreId && m.id !== newMachine.id);
+        if (existingStoreMachine) {
+          await supabase
+            .from('machines')
+            .update({ current_store_id: null, status: 'gudang' })
+            .eq('id', existingStoreMachine.id);
+        }
+
+        // Update stores: set current_machine_id ke mesin baru agar terbaca di DroppingView & KurirView
+        const { error: storeErr } = await supabase
+          .from('stores')
+          .update({
+            current_machine_id: newMachine.id,
+            status: 'terpasang',
+          })
+          .eq('id', addStoreId);
+
+        if (storeErr) {
+          console.warn('Gagal sinkronisasi data toko:', storeErr);
+        }
+      }
+
+      toast.success(`Mesin ${finalCode} berhasil ditambahkan!`);
       setIsAddMachineModalOpen(false);
       await onRefresh();
     } catch (err: any) {
@@ -264,7 +330,7 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
             Kelola Mesin.
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Format nomor mesin untuk setiap dropping.
+            Kelola seluruh mesin untuk setiap dropping.
           </p>
         </div>
         <button
@@ -736,24 +802,36 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Simpan di Gudang (Tanpa Dropping) --</option>
-                  {droppingStaff.map((staff) => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.full_name} ({staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name)})
-                    </option>
-                  ))}
+                  {droppingStaff.map((staff) => {
+                    const heldCount = machines.filter((m) => m.assigned_dropping_id === staff.id).length;
+                    const prefix = staff.machine_prefix || sanitizeMachinePrefix(staff.username || staff.full_name);
+                    const isFull = heldCount >= 20;
+                    return (
+                      <option key={staff.id} value={staff.id} disabled={isFull}>
+                        {staff.full_name} ({prefix} • {heldCount}/20 Unit{isFull ? ' - PENUH' : ''})
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Nomor Mesin (1 - 20):
+                  Nomor Mesin (01 - 20):
                 </label>
                 <input
                   type="number"
                   min={1}
-                  max={99}
+                  max={20}
                   value={addMachineNumber}
-                  onChange={(e) => setAddMachineNumber(parseInt(e.target.value, 10) || 1)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) {
+                      setAddMachineNumber(1);
+                    } else {
+                      setAddMachineNumber(Math.min(20, Math.max(1, val)));
+                    }
+                  }}
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-mono font-bold text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 />
               </div>
@@ -765,15 +843,31 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   ? targetStaff.machine_prefix || sanitizeMachinePrefix(targetStaff.username || targetStaff.full_name)
                   : 'MESIN';
                 const code = formatMachineCode(prefix, addMachineNumber);
+                const isExisting = machines.some(
+                  (m) => displayMachineCode(m.machine_code).toUpperCase() === code.toUpperCase()
+                );
 
                 return (
-                  <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80">
-                    <span className="text-[10px] uppercase font-bold text-indigo-700 dark:text-indigo-400 block">
-                      Kode Mesin yang Dibuat:
+                  <div className={`p-3 rounded-xl border ${
+                    isExisting
+                      ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/80'
+                      : 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800/80'
+                  }`}>
+                    <span className={`text-[10px] uppercase font-bold block ${
+                      isExisting ? 'text-rose-700 dark:text-rose-400' : 'text-indigo-700 dark:text-indigo-400'
+                    }`}>
+                      {isExisting ? 'Kode Mesin Sudah Terpakai:' : 'Kode Mesin yang Dibuat:'}
                     </span>
-                    <span className="font-mono font-black text-base text-indigo-900 dark:text-indigo-200 block mt-0.5">
+                    <span className={`font-mono font-black text-base block mt-0.5 ${
+                      isExisting ? 'text-rose-900 dark:text-rose-200' : 'text-indigo-900 dark:text-indigo-200'
+                    }`}>
                       {code}
                     </span>
+                    {isExisting && (
+                      <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-0.5 font-medium">
+                        Nomor ini sudah ada di cabang. Pilih nomor lain antara 01 - 20.
+                      </p>
+                    )}
                   </div>
                 );
               })()}
@@ -788,11 +882,14 @@ export const MachineManagerMobile: React.FC<MachineManagerMobileProps> = ({
                   className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl font-medium text-slate-900 dark:text-white outline-none focus:outline-none focus:ring-0 focus:border-slate-800 dark:focus:border-slate-300 transition-colors"
                 >
                   <option value="">-- Belum Dipasang (Simpan Gudang) --</option>
-                  {stores.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.address})
-                    </option>
-                  ))}
+                  {stores.map((s) => {
+                    const occupiedMachine = machines.find((m) => m.current_store_id === s.id);
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {s.name} {occupiedMachine ? `(Saat ini: ${displayMachineCode(occupiedMachine.machine_code)})` : '(Belum ada mesin)'}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             </div>
