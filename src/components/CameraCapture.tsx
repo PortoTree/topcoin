@@ -4,6 +4,7 @@ import { Camera, RefreshCw, CheckCircle2, X, ShieldCheck, Lock, Trash2 } from 'l
 import { compressImage } from '../lib/imageCompression';
 import { toast } from '../context/ToastContext';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
+import { lockBodyScroll } from '../lib/scrollLock';
 
 interface CameraCaptureProps {
   label: string;
@@ -50,17 +51,12 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     },
   });
 
-  // Lock background scrolling completely when camera modal is active
+  // Lock background scrolling completely when camera modal is active (reference-counted)
   useEffect(() => {
     if (isCameraModalOpen) {
-      const originalOverflow = document.body.style.overflow;
-      const originalTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-
+      const unlock = lockBodyScroll();
       return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.touchAction = originalTouchAction;
+        unlock();
       };
     }
   }, [isCameraModalOpen]);

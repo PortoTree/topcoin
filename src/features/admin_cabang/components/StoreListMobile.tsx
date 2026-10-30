@@ -835,7 +835,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
       <div className="flex items-center justify-between px-1 pt-1 pb-3">
         <div>
           <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
-            Toko Mitra Cabang
+            Daftar Toko Mitra
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Total {stores.length} toko mitra{branchName ? ` di ${branchName}` : ''}
@@ -857,7 +857,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition"
           >
             <Plus className="w-3.5 h-3.5" />
-            Tambah Toko
+            Tambah
           </button>
         </div>
       </div>
@@ -892,11 +892,10 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
             key={chip.id}
             type="button"
             onClick={() => setActiveFilter(chip.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 border transition cursor-pointer ${
-              activeFilter === chip.id
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600'
-            }`}
+            className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap flex-shrink-0 border transition cursor-pointer ${activeFilter === chip.id
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400 hover:text-indigo-600'
+              }`}
           >
             {chip.label}
           </button>
@@ -1001,13 +1000,12 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
                         <div className="flex items-center gap-1.5 pt-0.5 flex-wrap">
                           {/* Badge Kategori */}
                           <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${
-                              category === 'CADANGAN'
-                                ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                                : category === 'BEKAS'
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${category === 'CADANGAN'
+                              ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
+                              : category === 'BEKAS'
                                 ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200'
                                 : 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-800 dark:text-indigo-300'
-                            }`}
+                              }`}
                           >
                             {category === 'CADANGAN' ? (
                               <Users className="w-2.5 h-2.5" />
@@ -1107,7 +1105,7 @@ export const StoreListMobile: React.FC<StoreListMobileProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    close();
+                    setSelectedStoreInfo(null);
                     setEditingStore(targetStore);
                   }}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 transition"

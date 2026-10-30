@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
+import { lockBodyScroll } from '../lib/scrollLock';
 
 interface BottomSheetModalProps<T = any> {
   item?: T | null;
@@ -40,17 +41,12 @@ export function BottomSheetModal<T = any>({
     }
   }, [activeTrigger]);
 
-  // Lock background scrolling when sheet is open
+  // Lock background scrolling when sheet is open (reference-counted)
   useEffect(() => {
     if (renderedItem) {
-      const originalOverflow = document.body.style.overflow;
-      const originalTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-
+      const unlock = lockBodyScroll();
       return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.touchAction = originalTouchAction;
+        unlock();
       };
     }
   }, [renderedItem]);

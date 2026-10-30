@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
+import { lockBodyScroll } from '../lib/scrollLock';
 import {
   RefreshCw,
   CheckCircle2,
@@ -67,18 +68,13 @@ export const MultiStepCameraModal: React.FC<MultiStepCameraModalProps> = ({
     onClose();
   };
 
-  // Lock background scrolling completely when camera modal is active
+  // Lock background scrolling completely when camera modal is active (reference-counted)
   useEffect(() => {
     if (isOpen) {
       mountTimeRef.current = Date.now();
-      const originalOverflow = document.body.style.overflow;
-      const originalTouchAction = document.body.style.touchAction;
-      document.body.style.overflow = 'hidden';
-      document.body.style.touchAction = 'none';
-
+      const unlock = lockBodyScroll();
       return () => {
-        document.body.style.overflow = originalOverflow;
-        document.body.style.touchAction = originalTouchAction;
+        unlock();
       };
     }
   }, [isOpen]);
