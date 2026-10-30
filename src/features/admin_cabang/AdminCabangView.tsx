@@ -30,7 +30,6 @@ import {
   History,
   Search,
   Pencil,
-  Phone,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import type { DroppingTransaction, Machine, UserProfile, UserRole, Store } from '../../types';
@@ -87,11 +86,11 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
   const [selectedStaffForOption, setSelectedStaffForOption] = useState<UserProfile | null>(null);
   const [actionPrompt, setActionPrompt] = useState<ActionPromptConfig | null>(null);
 
-  const getStaffBadge = (staff: UserProfile) => {
+  const getStaffRoleInfo = (staff: UserProfile) => {
     if (staff.role === 'branch_manager') {
       return {
         label: 'Branch Manager',
-        className: 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800/60',
+        colorClass: 'text-purple-600/80 dark:text-purple-400/80',
       };
     }
     if (staff.role === 'admin_cabang' || staff.role === 'admin') {
@@ -104,35 +103,35 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
               : 'Dropping';
         return {
           label: `Admin • ${taskName}`,
-          className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
+          colorClass: 'text-indigo-600/80 dark:text-indigo-400/80',
         };
       }
       return {
         label: 'Admin Cabang',
-        className: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800/60',
+        colorClass: 'text-indigo-600/80 dark:text-indigo-400/80',
       };
     }
     if (staff.role === 'logistik' || staff.role === 'driver' || staff.role === 'kurir') {
       return {
         label: 'Logistik',
-        className: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+        colorClass: 'text-amber-600/80 dark:text-amber-400/80',
       };
     }
     if (staff.role === 'dropping') {
       return {
         label: 'Dropping',
-        className: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60',
+        colorClass: 'text-emerald-600/80 dark:text-emerald-400/80',
       };
     }
     if (staff.role === 'marketing' || staff.role === 'sales') {
       return {
         label: 'Marketing',
-        className: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/60',
+        colorClass: 'text-amber-600/80 dark:text-amber-400/80',
       };
     }
     return {
       label: staff.role,
-      className: 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      colorClass: 'text-slate-600/80 dark:text-slate-400/80',
     };
   };
 
@@ -905,8 +904,8 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
       {/* Tab: Jadwal (Karyawan Cabang & Pengajuan Hapus Akun) */}
       {(activeTab === 'schedule' || activeTab === 'employees') && (
         <div className="space-y-3.5 animate-in fade-in duration-150">
-          {/* Hero Section dengan Garis Pembatas Bawah */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+          {/* Hero Section dengan Garis Pembatas Bawah Kontras */}
+          <div className="flex items-center justify-between pb-3 border-b-2 border-slate-300 dark:border-slate-700">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">Kelola Petugas</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -945,7 +944,7 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
           </div>
 
           {/* List Langsung Menempel di Body (Tanpa Wrapper Card) */}
-          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="divide-y divide-slate-200 dark:divide-slate-800">
             {filterStaff(branchStaff, staffSearchQuery)
               .sort(compareStaff)
               .map((staff) => {
@@ -959,19 +958,17 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       isBM ? 'bg-purple-50/40 dark:bg-purple-950/20 rounded-xl px-2 my-0.5' : ''
                     }`}
                   >
-                    {/* Baris 1: [nama lengkap] | [role] */}
+                    {/* Baris 1: [nama lengkap] | [role teks biasa dengan opacity warna dasar] */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-sm text-slate-900 dark:text-white truncate">
                         {staff.full_name}
                       </span>
-                      <span className="text-slate-300 dark:text-slate-600 font-light">|</span>
+                      <span className="text-slate-400 dark:text-slate-500 font-normal">|</span>
                       {(() => {
-                        const badge = getStaffBadge(staff);
+                        const roleInfo = getStaffRoleInfo(staff);
                         return (
-                          <span
-                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-md border ${badge.className}`}
-                          >
-                            {badge.label}
+                          <span className={`text-xs font-semibold ${roleInfo.colorClass}`}>
+                            {roleInfo.label}
                           </span>
                         );
                       })()}
@@ -990,10 +987,14 @@ export const AdminCabangView: React.FC<AdminCabangViewProps> = ({ activeTab }) =
                       )}
                     </div>
 
-                    {/* Baris 2: [nomor whatsapp]                  [icon] [icon] */}
+                    {/* Baris 2: [nomor whatsapp dengan icon whatsapp.png]                  [icon] [icon] */}
                     <div className="flex items-center justify-between gap-2 mt-1">
-                      <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-mono">
-                        <Phone className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-mono font-medium">
+                        <img
+                          src="/whatsapp.png"
+                          alt="WhatsApp"
+                          className="w-3.5 h-3.5 object-contain flex-shrink-0"
+                        />
                         <span>{staff.phone || '-'}</span>
                       </div>
 
